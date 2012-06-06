@@ -207,6 +207,9 @@ public:
       );
   }
 
+  friend class Col3;
+  friend class Vec4;
+
 #if	!defined(USE_AMP) && !defined(USE_COMPUTE)
 private:
 #endif
