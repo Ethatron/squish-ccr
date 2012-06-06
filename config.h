@@ -47,6 +47,9 @@
 #define SQUISH_USE_SIMD 0
 #endif
 
+/* *****************************************************************************
+ * Turn explicit vectorization of in case AMP or DirectCompute is requested
+ */
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 #undef	SQUISH_USE_ALTIVEC
 #undef	SQUISH_USE_SSE
@@ -58,11 +61,13 @@
 #endif
 
 /* -----------------------------------------------------------------------------
+ * provide common-interface implementations for the debug-version of the AMP
+ * implementation
  */
 #if	defined(USE_AMP) && defined(USE_AMP_DEBUG)
-#define	tile_static
-#define	tile_barrier	int
-#define	tile_static_memory_fence(x)
+#define	tile_static						// void attribute
+#define	tile_barrier	int					// dummy var
+#define	tile_static_memory_fence(x)				// void function
 
 #define	amp_restricted
 #define	ccr_restricted
@@ -80,13 +85,14 @@
 #define	threaded_add(a, b)	a += b;
 #define	threaded_lor(a, b)	a |= b;
 #define	threaded_inc(a, b)	a += 1;
-#define	threaded_cse(n)
-#define	threaded_for(i, n)	for (int i = 0; i < (n); i++)
-#define	wavefrnt_for(i, n)	for (int i = 0; i < (n); i++)
+#define	threaded_cse(n)						// passthrough
+#define	threaded_for(i, n)	for (int i = 0; i < (n); i++)	// loop for real
+#define	wavefrnt_for(i, n)	for (int i = 0; i < (n); i++)	// loop for real
 
-#define	out
-#define	inout
+#define	out							// compute attribute
+#define	inout							// compute attribute
 /* -----------------------------------------------------------------------------
+ * provide common-interface implementations for the AMP implementation
  */
 #elif	defined(USE_AMP)
 #include <amp.h>
@@ -114,18 +120,19 @@
 #define	threaded_for(i, n)	const int i = thread; if (i < (n))
 #define	wavefrnt_for(i, n)	const int i = thread;
 
-#define	out
-#define	inout
+#define	out							// compute attribute
+#define	inout							// compute attribute
 
 typedef	::Concurrency::graphics::int_3		int3;
 typedef	::Concurrency::graphics::int_4		int4;
-typedef	/*::Concurrency::graphics::uint_3*/ unsigned int uint3[3];  /* no array-access */
-typedef	/*::Concurrency::graphics::uint_4*/ unsigned int uint4[4];  /* no array-access */
+typedef	/*::Concurrency::graphics::uint_3*/ unsigned int uint3[3];  /* array-access necessary */
+typedef	/*::Concurrency::graphics::uint_4*/ unsigned int uint4[4];  /* array-access necessary */
 typedef	::Concurrency::graphics::float_3	float3;
 typedef	::Concurrency::graphics::float_4	float4;
 
 using namespace ::Concurrency;
 /* -----------------------------------------------------------------------------
+ * provide common-interface implementations for the DirectCompute implementation
  */
 #elif	defined(USE_COMPUTE)
 #define	tile_static	groupshared
@@ -136,10 +143,10 @@ using namespace ::Concurrency;
 #define	ccr_restricted
 #define	static_hlsl	static
 #define	extern_hlsl
-#define	inherit_hlsl	/*public*/
-#define	public_hlsl	/*public:*/
-#define	protected_hlsl	/*protected:*/
-#define	private_hlsl	/*private:*/
+#define	inherit_hlsl	/*public*/				// C++ inheritance
+#define	public_hlsl	/*public:*/				// C++ section
+#define	protected_hlsl	/*protected:*/				// C++ section
+#define	private_hlsl	/*private:*/				// C++ section
 
 #define	threaded_max(a, b)	InterlockedMax(a, b)
 #define	threaded_min(a, b)	InterlockedMin(a, b)
@@ -152,6 +159,7 @@ using namespace ::Concurrency;
 #define	threaded_for(i, n)	const int i = thread; if (i < (n))
 #define	wavefrnt_for(i, n)	const int i = thread;
 
+// map to intrinsics
 #define	powf	pow
 #define	sqrtf	sqrt
 #define	atan2f	atan2
@@ -161,6 +169,7 @@ using namespace ::Concurrency;
 #define	sinf	sin
 #define	cosf	cos
 
+// map to intrinsics
 #define	maximum	max
 #define	minimum	min
 
@@ -168,12 +177,21 @@ using namespace ::Concurrency;
 #define FLT_EPSILON     1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 /* -----------------------------------------------------------------------------
  */
-#else
-#error	"You have to select a configuration"
+#elif	!defined(USE_CPP)
+#pragma message( "You may need to select a configuration:" )
+#pragma message( " USE_CPP      - if you want the regular C++ code and omit this message" )
+#pragma message( " USE_PRE      - if you don't want the regular C++ code" )
+#pragma message( " USE_AMP      - if you want the AMP code" )
+#pragma message( " USE_AMP_DEBG - if you want the AMP code without using AMP" )
+#pragma message( " USE_COMPUTE  - if you want the DirectCompute code" )
 #endif
 
+/* *****************************************************************************
+ */
 #ifndef	DIM
-/* at least RGBA, which is 4 components, can be more */
+#pragma message( "Input-array dimensionality has been set to 4" )
+
+// at least RGBA, which is 4 components, can be more
 #define	DIM	4
 #endif
 
