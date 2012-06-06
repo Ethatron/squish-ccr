@@ -30,6 +30,7 @@
 #if	!defined(USE_COMPUTE)
 #include <cmath>
 #include <algorithm>
+#include <float.h>
 #endif
 
 #include "squish.h"

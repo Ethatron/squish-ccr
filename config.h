@@ -43,6 +43,7 @@
 #endif
 #if SQUISH_USE_ALTIVEC || SQUISH_USE_SSE
 #define SQUISH_USE_SIMD 1
+#define a16		__declspec(align(16))
 #else
 #define SQUISH_USE_SIMD 0
 #endif
@@ -177,13 +178,27 @@ using namespace ::Concurrency;
 #define FLT_EPSILON     1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 /* -----------------------------------------------------------------------------
  */
-#elif	!defined(USE_CPP)
-#pragma message( "You may need to select a configuration:" )
-#pragma message( " USE_CPP      - if you want the regular C++ code and omit this message" )
-#pragma message( " USE_PRE      - if you don't want the regular C++ code" )
+#else
+#define	ccr_restricted
+#define	amp_restricted
+
+#define	static_hlsl
+#define	extern_hlsl	extern
+#define	inherit_hlsl	public
+#define	public_hlsl	public:
+#define	protected_hlsl	protected:
+#define	private_hlsl	private:
+
+#if	!defined(USE_CPP)
+#pragma message( "You may need to select a configuration." )
+#pragma message( "These enable mutual exclusive implementations:" )
+#pragma message( " USE_CPP      - if you are happy with the regular C++ code and want to omit this message" )
 #pragma message( " USE_AMP      - if you want the AMP code" )
 #pragma message( " USE_AMP_DEBG - if you want the AMP code without using AMP" )
 #pragma message( " USE_COMPUTE  - if you want the DirectCompute code" )
+#pragma message( "These disable implementations enabled by default:" )
+#pragma message( " USE_PRE      - if you don't want the regular C++ code" )
+#endif
 #endif
 
 /* *****************************************************************************
