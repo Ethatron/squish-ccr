@@ -70,8 +70,7 @@ namespace squish {
     int4 i = (int4)(a + 0.5f);
 
     // clamp to the limit
-    i = maximum(i, 0);
-    i = minimum(i, limit);
+    i = minimum(maximum(i, 0), limit);
 
     // done
     return i;

@@ -506,7 +506,7 @@ Vec3   ComputePrincipleComponent( Sym3x3 const& smatrix );
 #if	!defined(USE_COMPUTE)
 typedef Sym3x3 &Sym3x3r;
 #else
-typedef float Sym3x3[6];
+typedef float4 Sym3x3[2];
 typedef Sym3x3 Sym3x3r;
 #endif
 

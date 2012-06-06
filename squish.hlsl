@@ -118,12 +118,17 @@ void main(
   int fit = SQUISH_FIT_RANGE;
   IndexBlockLUT yArr = lookup_c34a57_ccr;
   SingleColourLUT lArr = lookup_34_56_ccr;
+  squish::code64 block = ous[1];
 
   // create the minimal point set
   squish::colours.CountSet(barrier, thread, ins, mask, true, trans);
 
   // compress colour
-  squish::CompressColorDxt(barrier, thread, ins, squish::colours, ous[1], metric, trans, fit, yArr, lArr);
+  squish::CompressColorDxt(barrier, thread, ins, squish::colours, block, metric, trans, fit, yArr, lArr);
+
+  if (thread == 0) {
+    ous[1] = block;
+  }
 #endif
 
   /* wait for completion */

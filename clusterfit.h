@@ -1,8 +1,8 @@
 /* -----------------------------------------------------------------------------
 
 	Copyright (c) 2006 Simon Brown                          si@sjbrown.co.uk
-	Copyright (c) 2012 Niels Fröhling              niels@paradice-insight.us
 	Copyright (c) 2007 Ignacio Castano                   icastano@nvidia.com
+	Copyright (c) 2012 Niels Fröhling              niels@paradice-insight.us
 
 	Permission is hereby granted, free of charge, to any person obtaining
 	a copy of this software and associated documentation files (the
@@ -35,6 +35,7 @@
 
 namespace squish {
 
+// -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
 class ClusterFit : public ColourFit
 {
@@ -59,22 +60,28 @@ private:
 };
 #endif
 
+// -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 struct ClusterFit_CCR : inherit_hlsl ColourFit_CCR
 {
 public_hlsl
-  void AssignSet (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
-  void Compress  (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block, const bool trans,
+  void AssignSet (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
+  void Compress  (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block, const bool trans,
                   IndexBlockLUT yArr) amp_restricted;
 
 protected_hlsl
-  void Compress3 (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress3 (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
                   IndexBlockLUT yArr) amp_restricted;
-  void Compress4 (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress4 (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
                   IndexBlockLUT yArr) amp_restricted;
 
 private_hlsl
-  bool ConstructOrdering(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, float3r axis, int iteration) amp_restricted;
+  bool ConstructOrdering(tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, float3r axis, int iteration) amp_restricted;
 
 #define	kMaxIterations	8
 

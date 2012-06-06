@@ -33,6 +33,7 @@
 
 namespace squish {
 
+// -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
 class ColourSet;
 class RangeFit : public ColourFit
@@ -51,20 +52,26 @@ private:
 };
 #endif
 
+// -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 struct RangeFit_CCR : inherit_hlsl ColourFit_CCR
 {
 public_hlsl
-  void AssignSet (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
-  void Compress  (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block, const bool trans,
+  void AssignSet (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
+  void Compress  (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block, const bool trans,
                   IndexBlockLUT yArr) amp_restricted;
 
 protected_hlsl
-  void Compress3 (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress3 (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
                   IndexBlockLUT yArr) amp_restricted;
-  void Compress4 (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress4 (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
                   IndexBlockLUT yArr) amp_restricted;
-  void Compress34(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress34(tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
                   IndexBlockLUT yArr) amp_restricted;
 
 #if	!defined(USE_COMPUTE)

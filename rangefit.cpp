@@ -230,6 +230,7 @@ void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_C
   }
 
   // cache some values
+  // AMP: causes a full copy, for indexibility
   const int count = m_colours.GetCount();
   point16 values = m_colours.GetPoints();
   weight16 weights = m_colours.GetWeights();
@@ -257,6 +258,10 @@ void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_C
     tile_static int   maxs[8];
 #endif
 
+    // same for all
+    const int dn = (thread << 1) + 0;
+    const int up = (thread << 1) + 1;
+
     /* calculate min/max
      *
      * AMP: reduction, O(count) vs. O(ln(16)) = O(4))
@@ -265,9 +270,6 @@ void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_C
      *          mean we can't do "for (i < count)" anyway
      */
     threaded_for(mm1, 8) {
-      const int dn = (mm1 << 1) + 0;
-      const int up = (mm1 << 1) + 1;
-
       // dummy-fill values beyond count with value
       // from 0, this remains neutral in the minmax
       const float3 value0 = values[(dn < count ? dn : 0)];
@@ -284,18 +286,12 @@ void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_C
     }
 
     threaded_for(mm2, 4) {
-      const int dn = (mm2 << 1) + 0;
-      const int up = (mm2 << 1) + 1;
-
       // prefer lower indices (will mask the identical prefixed values)
       mins[mm2] = (dist[mins[dn]] <= dist[mins[up]] ? mins[dn] : mins[up]);
       maxs[mm2] = (dist[maxs[dn]] >= dist[maxs[up]] ? maxs[dn] : maxs[up]);
     }
 
     threaded_for(mm3, 2) {
-      const int dn = (mm3 << 1) + 0;
-      const int up = (mm3 << 1) + 1;
-
       // prefer lower indices (will mask the identical prefixed values)
       mins[mm3] = (dist[mins[dn]] <= dist[mins[up]] ? mins[dn] : mins[up]);
       maxs[mm3] = (dist[maxs[dn]] >= dist[maxs[up]] ? maxs[dn] : maxs[up]);
@@ -361,6 +357,7 @@ void RangeFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_C
 #endif
 
   // cache some values
+  // AMP: causes a full copy, for indexibility
   const int count = m_colours.GetCount();
   point16 values = m_colours.GetPoints();
 
@@ -412,6 +409,7 @@ void RangeFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_C
 #endif
 
   // cache some values
+  // AMP: causes a full copy, for indexibility
   const int count = m_colours.GetCount();
   point16 values = m_colours.GetPoints();
 
@@ -471,6 +469,7 @@ void RangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_
 #endif
 
   // cache some values
+  // AMP: causes a full copy, for indexibility
   const int count = m_colours.GetCount();
   point16 values = m_colours.GetPoints();
 
@@ -534,11 +533,12 @@ void RangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_
     errors[fcscan][CASE4] = dists[idx[CASE4]];
   }
 
+  // same for all
+  const int dn = (thread << 1) + 0;
+  const int up = (thread << 1) + 1;
+
   // accumulate the error of case 3/4
   threaded_for(er1, 8) {
-    const int dn = (er1 << 1) + 0;
-    const int up = (er1 << 1) + 1;
-
     // AMP: prefer 2-wide vectorized op
     errors[er1][CASE3] = (dn < count ? errors[dn][CASE3] : 0.0f) +
     	                 (up < count ? errors[up][CASE3] : 0.0f);
@@ -548,9 +548,6 @@ void RangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_
 
   // accumulate the error of case 3/4
   threaded_for(er2, 4) {
-    const int dn = (er2 << 1) + 0;
-    const int up = (er2 << 1) + 1;
-
     // AMP: prefer 2-wide vectorized op
     errors[er2][CASE3] = errors[dn][CASE3] + errors[up][CASE3];
     errors[er2][CASE4] = errors[dn][CASE4] + errors[up][CASE4];
@@ -558,9 +555,6 @@ void RangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_
 
   // accumulate the error of case 3/4
   threaded_for(er3, 2) {
-    const int dn = (er3 << 1) + 0;
-    const int up = (er3 << 1) + 1;
-
     // AMP: prefer 2-wide vectorized op
     errors[er3][CASE3] = errors[dn][CASE3] + errors[up][CASE3];
     errors[er3][CASE4] = errors[dn][CASE4] + errors[up][CASE4];

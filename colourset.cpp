@@ -167,65 +167,63 @@ void ColourSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rgb
   for (int i = 0; i < 16; ++i) {
     // check this pixel is enabled
     int bit = 1 << i;
-    if ((mask & bit) == 0) {
-      continue;
-    }
-
-    // check for transparent pixels when using dxt1
-    if (isDxt1 && (rgba[i][0] < 128)) {
-      // AMP: all thread end up here (CXCHG won't block concurrent reads)
-      int zero = 0; threaded_set(m_transparent, zero, 1);
-      continue;
-    }
-
-    // make writes to "m_remap" visible to all
-    tile_static_memory_fence(barrier);
-
-    // loop over previous points for a match (AMP: parallel search)
-    threaded_for(j, i) {
-      // check for a match
-      int oldbit = 1 << j;
-
-      // get the index of the match
-      bool match = ((mask & oldbit) != 0)
-	&& (rgba[i][3] == rgba[j][3])
-	&& (rgba[i][2] == rgba[j][2])
-	&& (rgba[i][1] == rgba[j][1])
-	&& (!isDxt1 || (rgba[j][0] >= 128));
-
-      // AMP: there is only one thread max. which could find a match
-      //      so it's only one thread which writes to index, no
-      //      atomic needed
-      if (match)
-	m_remap[i] = m_remap[j];
-    }
-
-    // make writes to "m_remap" visible to thread 0
-    tile_static_memory_fence(barrier);
-
-    // allocate a new point
-    threaded_cse(0) {
-      int index = m_remap[i];
-      if (index < 0) {
-	// get the index of the new point
-	index = m_count++;
-
-	// add the point
-	m_weights[index] = 0;
-	m_points [index] = float3(
-	  (float)rgba[i][3],
-	  (float)rgba[i][2],
-	  (float)rgba[i][1]
-	);
-
-	m_remap[i] = index;
+    if ((mask & bit) != 0) {
+      // check for transparent pixels when using dxt1
+      if (isDxt1 && (rgba[i][0] < 128)) {
+        // AMP: all thread end up here (CXCHG won't block concurrent reads)
+        int zero = 0; threaded_set(m_transparent, zero, 1);
       }
+      else {
+        // make writes to "m_remap" visible to all
+        tile_static_memory_fence(barrier);
 
-      // ensure there is always non-zero weight even for zero alpha
-      float w = (float)(rgba[i][0] + 1) / 256.0f;
+        // loop over previous points for a match (AMP: parallel search)
+        threaded_for(j, i) {
+          // check for a match
+          int oldbit = 1 << j;
 
-      // map to this point and increase the weight
-      m_weights[index] += (weightByAlpha ? w : 1.0f);
+          // get the index of the match
+          bool match = ((mask & oldbit) != 0)
+	    && (rgba[i][3] == rgba[j][3])
+	    && (rgba[i][2] == rgba[j][2])
+	    && (rgba[i][1] == rgba[j][1])
+	    && (!isDxt1 || (rgba[j][0] >= 128));
+
+          // AMP: there is only one thread max. which could find a match
+          //      so it's only one thread which writes to index, no
+          //      atomic needed
+          if (match)
+	    m_remap[i] = m_remap[j];
+        }
+
+        // make writes to "m_remap" visible to thread 0
+        tile_static_memory_fence(barrier);
+
+        // allocate a new point
+        threaded_cse(0) {
+          int index = m_remap[i];
+          if (index < 0) {
+	    // get the index of the new point
+	    index = m_count++;
+
+	    // add the point
+	    m_weights[index] = 0;
+	    m_points [index] = float3(
+	      (float)rgba[i][3],
+	      (float)rgba[i][2],
+	      (float)rgba[i][1]
+	    );
+
+	    m_remap[i] = index;
+          }
+
+          // ensure there is always non-zero weight even for zero alpha
+          float w = (float)(rgba[i][0] + 1) / 256.0f;
+
+          // map to this point and increase the weight
+          m_weights[index] += (weightByAlpha ? w : 1.0f);
+        }
+      }
     }
   }
 

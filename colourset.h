@@ -32,6 +32,7 @@
 
 namespace squish {
 
+// -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
 /*! @brief Represents a set of block colours
 */
@@ -56,6 +57,7 @@ private:
 };
 #endif
 
+// -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 struct ColourSet_CCR
 {
@@ -65,12 +67,15 @@ public_hlsl
   weight16 GetWeights() amp_restricted;
   bool IsTransparent() amp_restricted;
 
-  void CountSet    (tile_barrier barrier, const int thread, pixel16 rgba, int mask, const bool tresh, const bool trans) amp_restricted;
-  void WriteSet    (tile_barrier barrier, const int thread, lineC2 cline, inout index16x2 source, out code64 block, const int is4,
+  void CountSet    (tile_barrier barrier, const int thread,
+		    pixel16 rgba, int mask, const bool tresh, const bool trans) amp_restricted;
+  void WriteSet    (tile_barrier barrier, const int thread,
+		    lineC2 cline, inout index16x2 source, out code64 block, const int is4,
 		    IndexBlockLUT yArr) amp_restricted;
 
 protected_hlsl
-  void RemapIndices(tile_barrier barrier, const int thread, inout index16x2 source) amp_restricted;
+  void RemapIndices(tile_barrier barrier, const int thread,
+		    inout index16x2 source) amp_restricted;
 
 #if	!defined(USE_COMPUTE)
 private_hlsl

@@ -1,8 +1,8 @@
 /* -----------------------------------------------------------------------------
 
 	Copyright (c) 2006 Simon Brown                          si@sjbrown.co.uk
-	Copyright (c) 2012 Niels Fröhling              niels@paradice-insight.us
 	Copyright (c) 2007 Ignacio Castano                   icastano@nvidia.com
+	Copyright (c) 2012 Niels Fröhling              niels@paradice-insight.us
 
 	Permission is hereby granted, free of charge, to any person obtaining
 	a copy of this software and associated documentation files (the
@@ -417,11 +417,13 @@ void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet
   }
 
   // cache some values
+  // AMP: causes a full copy, for indexibility
   const int count = m_colours.GetCount();
   point16 values = m_colours.GetPoints();
+  weight16 weights = m_colours.GetWeights();
 
   // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance(barrier, thread, count, values, m_colours.GetWeights());
+  Sym3x3 covariance = ComputeWeightedCovariance(barrier, thread, count, values, weights);
 
   // compute the principle component
   float3 principle = ComputePrincipleComponent(barrier, thread, covariance);
@@ -438,7 +440,7 @@ bool ClusterFit_CCR::ConstructOrdering(tile_barrier barrier, const int thread, C
   using namespace Concurrency::vector_math;
 #endif
 
-  // cache some values
+  // cache some values (AMP: causes a full copy, for indexibility)
   const int count = m_colours.GetCount();
   point16 values = m_colours.GetPoints();
 
@@ -476,6 +478,7 @@ bool ClusterFit_CCR::ConstructOrdering(tile_barrier barrier, const int thread, C
   }
 
   // copy the ordering and weight all the points
+  // AMP: causes a full copy, for indexibility
   point16 unweighted = m_colours.GetPoints();
   weight16 weights = m_colours.GetWeights();
 

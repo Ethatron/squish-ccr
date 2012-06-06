@@ -30,12 +30,14 @@
 #include <squish.h>
 #include "colourfit.h"
 
-#ifdef USE_AMP
+// pull in structure definitions
+#if	defined(USE_AMP)
 #include "singlecolourlookup_ccr.inl"
 #endif
 
 namespace squish {
 
+// -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
 class ColourSet;
 struct SingleColourLookup;
@@ -59,20 +61,26 @@ private:
 };
 #endif
 
+// -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 struct SingleColourFit_CCR : inherit_hlsl ColourFit_CCR
 {
 public_hlsl
-  void AssignSet (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
-  void Compress  (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block, const bool trans,
+  void AssignSet (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
+  void Compress  (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block, const bool trans,
 		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
 
 protected_hlsl
-  void Compress3 (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress3 (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
 		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
-  void Compress4 (tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress4 (tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
 		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
-  void Compress34(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+  void Compress34(tile_barrier barrier, const int thread,
+                  ColourSet_CCRr m_colours, out code64 block,
 		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
 
   void ComputeEndPoints(tile_barrier barrier, const int thread, const int is4,

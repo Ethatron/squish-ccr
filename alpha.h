@@ -31,6 +31,7 @@
 
 namespace squish {
 
+// -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
   void CompressAlphaDxt3( u8 const* rgba, int mask, void* block );
   void CompressAlphaDxt5( u8 const* rgba, int mask, void* block );
@@ -39,11 +40,19 @@ namespace squish {
   void DecompressAlphaDxt5( u8* rgba, void const* block );
 #endif
 
+// -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
-  void CompressAlphaDxt3(tile_barrier barrier, const int thread, pixel16 rgba, int mask, out code64 block,
+  void CompressAlphaDxt3(tile_barrier barrier, const int thread,
+			 pixel16 rgba, int mask, out code64 block,
 			 IndexBlockLUT yArr) amp_restricted;
-  void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int mask, out code64 block,
+  void CompressAlphaDxt5(tile_barrier barrier, const int thread,
+			 pixel16 rgba, int mask, out code64 block,
 			 IndexBlockLUT yArr) amp_restricted;
+
+/*void DecompressAlphaDxt3(tile_barrier barrier, const int thread,
+			   out pixel16 rgba, code64 block) amp_restricted;
+  void DecompressAlphaDxt5(tile_barrier barrier, const int thread,
+			   out pixel16 rgba, code64 block) amp_restricted;*/
 #endif
 
 } // namespace squish
