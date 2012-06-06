@@ -39,6 +39,7 @@ namespace squish {
 
 // -----------------------------------------------------------------------------
 
+// Skip enum-type in HLSL
 #if	!defined(USE_COMPUTE)
 enum
 {
@@ -254,20 +255,26 @@ void CompressImage( u8 const* rgba, int width, int height, void* blocks, int fla
 void DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags );
 #endif
 
-// -----------------------------------------------------------------------------
-
+/* *****************************************************************************
+ */
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 //! Typedef a quantity that is a single unsigned byte.
 typedef unsigned int ccr8;
 
+// Start- and end-point positions in arrays, for colors
 #define	CSTRT	0
 #define	CSTOP	1
 #define	CVALS	2
 
+// Start- and end-point positions in arrays, for alphas
 #define	ASTRT	0
 #define	ASTOP	1
 #define	AVALS	2
 
+/* -----------------------------------------------------------------------------
+ * Provide types for the C++ and AMP version, these a only for passing function
+ * arguments as references
+ */
 #if	!defined(USE_COMPUTE)
 typedef const int (&pixel16)[16][DIM];
 typedef float3 (&lineC2)[CVALS];
@@ -280,6 +287,10 @@ typedef ccr8 (&index16x2)[2][16];
 typedef ccr8 (&index8)[8];
 typedef unsigned int (&code64)[2];
 typedef float3 &float3r;
+/* -----------------------------------------------------------------------------
+ * Provide types for the DirectCompute version, these a only for passing function
+ * arguments as "references" (no such thing as pointers and refs in HLSL)
+ */
 #else
 typedef const int pixel16[16][DIM];
 typedef float3 lineC2[CVALS];
@@ -303,6 +314,8 @@ typedef float3 float3r;
 #define	SQUISH_FIT_RANGE		0
 #define	SQUISH_FIT_CLUSTER		1
 #define	SQUISH_FIT_CLUSTERITERATIVE	8
+
+// -----------------------------------------------------------------------------
 
 #if	defined(USE_AMP)
 struct ColourSet_CCR;
