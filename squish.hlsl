@@ -43,11 +43,22 @@
 #include "squish.cpp"
 
 // -----------------------------------------------------------------------------
-cbuffer cbCS
-{
-    uint bwidth;
-    uint bheight;
-};
+// can be configured:
+//
+//  #define READ_STRUCTURED	read from a StructuredBuffer<uint4>
+//  #undef  READ_STRUCTURED	read from a Texture2D<uint4>
+//  #define WRTE_STRUCTURED	write to a RWStructuredBuffer<uint2>
+//  #undef  WRTE_STRUCTURED	write to a RWTexture2D<uint2>
+//  #define SIZE_CBUFFER	you pass dimensions yourself
+//  #undef  SIZE_CBUFFER	we figure the dimensions out ourselfs
+//
+// Notes:
+// - READ_STRUCTURED is bandwidth intensive, read 4 ints, no datatype
+//   conversion
+// - not WRTE_STRUCTURED is a bit odd, and you have to setup a 2 component
+//   DXT imposter
+// - not WRTE_STRUCTURED + not READ_STRUCTURED will make all i/o dimensionality
+//   implicit, no need to calculate anything at all
 
 // -----------------------------------------------------------------------------
 // size of the input block in pixels (4x4 chars)
@@ -67,7 +78,20 @@ Texture2D<uint4> g_Input;
 #define CODES_SIZE_X		1
 #define CODES_SIZE		(CODES_SIZE_Y * CODES_SIZE_X)
 
+#ifdef	WRTE_STRUCTURED
 RWStructuredBuffer<uint2> g_Output;
+#else
+RWTexture2D<uint2> g_Output;
+#endif
+
+// -----------------------------------------------------------------------------
+#ifdef	SIZE_CBUFFER
+cbuffer cbCS
+{
+    uint bwidth;
+    uint bheight;
+};
+#endif
 
 // -----------------------------------------------------------------------------
 groupshared int ins[16][4];
@@ -81,13 +105,27 @@ void main(
 	uint3 GI : SV_GroupID
 )
 {
-  /* get the flattened thread-id */
+  /* get the flattened thread-id -------------------------------------------- */
+
 //const int thread = (                      TI.z) * (BLOCK_SIZE_Y           * BLOCK_SIZE_X         ) +
 //                   (                      TI.y) * (                         BLOCK_SIZE_X         ) +
 //                   (                      TI.x) * (                                    1         );
   const int thread = TR;
 
-  /* read the pixel(s) into thread-shared memory */
+  /* get the dimension of the used input type ------------------------------- */
+
+#ifndef	SIZE_CBUFFER
+  uint bwidth, bheight;
+
+#ifdef	READ_STRUCTURED
+  g_Input.GetDimensions(bheight, bwidth); bheight /= bwidth;
+#else
+  g_Input.GetDimensions(bwidth, bheight);
+#endif
+#endif
+
+  /* read the pixel(s) into thread-shared memory----------------------------- */
+
 #ifdef	READ_STRUCTURED
   // calculate the input "array" location
   const int posloc = (DI.z                      ) * (BLOCK_SIZE_Y * bheight * BLOCK_SIZE_X * bwidth) +
@@ -164,13 +202,26 @@ void main(
   /* wait for completion */
   GroupMemoryBarrierWithGroupSync();
 
+  /* write the code(s) into destination ------------------------------------- */
+
   /* throw it out */
   if (thread == 0) {
+#ifdef	WRTE_STRUCTURED
     // calculate the output "array" location
     const int cdeloc = (DI.z                      ) * (CODES_SIZE_Y * bheight * CODES_SIZE_X * bwidth) +
                        (DI.y                      ) * (                         CODES_SIZE_X * bwidth) +
                        (DI.x                      ) * (                                    1         );
 
     g_Output[cdeloc] = uint2(ous[1][0], ous[1][1]);
+#else
+    // calculate the output "texture" position
+//  const uint3 tcdloc = uint3((GI.x * CODES_SIZE_X + TI.x),
+//                             (GI.y * CODES_SIZE_Y + TI.y),
+//                             (GI.z *            1 + TI.z));
+    const uint2 tcdloc = uint2((GI.x * CODES_SIZE_X + TI.x),
+                               (GI.y * CODES_SIZE_Y + TI.y));
+
+    g_Output[tcdloc] = uint2(ous[1][0], ous[1][1]);
+#endif
   }
 }
