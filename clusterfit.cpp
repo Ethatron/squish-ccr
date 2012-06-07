@@ -522,9 +522,7 @@ void ClusterFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet
   const int count = m_colours.GetCount();
 
   const float4 two = 2.0;
-  const float4 one = 1.0f;
   const float4 half_half2 = float4(0.5f, 0.5f, 0.5f, 0.25f);
-  const float4 zero = 0.0f;
   const float4 half = 0.5f;
   const float4 grid = float4(31.0f, 63.0f, 31.0f, 0.0f);
   const float4 gridrcp = float4(1.0f/31.0f, 1.0f/63.0f, 1.0f/31.0f, 0.0f);
@@ -559,30 +557,30 @@ void ClusterFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet
 	float4 part2 = m_xsum_wsum - part1 - part0;
 
 	// compute least squares terms directly
-	float4 alphax_sum = mad( part1, half_half2, part0 );
+	float4 alphax_sum = muladd( part1, half_half2, part0 );
 	float4 alpha2_sum; alpha2_sum = alphax_sum.w;
 
-	float4 betax_sum = mad( part1, half_half2, part2 );
+	float4 betax_sum = muladd( part1, half_half2, part2 );
 	float4 beta2_sum; beta2_sum = betax_sum.w;
 
 	float4 alphabeta_sum; alphabeta_sum = ( part1*half_half2 ).w;
 
 	// compute the least-squares optimal points
-	float4 factor = recp( submul( alphabeta_sum, alphabeta_sum, alpha2_sum*beta2_sum ) );
+	float4 factor = recip( submul( alphabeta_sum, alphabeta_sum, alpha2_sum*beta2_sum ) );
 	float4 a = submul( betax_sum, alphabeta_sum, alphax_sum*beta2_sum )*factor;
 	float4 b = submul( alphax_sum, alphabeta_sum, betax_sum*alpha2_sum )*factor;
 
 	// clamp to the grid
-	a = minimum( one, maximum( zero, a ) );
-	b = minimum( one, maximum( zero, b ) );
-	a = truncate( mad( grid, a, half ) )*gridrcp;
-	b = truncate( mad( grid, b, half ) )*gridrcp;
+	a = saturate( a );
+	b = saturate( b );
+	a = truncate( muladd( grid, a, half ) )*gridrcp;
+	b = truncate( muladd( grid, b, half ) )*gridrcp;
 
 	// compute the error (we skip the constant xxsum)
-	float4 e1 = mad( a*a, alpha2_sum, b*b*beta2_sum );
+	float4 e1 = muladd( a*a, alpha2_sum, b*b*beta2_sum );
 	float4 e2 = submul( a, alphax_sum, a*b*alphabeta_sum );
 	float4 e3 = submul( b, betax_sum, e2 );
-	float4 e4 = mad( two, e3, e1 );
+	float4 e4 = muladd( two, e3, e1 );
 
 	// apply the metric to the error term
 	float4 e5 = e4 * m_metric4;
@@ -654,11 +652,9 @@ void ClusterFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet
   const int count = m_colours.GetCount();
 
   const float4 two = 2.0f;
-  const float4 one = 1.0f;
   const float4 onethird_onethird2 = float4( 1.0f/3.0f, 1.0f/3.0f, 1.0f/3.0f, 1.0f/9.0f );
   const float4 twothirds_twothirds2 = float4( 2.0f/3.0f, 2.0f/3.0f, 2.0f/3.0f, 4.0f/9.0f );
   const float4 twonineths = 2.0f/9.0f;
-  const float4 zero = 0.0f;
   const float4 half = 0.5f;
   const float4 grid = float4( 31.0f, 63.0f, 31.0f, 0.0f );
   const float4 gridrcp = float4( 1.0f/31.0f, 1.0f/63.0f, 1.0f/31.0f, 0.0f );
@@ -696,30 +692,30 @@ void ClusterFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet
 	  float4 part3 = m_xsum_wsum - part2 - part1 - part0;
 
 	  // compute least squares terms directly
-	  float4 alphax_sum = mad( part2, onethird_onethird2, mad( part1, twothirds_twothirds2, part0 ) );
+	  float4 alphax_sum = muladd( part2, onethird_onethird2, muladd( part1, twothirds_twothirds2, part0 ) );
 	  float4 alpha2_sum; alpha2_sum = alphax_sum.w;
 
-	  float4 betax_sum = mad( part1, onethird_onethird2, mad( part2, twothirds_twothirds2, part3 ) );
+	  float4 betax_sum = muladd( part1, onethird_onethird2, muladd( part2, twothirds_twothirds2, part3 ) );
 	  float4 beta2_sum; beta2_sum = betax_sum.w;
 
 	  float4 alphabeta_sum; alphabeta_sum = twonineths * ( part1 + part2 ).w;
 
 	  // compute the least-squares optimal points
-	  float4 factor = recp( submul( alphabeta_sum, alphabeta_sum, alpha2_sum*beta2_sum ) );
+	  float4 factor = recip( submul( alphabeta_sum, alphabeta_sum, alpha2_sum*beta2_sum ) );
 	  float4 a = submul( betax_sum, alphabeta_sum, alphax_sum*beta2_sum )*factor;
 	  float4 b = submul( alphax_sum, alphabeta_sum, betax_sum*alpha2_sum )*factor;
 
 	  // clamp to the grid
-	  a = minimum( one, maximum( zero, a ) );
-	  b = minimum( one, maximum( zero, b ) );
-	  a = truncate( mad( grid, a, half ) )*gridrcp;
-	  b = truncate( mad( grid, b, half ) )*gridrcp;
+	  a = saturate( a );
+	  b = saturate( b );
+	  a = truncate( muladd( grid, a, half ) )*gridrcp;
+	  b = truncate( muladd( grid, b, half ) )*gridrcp;
 
 	  // compute the error (we skip the constant xxsum)
-	  float4 e1 = mad( a*a, alpha2_sum, b*b*beta2_sum );
+	  float4 e1 = muladd( a*a, alpha2_sum, b*b*beta2_sum );
 	  float4 e2 = submul( a, alphax_sum, a*b*alphabeta_sum );
 	  float4 e3 = submul( b, betax_sum, e2 );
-	  float4 e4 = mad( two, e3, e1 );
+	  float4 e4 = muladd( two, e3, e1 );
 
 	  // apply the metric to the error term
 	  float4 e5 = e4 * m_metric4;

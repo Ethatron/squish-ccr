@@ -161,18 +161,22 @@ using namespace ::Concurrency;
 #define	wavefrnt_for(i, n)	const int i = thread;
 
 // map to intrinsics
-#define	powf	pow
-#define	sqrtf	sqrt
-#define	atan2f	atan2
-#define	floorf	floor
-#define	fabsf	abs
-#define	ceilf	ceil
-#define	sinf	sin
-#define	cosf	cos
+#define	powf		pow
+#define	sqrtf		sqrt
+#define	atan2f		atan2
+#define	floorf		floor
+#define	fabsf		abs
+#define	ceilf		ceil
+#define	sinf		sin
+#define	cosf		cos
 
 // map to intrinsics
-#define	maximum	max
-#define	minimum	min
+#define	maximum		max
+#define	minimum		min
+#define	minimax		clamp
+#define	muladd		mad
+#define	recip		rcp
+#define	truncate	trunc
 
 #define FLT_MAX         3.402823466e+38F        /* max value */
 #define FLT_EPSILON     1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */

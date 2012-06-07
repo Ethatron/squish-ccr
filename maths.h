@@ -400,26 +400,17 @@ namespace Concurrency {
 namespace vector_math {
 #endif
 
-  float3 mad( float3 left, float3 right, float3 offset ) amp_restricted
-  {
-    return float3(
-      left.x * right.x + offset.x,
-      left.y * right.y + offset.y,
-      left.z * right.z + offset.z
-    );
-  }
-
-  float dot( float3 left, float3 right ) amp_restricted
-  {
-    return left.x*right.x + left.y*right.y + left.z*right.z;
-  }
-
   float lengthsquared( float3 center ) amp_restricted
   {
     return dot(center, center);
   }
 
 #if	!defined(USE_COMPUTE)
+  float dot( float3 left, float3 right ) amp_restricted
+  {
+    return left.x*right.x + left.y*right.y + left.z*right.z;
+  }
+
   float3 minimum( float3 left, float3 right ) amp_restricted
   {
     return float3(
@@ -455,7 +446,30 @@ namespace vector_math {
       left.b > right.b ? left.b : right.b
     );
   }
-#endif
+
+  float3 minimax( float3 center, float3 left, float3 right ) amp_restricted
+  {
+    return minimum(maximum(center, left), right);
+  }
+
+  int3 minimax( int3 center, int3 left, int3 right ) amp_restricted
+  {
+    return minimum(maximum(center, left), right);
+  }
+
+  float3 saturate( float3 center ) amp_restricted
+  {
+    return minimax(center, 0.0f, 1.0f);
+  }
+
+  float3 muladd( float3 left, float3 right, float3 offset ) amp_restricted
+  {
+    return float3(
+      left.x * right.x + offset.x,
+      left.y * right.y + offset.y,
+      left.z * right.z + offset.z
+    );
+  }
 
   float3 truncate( float3 center ) amp_restricted
   {
@@ -465,6 +479,7 @@ namespace vector_math {
       center.z > 0.0f ? floorf( center.z ) : ceilf( center.z )
     );
   }
+#endif
 
 #if	!defined(USE_COMPUTE)
 }

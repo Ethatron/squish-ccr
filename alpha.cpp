@@ -63,10 +63,7 @@ namespace squish {
     int3 i = (int3)(a + 0.5f);
 
     // clamp to the limit
-    i = minimum(maximum(i, 0), limit);
-
-    // done
-    return i;
+    return minimax(i, 0, limit);
   }
 
   static int4 FloatToInt( float4 a, int4 limit ) amp_restricted
@@ -79,11 +76,7 @@ namespace squish {
     int4 i = (int4)(a + 0.5f);
 
     // clamp to the limit
-    i = maximum(i, 0);
-    i = minimum(i, limit);
-
-    // done
-    return i;
+    return minimax(i, 0, limit);
   }
 #endif
 #endif

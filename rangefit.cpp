@@ -311,23 +311,19 @@ void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_C
     cline[CSTOP] = values[max];
   }
 
-  // clamp the output to [0, 1]
-  const float3 one = 1.0f;
-  const float3 zero = 0.0f;
-
   // clamp to the grid and save
   const float3 grid = float3( 31.0f, 63.0f, 31.0f );
   const float3 gridrcp = float3( 1.0f/31.0f, 1.0f/63.0f, 1.0f/31.0f );
   const float3 half = 0.5f;
 
-  /* start = minimum(one, maximum(zero, start));
-   * end   = minimum(one, maximum(zero, end  ));
+  /* start = saturate(start);
+   * end   = saturate(end  );
    *
    * m_line[CSTRT] = truncate(grid * start + half) * gridrcp;
    * m_line[CSTOP] = truncate(grid * end   + half) * gridrcp;
    */
   threaded_for(cs, CVALS) {
-    cline[cs] = minimum(one, maximum(zero, cline[cs]));
+    cline[cs] = saturate(cline[cs]);
     m_line[cs] = truncate(grid * cline[cs] + half) * gridrcp;
   }
 }

@@ -50,31 +50,6 @@ namespace Concurrency {
 namespace vector_math {
 #endif
 
-  float4 recp( float4 center ) amp_restricted
-  {
-    return float4(
-      1.0f / center.x,
-      1.0f / center.y,
-      1.0f / center.z,
-      1.0f / center.w
-    );
-  }
-
-  float4 mad( float4 left, float4 right, float4 offset ) amp_restricted
-  {
-    return float4(
-      left.x * right.x + offset.x,
-      left.y * right.y + offset.y,
-      left.z * right.z + offset.z,
-      left.w * right.w + offset.w
-    );
-  }
-
-  float4 submul( float4 left, float4 right, float4 offset ) amp_restricted
-  {
-    return mad(-left, right, offset);
-  }
-
 #if	!defined(USE_COMPUTE)
   float4 minimum( float4 left, float4 right ) amp_restricted
   {
@@ -115,7 +90,47 @@ namespace vector_math {
       left.a > right.a ? left.a : right.a
     );
   }
+
+  float4 minimax( float4 center, float4 left, float4 right ) amp_restricted
+  {
+    return minimum(maximum(center, left), right);
+  }
+
+  int4 minimax( int4 center, int4 left, int4 right ) amp_restricted
+  {
+    return minimum(maximum(center, left), right);
+  }
+
+  float4 saturate( float4 center ) amp_restricted
+  {
+    return minimax(center, 0.0f, 1.0f);
+  }
+
+  float4 recip( float4 center ) amp_restricted
+  {
+    return float4(
+      1.0f / center.x,
+      1.0f / center.y,
+      1.0f / center.z,
+      1.0f / center.w
+    );
+  }
+
+  float4 muladd( float4 left, float4 right, float4 offset ) amp_restricted
+  {
+    return float4(
+      left.x * right.x + offset.x,
+      left.y * right.y + offset.y,
+      left.z * right.z + offset.z,
+      left.w * right.w + offset.w
+    );
+  }
 #endif
+
+  float4 submul( float4 left, float4 right, float4 offset ) amp_restricted
+  {
+    return muladd(-left, right, offset);
+  }
 
   float4 truncate( float4 center ) amp_restricted
   {
