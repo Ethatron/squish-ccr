@@ -400,17 +400,7 @@ namespace Concurrency {
 namespace vector_math {
 #endif
 
-  float lengthsquared( float3 center ) amp_restricted
-  {
-    return dot(center, center);
-  }
-
 #if	!defined(USE_COMPUTE)
-  float dot( float3 left, float3 right ) amp_restricted
-  {
-    return left.x*right.x + left.y*right.y + left.z*right.z;
-  }
-
   float3 minimum( float3 left, float3 right ) amp_restricted
   {
     return float3(
@@ -479,7 +469,17 @@ namespace vector_math {
       center.z > 0.0f ? floorf( center.z ) : ceilf( center.z )
     );
   }
+
+  float dot( float3 left, float3 right ) amp_restricted
+  {
+    return left.x*right.x + left.y*right.y + left.z*right.z;
+  }
 #endif
+
+  float lengthsquared( float3 center ) amp_restricted
+  {
+    return dot(center, center);
+  }
 
 #if	!defined(USE_COMPUTE)
 }
