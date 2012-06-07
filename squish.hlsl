@@ -42,21 +42,36 @@
 #include "clusterfit.cpp"
 #include "squish.cpp"
 
-RWStructuredBuffer<uint4> g_Input;
-RWStructuredBuffer<uint2> g_Output;
-
-#define BLOCK_SIZE_Y		4
-#define BLOCK_SIZE_X		4
-#define BLOCK_SIZE		(BLOCK_SIZE_Y * BLOCK_SIZE_X)
-
-groupshared int ins[16][4];
-groupshared unsigned int ous[2][2];
-
+// -----------------------------------------------------------------------------
 cbuffer cbCS
 {
     uint bwidth;
     uint bheight;
 };
+
+// -----------------------------------------------------------------------------
+// size of the input block in pixels (4x4 chars)
+#define BLOCK_SIZE_Y		4
+#define BLOCK_SIZE_X		4
+#define BLOCK_SIZE		(BLOCK_SIZE_Y * BLOCK_SIZE_X)
+
+#ifdef	READ_STRUCTURED
+StructuredBuffer<uint4> g_Input;
+#else
+Texture2D<uint4> g_Input;
+#endif
+
+// -----------------------------------------------------------------------------
+// size of the output codes in uint2s (2 or 4 longs)
+#define CODES_SIZE_Y		1
+#define CODES_SIZE_X		1
+#define CODES_SIZE		(CODES_SIZE_Y * CODES_SIZE_X)
+
+RWStructuredBuffer<uint2> g_Output;
+
+// -----------------------------------------------------------------------------
+groupshared int ins[16][4];
+groupshared unsigned int ous[2][2];
 
 [numthreads(BLOCK_SIZE_X, BLOCK_SIZE_Y, 1)]
 void main(
@@ -66,22 +81,37 @@ void main(
 	uint3 GI : SV_GroupID
 )
 {
+  /* get the flattened thread-id */
+//const int thread = (                      TI.z) * (BLOCK_SIZE_Y           * BLOCK_SIZE_X         ) +
+//                   (                      TI.y) * (                         BLOCK_SIZE_X         ) +
+//                   (                      TI.x) * (                                    1         );
+  const int thread = TR;
+
+  /* read the pixel(s) into thread-shared memory */
+#ifdef	READ_STRUCTURED
+  // calculate the input "array" location
   const int posloc = (DI.z                      ) * (BLOCK_SIZE_Y * bheight * BLOCK_SIZE_X * bwidth) +
                      (DI.y                      ) * (                         BLOCK_SIZE_X * bwidth) +
                      (DI.x                      ) * (                                    1         );
 //const int posloc = (GI.z *            1 + TI.z) * (BLOCK_SIZE_Y * bheight * BLOCK_SIZE_X * bwidth) +
 //                   (GI.y * BLOCK_SIZE_Y + TI.y) * (                         BLOCK_SIZE_X * bwidth) +
 //                   (GI.x * BLOCK_SIZE_X + TI.x) * (                                    1         );
-  const int tilloc = (GI.z *            1       ) * (BLOCK_SIZE_Y * bheight * BLOCK_SIZE_X * bwidth) +
-                     (GI.y * BLOCK_SIZE_Y       ) * (                         BLOCK_SIZE_X * bwidth) +
-                     (GI.x * BLOCK_SIZE_X       ) * (                                    1         );
-//const int thread = (                      TI.z) * (BLOCK_SIZE_Y           * BLOCK_SIZE_X         ) +
-//                   (                      TI.y) * (                         BLOCK_SIZE_X         ) +
-//                   (                      TI.x) * (                                    1         );
-  const int thread = TR;
+//const int tilloc = (GI.z *            1       ) * (BLOCK_SIZE_Y * bheight * BLOCK_SIZE_X * bwidth) +
+//                   (GI.y * BLOCK_SIZE_Y       ) * (                         BLOCK_SIZE_X * bwidth) +
+//                   (GI.x * BLOCK_SIZE_X       ) * (                                    1         );
 
-  /* read the pixel into thread-shared memory */
   uint4 pel = g_Input[posloc];
+#else
+  // calculate the input "texture" position
+//const uint3 texloc = uint3((GI.x * BLOCK_SIZE_X + TI.x),
+//                           (GI.y * BLOCK_SIZE_Y + TI.y),
+//                           (GI.z *            1 + TI.z));
+  const uint2 texloc = uint2((GI.x * BLOCK_SIZE_X + TI.x),
+                             (GI.y * BLOCK_SIZE_Y + TI.y));
+
+//uint4 pel = g_Input.Load(texloc);
+  uint4 pel = g_Input[texloc];
+#endif
 
   ins[thread][0] = pel.a;
   ins[thread][1] = pel.r;
@@ -136,10 +166,11 @@ void main(
 
   /* throw it out */
   if (thread == 0) {
-//  threaded_xch(g_Output[0], ous[1][0]);
-//  threaded_xch(g_Output[1], ous[1][1]);
+    // calculate the output "array" location
+    const int cdeloc = (DI.z                      ) * (CODES_SIZE_Y * bheight * CODES_SIZE_X * bwidth) +
+                       (DI.y                      ) * (                         CODES_SIZE_X * bwidth) +
+                       (DI.x                      ) * (                                    1         );
 
-//  threaded_xch(g_Output[posloc][thread], ous[1][thread]);
-    g_Output[posloc] = uint2(ous[1][0], ous[1][1]);
+    g_Output[cdeloc] = uint2(ous[1][0], ous[1][1]);
   }
 }
