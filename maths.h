@@ -187,7 +187,7 @@ public:
       std::min<float>( left.x, right.x ),
       std::min<float>( left.y, right.y ),
       std::min<float>( left.z, right.z )
-      );
+    );
   }
 
   friend Vec3 Max( Arg left, Arg right )
@@ -196,7 +196,15 @@ public:
       std::max<float>( left.x, right.x ),
       std::max<float>( left.y, right.y ),
       std::max<float>( left.z, right.z )
-      );
+    );
+  }
+
+  // clamp the output to [0, 1]
+  Vec3 Clamp() const {
+    Vec3 const one (1.0f);
+    Vec3 const zero(0.0f);
+
+    return Min(one, Max(zero, *this));
   }
 
   friend Vec3 Truncate( Arg v )
@@ -205,7 +213,7 @@ public:
       v.x > 0.0f ? std::floor( v.x ) : std::ceil( v.x ),
       v.y > 0.0f ? std::floor( v.y ) : std::ceil( v.y ),
       v.z > 0.0f ? std::floor( v.z ) : std::ceil( v.z )
-      );
+    );
   }
 
   friend class Col3;
@@ -373,6 +381,9 @@ public:
       );
   }
 
+  friend class Col4;
+  friend class Vec3;
+
 #if	!defined(USE_AMP)
 private:
 #endif
@@ -385,7 +396,7 @@ private:
 #if	!defined(USE_PRE)
 inline float LengthSquared( Vec3::Arg v )
 {
-	return Dot( v, v );
+  return Dot( v, v );
 }
 #endif
 
@@ -470,6 +481,15 @@ namespace vector_math {
     );
   }
 
+  float3 round( float3 center ) amp_restricted
+  {
+    return float3(
+      floorf( center.x + 0.5f ),
+      floorf( center.y + 0.5f ),
+      floorf( center.z + 0.5f )
+    );
+  }
+
   float dot( float3 left, float3 right ) amp_restricted
   {
     return left.x*right.x + left.y*right.y + left.z*right.z;
@@ -516,9 +536,20 @@ private:
 };
 #endif
 
+} // namespace squish
+
+#include "simd.h"
+
+/* -------------------------------------------------------------------------- */
+
+namespace squish {
+
 #if	!defined(USE_PRE)
-Sym3x3 ComputeWeightedCovariance( int n, Vec3 const* points, float const* weights );
-Vec3   ComputePrincipleComponent( Sym3x3 const& smatrix );
+Sym3x3 ComputeWeightedCovariance(int n, Vec3 const* points, float const* weights);
+Sym3x3 ComputeWeightedCovariance(int n, Vec4 const* points, float const* weights);
+Vec3   ComputePrincipleComponent(Sym3x3 const& smatrix);
+
+const float *ComputeGammaLUT(bool sRGB);
 #endif
 
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
@@ -532,6 +563,185 @@ typedef Sym3x3 Sym3x3r;
 Sym3x3 ComputeWeightedCovariance(tile_barrier barrier, const int thread, int n, point16 points, weight16 weights) amp_restricted;
 float3 ComputePrincipleComponent(tile_barrier barrier, const int thread, Sym3x3r smatrix) amp_restricted;
 #endif
+
+/* -------------------------------------------------------------------------- */
+
+#define	OLD_QUANTIZER
+
+template<const int rb, const int gb, const int bb>
+class cQuantizer3 {
+
+public:
+  static const int rm = (1 << rb) - 1;
+  static const int gm = (1 << gb) - 1;
+  static const int bm = (1 << bb) - 1;
+
+#ifdef	OLD_QUANTIZER
+  Vec3 gridrcp;
+  Vec3 grid;
+  Vec3 gridoff;
+
+  cQuantizer3() :
+    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm ),
+    grid   ( 1.0f * rm, 1.0f * gm, 1.0f * bm ),
+    gridoff( 0.5f     , 0.5f     , 0.5f      ) {
+  }
+
+  Vec3 SnapToLattice(Vec3 const &val) {
+    return Truncate(grid * val.Clamp() + gridoff) * gridrcp;
+  }
+
+  Vec3 SnapToLatticeClamped(Vec3 const &val) {
+    return Truncate(grid * val + gridoff) * gridrcp;
+  }
+#else
+  Vec3 gridrcp;
+  Vec3 grid;
+
+  cQuantizer3() :
+    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm ),
+    grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm ) {
+  }
+
+  Vec3 SnapToLattice(Vec3 const &val) {
+    return (Truncate(grid * val) * gridrcp).Clamp();
+  }
+
+  Vec3 SnapToLatticeClamped(Vec3 const &val) {
+    return Min(Truncate(grid * val) * gridrcp, Vec3(1.0f));
+  }
+#endif
+};
+
+template<const int rb, const int gb, const int bb, const int ab>
+class cQuantizer4 {
+
+public:
+  static const int rm = (1 << rb) - 1;
+  static const int gm = (1 << gb) - 1;
+  static const int bm = (1 << bb) - 1;
+  static const int am = (1 << ab) - 1;
+
+#ifdef	OLD_QUANTIZER
+  Vec4 gridrcp;
+  Vec4 grid;
+  Vec4 gridoff;
+
+  cQuantizer4() :
+    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, 0.0f ),
+    grid   ( 1.0f * rm, 1.0f * gm, 1.0f * bm, 0.0f ),
+    gridoff( 0.5f     , 0.5f     , 0.5f     , 0.0f ) {
+  }
+
+  Vec4 SnapToLattice(Vec4 const &val) {
+    return Truncate(MultiplyAdd(grid, val.Clamp(), gridoff)) * gridrcp;
+  }
+
+  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+    return Truncate(MultiplyAdd(grid, val, gridoff)) * gridrcp;
+  }
+#else
+  Vec4 gridrcp;
+  Vec4 grid;
+
+  cQuantizer4() :
+    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, 0.0f ),
+    grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, 0.0f ) {
+  }
+
+  Vec4 SnapToLattice(Vec4 const &val) {
+    return (Truncate(grid * val) * gridrcp).Clamp();
+  }
+
+  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+    return Min(Truncate(grid * val) * gridrcp, Vec4(1.0f));
+  }
+#endif
+};
+
+class vQuantizer {
+
+public:
+
+#ifdef	OLD_QUANTIZER
+  Vec4 gridrcp;
+  Vec4 grid;
+  Vec4 gridoff;
+
+  vQuantizer(const int rb, const int gb, const int bb, const int ab)/* :
+    rm(1 << rb), gm(1 << gb), bm(1 << bb), am(1 << ab),
+    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, ab ? 1.0f / am : 1.0f),
+    grid   ( 1.0f * rm, 1.0f * gm, 1.0f * bm, ab ? 1.0f * am : 1.0f),
+    gridoff( 0.5f     , 0.5f     , 0.5f     , ab ? 0.5f      : 0.0f)*/ {
+/*
+    grid.SetXYZWpow2<0>(rb, gb, bb, ab);
+    Vec4 mask = grid.IsNotOne();
+
+    grid   -= mask & Vec4(1.0f);
+    gridrcp = Reciprocal(grid);
+    gridoff = mask & Vec4(0.5f);
+*/
+    grid.SetXYZWpow2<0>(rb, gb, bb, ab ? ab : 8);
+
+    grid   -= Vec4(1.0f);
+    gridrcp = Reciprocal(grid);
+    gridoff = Vec4(0.5f);
+  }
+
+  Vec4 SnapToLattice(Vec4 const &val) {
+    return Truncate(MultiplyAdd(grid, val.Clamp(), gridoff)) * gridrcp;
+  }
+
+  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+    return Truncate(MultiplyAdd(grid, val, gridoff)) * gridrcp;
+  }
+
+  Col4 QuantizeToInt(Vec4 const &val) {
+    // rcomplete[?] = FloatToInt(grid * colour[?].Clamp());
+    return FloatToInt<false>(MultiplyAdd(grid, val.Clamp(), gridoff));
+  }
+
+  Col4 QuantizeToIntClamped(Vec4 const &val) {
+    // rcomplete[?] = FloatToInt(grid * colour[?]);
+    return FloatToInt<false>(MultiplyAdd(grid, val, gridoff));
+  }
+#else
+  Vec4 gridrcp;
+  Vec4 grid;
+  Col4 gridinv;
+
+  vQuantizer(const int rb, const int gb, const int bb, const int ab)/* :
+    rm(1 << rb), gm(1 << gb), bm(1 << bb), am(1 << ab),
+    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, ab ? 1.0f / am : 1.0f ),
+    grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, ab ? 1.0f + am : 1.0f )*/ {
+
+    gridinv.SetRGBApow2<0>(rb, gb, bb, ab);
+    grid.SetXYZWpow2<0>(rb, gb, bb, ab);
+    Vec4 mask = grid.IsNotOne();
+
+    grid -= mask & Vec4(1.0f);
+    gridrcp = Reciprocal(grid);
+    grid += mask & Vec4(1.0f);
+    grid -= gridrcp;
+  }
+
+  Vec4 SnapToLattice(Vec4 const &val) {
+    return (Truncate(val * grid) * gridrcp).Clamp();
+  }
+
+  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+    return Min(Truncate(val * grid) * gridrcp, Vec4(1.0f));
+  }
+
+  Col4 QuantizeToInt(Vec4 const &val) {
+    return ((FloatToInt<true>(SnapToLattice(val) * Vec4(255.0f))).Clamp() * gridinv) >> 8;
+  }
+
+  Col4 QuantizeToIntClamped(Vec4 const &val) {
+    return (FloatToInt<true>(SnapToLattice(val) * Vec4(255.0f)) * gridinv) >> 8;
+  }
+#endif
+};
 
 } // namespace squish
 

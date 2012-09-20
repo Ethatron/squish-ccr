@@ -35,10 +35,11 @@ void SingleColourFit_CCR::AssignSet(tile_barrier barrier, const int thread, Colo
 
   threaded_cse(0) {
     // initialise the color
-    m_colour = FloatToInt(values[0] * float3(255.0f, 255.0f, 255.0f), int3(255, 255, 255));
+//  m_colour = FloatToInt(values[0] * 255.0f, 255);
+    m_colour = QuantizeFloatToInt(values[0], 255);
 
     // initialise the index
-//    m_index = 0;
+//  m_index = 0;
   }
 }
 
@@ -46,10 +47,10 @@ void SingleColourFit_CCR::Compress(tile_barrier barrier, const int thread, Colou
 				   IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted
 {
   /* all or nothing branches, OK, same for all threads */
-  const bool isDxt1 = (trans);
-  if (isDxt1 && m_colours.IsTransparent())
+  const bool isBtc1 = (trans);
+  if (isBtc1 && m_colours.IsTransparent())
     Compress3 (barrier, thread, m_colours, block, yArr, lArr);
-  else if (!isDxt1)
+  else if (!isBtc1)
     Compress4 (barrier, thread, m_colours, block, yArr, lArr);
   else
     Compress34(barrier, thread, m_colours, block, yArr, lArr);

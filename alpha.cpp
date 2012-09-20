@@ -33,56 +33,14 @@
 #include <algorithm>
 #endif
 
+#include "inlineables.cpp"
+
 namespace squish {
 
-#ifndef FLOATTOINT
-#define FLOATTOINT
-  static int FloatToInt( float a, int limit ) ccr_restricted
-  {
-    // use ANSI round-to-zero behaviour to get round-to-nearest
-    int i = ( int )( a + 0.5f );
-
-    // clamp to the limit
-    if( i < 0 )
-      i = 0;
-    else if( i > limit )
-      i = limit;
-
-    // done
-    return i;
-  }
-
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
-  static int3 FloatToInt( float3 a, int3 limit ) amp_restricted
-  {
-#if	!defined(USE_COMPUTE)
-    using namespace Concurrency::vector_math;
-#endif
-
-    // use ANSI round-to-zero behaviour to get round-to-nearest
-    int3 i = (int3)(a + 0.5f);
-
-    // clamp to the limit
-    return minimax(i, 0, limit);
-  }
-
-  static int4 FloatToInt( float4 a, int4 limit ) amp_restricted
-  {
-#if	!defined(USE_COMPUTE)
-    using namespace Concurrency::vector_math;
-#endif
-
-    // use ANSI round-to-zero behaviour to get round-to-nearest
-    int4 i = (int4)(a + 0.5f);
-
-    // clamp to the limit
-    return minimax(i, 0, limit);
-  }
-#endif
-#endif
-
+/* *****************************************************************************
+ */
 #if	!defined(USE_PRE)
-void CompressAlphaDxt3( u8 const* rgba, int mask, void* block )
+void CompressAlphaBtc2( u8 const* rgba, int mask, void* block )
 {
   u8* bytes = reinterpret_cast< u8* >( block );
 
@@ -90,31 +48,32 @@ void CompressAlphaDxt3( u8 const* rgba, int mask, void* block )
   for( int i = 0; i < 8; ++i )
   {
     // quantise down to 4 bits
-    float alpha1 = ( float )rgba[8*i + 3] * ( 15.0f/255.0f );
-    float alpha2 = ( float )rgba[8*i + 7] * ( 15.0f/255.0f );
-    int quant1 = FloatToInt( alpha1, 15 );
-    int quant2 = FloatToInt( alpha2, 15 );
+    float alpha1 = (float)rgba[8 * i + 3] * (15.0f / 255.0f);
+    float alpha2 = (float)rgba[8 * i + 7] * (15.0f / 255.0f);
+
+    int quant1 = FloatToInt(alpha1, 15);
+    int quant2 = FloatToInt(alpha2, 15);
 
     // set alpha to zero where masked
-    int bit1 = 1 << ( 2*i );
-    int bit2 = 1 << ( 2*i + 1 );
-    if( ( mask & bit1 ) == 0 )
+    int bit1 = 1 << (2 * i + 0);
+    int bit2 = 1 << (2 * i + 1);
+
+    if ((mask & bit1) == 0)
       quant1 = 0;
-    if( ( mask & bit2 ) == 0 )
+    if ((mask & bit2) == 0)
       quant2 = 0;
 
     // pack into the byte
-    bytes[i] = ( u8 )( quant1 | ( quant2 << 4 ) );
+    bytes[i] = (u8)(quant1 | (quant2 << 4));
   }
 }
 
-void DecompressAlphaDxt3( u8* rgba, void const* block )
+void DecompressAlphaBtc2( u8* rgba, void const* block )
 {
   u8 const* bytes = reinterpret_cast< u8 const* >( block );
 
   // unpack the alpha values pairwise
-  for( int i = 0; i < 8; ++i )
-  {
+  for (int i = 0; i < 8; ++i) {
     // quantise down to 4 bits
     u8 quant = bytes[i];
 
@@ -123,17 +82,17 @@ void DecompressAlphaDxt3( u8* rgba, void const* block )
     u8 hi = quant & 0xf0;
 
     // convert back up to bytes
-    rgba[8*i + 3] = lo | ( lo << 4 );
-    rgba[8*i + 7] = hi | ( hi >> 4 );
+    rgba[8 * i + 3] = lo | (lo << 4);
+    rgba[8 * i + 7] = hi | (hi >> 4);
   }
 }
 
 static void FixRange( int& min, int& max, int steps )
 {
-  if( max - min < steps )
-    max = std::min<int>( min + steps, 255 );
-  if( max - min < steps )
-    min = std::max<int>( 0, max - steps );
+  if (max - min < steps)
+    max = std::min<int>(min + steps, 255);
+  if (max - min < steps)
+    min = std::max<int>(0, max - steps);
 }
 
 static int FitCodes( u8 const* rgba, int mask, u8 const* codes, u8* indices )
@@ -266,7 +225,7 @@ static void WriteAlphaBlock7( int alpha0, int alpha1, u8 const* indices, void* b
   }
 }
 
-void CompressAlphaDxt5( u8 const* rgba, int mask, void* block )
+void CompressAlphaBtc3( u8 const* rgba, int mask, void* block )
 {
   // get the range for 5-alpha and 7-alpha interpolation
   int min5 = 255;
@@ -331,7 +290,7 @@ void CompressAlphaDxt5( u8 const* rgba, int mask, void* block )
     WriteAlphaBlock7( min7, max7, indices7, block );
 }
 
-void DecompressAlphaDxt5( u8* rgba, void const* block )
+void DecompressAlphaBtc3( u8* rgba, void const* block )
 {
   // get the two alpha values
   u8 const* bytes = reinterpret_cast< u8 const* >( block );
@@ -385,6 +344,8 @@ void DecompressAlphaDxt5( u8* rgba, void const* block )
 }
 #endif
 
+/* *****************************************************************************
+ */
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 /* C++ AMP version */
 static void FixRange(out lineA2 aline, int steps) amp_restricted
@@ -549,7 +510,7 @@ static void WriteAlphaBlock7(tile_barrier barrier, const int thread, lineA2 alph
 #endif
 
 /* C++ AMP version */
-void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int mask, out code64 block,
+void CompressAlphaBtc3(tile_barrier barrier, const int thread, pixel16 rgba, int mask, out code64 block,
 		       IndexBlockLUT yArr) amp_restricted
 {
   // get the range for 5-alpha and 7-alpha interpolation
@@ -560,6 +521,10 @@ void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int
   tile_static int error[ERRS];
 #endif
 
+  // same for all
+  const int ewch = thread & 1;
+  const int cpos = thread >> 1;
+
   /* initialize:
    *
    *  aline[ERR7][ASTRT] = 255;
@@ -568,9 +533,6 @@ void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int
    *  aline[ERR5][ASTOP] = 0;
    */
   threaded_for(li, CNUMS) {
-    const int ewch = li & 1;
-    const int cpos = li >> 1;
-
     aline[ewch][cpos] = (cpos ? 0 : 255);
   }
 
@@ -596,7 +558,6 @@ void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int
    *  FixRange(aline[ERR7], 7);
    */
   threaded_for(ec, ERRS) {
-    const int ewch = ec;
     const int step = 5 + (ec * 2);
 
     /* handle the case that no valid range was found
@@ -619,9 +580,6 @@ void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int
    *  acodes[ERR7][1] = (ccr8)aline[ERR7][ASTOP];
    */
   threaded_for(ei, CNUMS) {
-    const int ewch = ei & 1;
-    const int cpos = ei >> 1;
-
     acodes[ewch][cpos] = (ccr8)aline[ewch][cpos];
   }
 
@@ -656,7 +614,7 @@ void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int
    *  erros[ERR7] = FitCodes(barrier, thread, rgba, mask, acodes[ERR7], matched[ERR7]);
    */
   threaded_for(ef, ERRS) {
-    error[ef] = FitCodes(barrier, thread, rgba, mask, acodes[ef], matched[ef]);
+    error[ewch] = FitCodes(barrier, thread, rgba, mask, acodes[ewch], matched[ewch]);
   }
 
   // AMP: final reduction (make the choice)
@@ -681,18 +639,19 @@ void CompressAlphaDxt5(tile_barrier barrier, const int thread, pixel16 rgba, int
 #endif
 
 /* C++ AMP version */
-void CompressAlphaDxt3(tile_barrier barrier, const int thread, pixel16 rgba, int mask, code64 block,
+void CompressAlphaBtc2(tile_barrier barrier, const int thread, pixel16 rgba, int mask, code64 block,
 		         IndexBlockLUT yArr) amp_restricted
 {
 #if	!defined(USE_COMPUTE)
   tile_static unsigned int frags[4];
 #endif
 
+  // same for all
+  const int opos = thread << 2;
+  const int hilo = thread >> 1;
+
   // quantise and pack the alpha values quad-wise (AMP: prefer vectorization over parallelism)
   threaded_for(qs, 4) {
-    const int opos = qs << 2;
-    const int hilo = qs >> 1;
-
     // quantise down to 4 bits
     float4 alpha = float4(
       (float)rgba[opos + 0][0],
@@ -701,7 +660,7 @@ void CompressAlphaDxt3(tile_barrier barrier, const int thread, pixel16 rgba, int
       (float)rgba[opos + 3][0]
     );
 
-    int4 quant = FloatToInt(alpha * 15.0f / 255.0f, 15);
+    int4 quant = QuantizeFloatToInt(alpha * 1.0f / 255.0f, 15);
 
     // set alpha to zero where masked
     quant.x = ((mask >> (opos + 0)) & 1) ? quant.x : 0;

@@ -34,202 +34,6 @@
 
 namespace squish {
 
-#if	!defined(USE_COMPUTE)
-#define VEC4_CONST( X ) Vec4( X )
-
-class Vec4
-{
-public:
-  typedef Vec4 const& Arg;
-
-  Vec4() {}
-
-  explicit Vec4( float _s )
-    : x( _s ),
-    y( _s ),
-    z( _s ),
-    w( _s )
-  {
-  }
-
-  Vec4( float _x, float _y, float _z, float _w )
-    : x( _x ),
-    y( _y ),
-    z( _z ),
-    w( _w )
-  {
-  }
-
-  Vec4( Vec3 _v, float _w )
-    : x( _v.x ),
-    y( _v.y ),
-    z( _v.z ),
-    w( _w )
-  {
-  }
-
-  Vec3 GetVec3() const
-  {
-    return Vec3( x, y, z );
-  }
-
-  Vec4 SplatX() const { return Vec4( x ); }
-  Vec4 SplatY() const { return Vec4( y ); }
-  Vec4 SplatZ() const { return Vec4( z ); }
-  Vec4 SplatW() const { return Vec4( w ); }
-
-  operator Vec3() const
-  {
-    Vec3 v;
-    v.x = x;
-    v.y = y;
-    v.z = z;
-    return v;
-  }
-
-  Vec4 operator-() const
-  {
-    Vec4 v;
-    v.x = -x;
-    v.y = -y;
-    v.z = -z;
-    v.w = -w;
-    return v;
-  }
-
-  Vec4& operator=(const float &f)
-  {
-    x = f;
-    y = f;
-    z = f;
-    w = f;
-    return *this;
-  }
-
-  Vec4& operator+=( Arg v )
-  {
-    x += v.x;
-    y += v.y;
-    z += v.z;
-    w += v.w;
-    return *this;
-  }
-
-  Vec4& operator-=( Arg v )
-  {
-    x -= v.x;
-    y -= v.y;
-    z -= v.z;
-    w -= v.w;
-    return *this;
-  }
-
-  Vec4& operator*=( Arg v )
-  {
-    x *= v.x;
-    y *= v.y;
-    z *= v.z;
-    w *= v.w;
-    return *this;
-  }
-
-  friend Vec4 operator+( Vec4::Arg left, Vec4::Arg right  )
-  {
-    Vec4 copy( left );
-    return copy += right;
-  }
-
-  friend Vec4 operator-( Vec4::Arg left, Vec4::Arg right  )
-  {
-    Vec4 copy( left );
-    return copy -= right;
-  }
-
-  friend Vec4 operator*( Vec4::Arg left, Vec4::Arg right  )
-  {
-    Vec4 copy( left );
-    return copy *= right;
-  }
-
-  friend Vec4 operator*( Vec4::Arg left, float right  )
-  {
-    Vec4 copy( left );
-    copy.x *= right;
-    copy.y *= right;
-    copy.z *= right;
-    copy.w *= right;
-    return copy;
-  }
-
-  //! Returns a*b + c
-  friend Vec4 MultiplyAdd( Vec4::Arg a, Vec4::Arg b, Vec4::Arg c )
-  {
-    return a*b + c;
-  }
-
-  //! Returns -( a*b - c )
-  friend Vec4 NegativeMultiplySubtract( Vec4::Arg a, Vec4::Arg b, Vec4::Arg c )
-  {
-    return c - a*b;
-  }
-
-  friend Vec4 Reciprocal( Vec4::Arg v )
-  {
-    return Vec4(
-      1.0f/v.x,
-      1.0f/v.y,
-      1.0f/v.z,
-      1.0f/v.w
-      );
-  }
-
-  friend Vec4 Min( Vec4::Arg left, Vec4::Arg right )
-  {
-    return Vec4(
-      std::min<float>( left.x, right.x ),
-      std::min<float>( left.y, right.y ),
-      std::min<float>( left.z, right.z ),
-      std::min<float>( left.w, right.w )
-      );
-  }
-
-  friend Vec4 Max( Vec4::Arg left, Vec4::Arg right )
-  {
-    return Vec4(
-      std::max<float>( left.x, right.x ),
-      std::max<float>( left.y, right.y ),
-      std::max<float>( left.z, right.z ),
-      std::max<float>( left.w, right.w )
-      );
-  }
-
-  friend Vec4 Truncate( Vec4::Arg v )
-  {
-    return Vec4(
-      v.x > 0.0f ? std::floor( v.x ) : std::ceil( v.x ),
-      v.y > 0.0f ? std::floor( v.y ) : std::ceil( v.y ),
-      v.z > 0.0f ? std::floor( v.z ) : std::ceil( v.z ),
-      v.w > 0.0f ? std::floor( v.w ) : std::ceil( v.w )
-      );
-  }
-
-  friend bool CompareAnyLessThan( Vec4::Arg left, Vec4::Arg right )
-  {
-    return left.x < right.x
-      || left.y < right.y
-      || left.z < right.z
-      || left.w < right.w;
-  }
-
-#if	!defined(USE_AMP)
-private:
-#endif
-  float x;
-  float y;
-  float z;
-  float w;
-};
-
 class Col4
 {
 public:
@@ -239,25 +43,57 @@ public:
 
   explicit Col4( int _s )
     : r( _s ),
-    g( _s ),
-    b( _s ),
-    a( _s )
+      g( _s ),
+      b( _s ),
+      a( _s )
+  {
+  }
+
+  explicit Col4( float _s )
+    : r( (int)_s ),
+      g( (int)_s ),
+      b( (int)_s ),
+      a( (int)_s )
   {
   }
 
   Col4( int _r, int _g, int _b, int _a )
     : r( _r ),
-    g( _g ),
-    b( _b ),
-    a( _a )
+      g( _g ),
+      b( _b ),
+      a( _a )
   {
   }
 
   Col4( Col3 _v, int _w )
     : r( _v.r ),
-    g( _v.g ),
-    b( _v.b ),
-    a( _w )
+      g( _v.g ),
+      b( _v.b ),
+      a( _w )
+  {
+  }
+
+  explicit Col4( unsigned int _s )
+    : r( _s ),
+      g( _s ),
+      b( _s ),
+      a( _s )
+  {
+  }
+
+  explicit Col4( const unsigned int (&_rgba)[4] )
+    : r( _rgba[0] ),
+      g( _rgba[1] ),
+      b( _rgba[2] ),
+      a( _rgba[3] )
+  {
+  }
+
+  explicit Col4( u8 const *_source )
+    : r( _source[0] ),
+      g( _source[1] ),
+      b( _source[2] ),
+      a( _source[3] )
   {
   }
 
@@ -266,27 +102,62 @@ public:
     return Col3( r, g, b );
   }
 
-  Col4 SplatX() const { return Col4( r ); }
-  Col4 SplatY() const { return Col4( g ); }
-  Col4 SplatZ() const { return Col4( b ); }
-  Col4 SplatW() const { return Col4( a ); }
+  int GetLong() const
+  {
+    return r;
+  }
+
+  Col4 SetLong( int v ) const
+  {
+    return Col4 ( v, 0, 0, 0 );
+  }
+
+  int R() const { r; }
+  int G() const { g; }
+  int B() const { b; }
+  int A() const { a; }
+
+  Col4 SplatR() const { return Col4( r ); }
+  Col4 SplatG() const { return Col4( g ); }
+  Col4 SplatB() const { return Col4( b ); }
+  Col4 SplatA() const { return Col4( a ); }
+
+  template<const int inv>
+  void SetRGBA( int _r, int _g, int _b, int _a ) {
+    r = (inv ? inv - _r : _r);
+    g = (inv ? inv - _g : _g);
+    b = (inv ? inv - _b : _b);
+    a = (inv ? inv - _a : _a);
+  }
+
+  template<const int inv>
+  void SetRGBApow2( int _r, int _g, int _b, int _a ) {
+    r = 1 << (inv ? inv - _r : _r);
+    g = 1 << (inv ? inv - _g : _g);
+    b = 1 << (inv ? inv - _b : _b);
+    a = 1 << (inv ? inv - _a : _a);
+  }
 
   operator Col3() const
   {
     Col3 v;
+
     v.r = r;
     v.g = g;
     v.b = b;
+
     return v;
   }
 
   Col4 operator-() const
   {
     Col4 v;
+
     v.r = -r;
     v.g = -g;
     v.b = -b;
     v.a = -a;
+
     return v;
   }
 
@@ -296,6 +167,57 @@ public:
     g = f;
     b = f;
     a = f;
+
+    return *this;
+  }
+
+  Col4& operator&=( Arg v )
+  {
+    r &= v.r;
+    g &= v.g;
+    b &= v.b;
+    a &= v.a;
+
+    return *this;
+  }
+
+  Col4& operator^=( Arg v )
+  {
+    r ^= v.r;
+    g ^= v.g;
+    b ^= v.b;
+    a ^= v.a;
+
+    return *this;
+  }
+
+  Col4& operator|=( Arg v )
+  {
+    r |= v.r;
+    g |= v.g;
+    b |= v.b;
+    a |= v.a;
+
+    return *this;
+  }
+
+  Col4& operator>>=( const int n )
+  {
+    r >>= n;
+    g >>= n;
+    b >>= n;
+    a >>= n;
+
+    return *this;
+  }
+
+  Col4& operator<<=( const int n )
+  {
+    r <<= n;
+    g <<= n;
+    b <<= n;
+    a <<= n;
+
     return *this;
   }
 
@@ -305,6 +227,7 @@ public:
     g += v.g;
     b += v.b;
     a += v.a;
+
     return *this;
   }
 
@@ -314,6 +237,7 @@ public:
     g -= v.g;
     b -= v.b;
     a -= v.a;
+
     return *this;
   }
 
@@ -323,7 +247,38 @@ public:
     g *= v.g;
     b *= v.b;
     a *= v.a;
+
     return *this;
+  }
+
+  friend Col4 operator&( Col4::Arg left, Col4::Arg right  )
+  {
+    Col4 copy( left );
+    return copy &= right;
+  }
+
+  friend Col4 operator^( Col4::Arg left, Col4::Arg right  )
+  {
+    Col4 copy( left );
+    return copy ^= right;
+  }
+
+  friend Col4 operator|( Col4::Arg left, Col4::Arg right  )
+  {
+    Col4 copy( left );
+    return copy |= right;
+  }
+
+  friend Col4 operator>>( Col4::Arg left, int n  )
+  {
+    Col4 copy( left );
+    return copy >>= n;
+  }
+
+  friend Col4 operator<<( Col4::Arg left, int n  )
+  {
+    Col4 copy( left );
+    return copy <<= n;
   }
 
   friend Col4 operator+( Col4::Arg left, Col4::Arg right  )
@@ -347,11 +302,243 @@ public:
   friend Col4 operator*( Col4::Arg left, int right  )
   {
     Col4 copy( left );
+
     copy.r *= right;
     copy.g *= right;
     copy.b *= right;
     copy.a *= right;
+
     return copy;
+  }
+
+  friend Col4 ShiftLeft( Col4::Arg a, int n )
+  {
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    if (n >= 64) {
+      bb[1] = (ba[0] << (n - 64));
+      bb[0] = 0;
+    }
+    else {
+      bb[1] = (ba[1] << (n)) | (ba[0] >> (64 - n));
+      bb[0] = (ba[0] << (n));
+    }
+
+    return b;
+  }
+
+  template<const int n>
+  friend Col4 ShiftLeft( Col4::Arg a )
+  {
+    return ShiftLeft( a, n );
+  }
+
+  friend Col4 ShiftRight( Col4::Arg a, int n )
+  {
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    if (n >= 64) {
+      bb[0] = (ba[1] >> (n - 64));
+      bb[1] = 0;
+    }
+    else {
+      bb[0] = (ba[0] >> (n)) | (ba[1] << (64 - n));
+      bb[1] = (ba[1] >> (n));
+    }
+
+    return b;
+  }
+
+  template<const int n>
+  friend Col4 ShiftRight( Col4::Arg a )
+  {
+    return ShiftRight( a, n );
+  }
+
+  template<const int n>
+  friend Col4 ShiftRightHalf( Col4::Arg a )
+  {
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bb[0] = (ba[0] >> (n));
+    bb[1] = (ba[1] >> (n));
+
+    return b;
+  }
+
+  friend Col4 ShiftRightHalf( Col4::Arg a, int n )
+  {
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bb[0] = (ba[0] >> (n));
+    bb[1] = (ba[1] >> (n));
+
+    return b;
+  }
+
+  friend Col4 ShiftRightHalf( Col4::Arg a, Col4::Arg b )
+  {
+    Col4 c;
+
+    unsigned__int64 *bc = (unsigned__int64 *)&c.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bc[0] = (ba[0] >> (b.r));
+    bc[1] = (ba[1] >> (b.r));
+
+    return c;
+  }
+
+  template<const int n>
+  friend Col4 ShiftLeftHalf( Col4::Arg a )
+  {
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bb[0] = (ba[0] << (n));
+    bb[1] = (ba[1] << (n));
+
+    return b;
+  }
+
+  friend Col4 ShiftLeftHalf( Col4::Arg a, const int n )
+  {
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bb[0] = (ba[0] << (n));
+    bb[1] = (ba[1] << (n));
+
+    return b;
+  }
+
+  template<const int r, const int g, const int b, const int a>
+  friend Col4 ShiftLeftLo( Col4::Arg v )
+  {
+    Col4 r;
+
+    r.r <<= v.r;
+    r.g <<= v.g;
+    r.b <<= v.b;
+    r.a <<= v.a;
+
+    return r;
+  }
+
+  template<const int n, const int p>
+  friend Col4 MaskBits( Col4::Arg a )
+  {
+    if ((p + n) <= 0)
+      return Col4(0);
+    if ((p + n) >= 64)
+      return a;
+
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bb[0] = (ba[0] & (~(0xFFFFFFFFFFFFFFFFLL << (p + n))));
+    bb[1] = (ba[1] &    0                                );
+
+    return b;
+  }
+
+  friend Col4 MaskBits( Col4::Arg a, const int n, const int p )
+  {
+    if ((p + n) >= 64)
+      return a;
+
+    Col4 b;
+
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bb[0] = (ba[0] & (~(0xFFFFFFFFFFFFFFFFLL << (p + n))));
+    bb[1] = (ba[1] &    0                                );
+
+    return b;
+  }
+
+  template<const int n, const int p>
+  friend Col4 CopyBits( Col4::Arg left, Col4::Arg right )
+  {
+    if (!n)
+      return left;
+    if (!p)
+      return MaskBits<n, 0>(right);
+    if ((p + n) >= 64)
+      return (left) | ShiftLeftHalf<p>(right);
+
+    return MaskBits<p, 0>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+  }
+
+  friend Col4 CopyBits( Col4::Arg left, Col4 right, const int n, const int p )
+  {
+    return MaskBits(left, p, 0) | MaskBits(ShiftLeftHalf(right, p), n, p);
+  }
+
+  template<const int n, const int p>
+  friend Col4 ExtrBits( Col4::Arg a )
+  {
+    if (!n)
+      return Col4(0);
+    if (!p)
+      return MaskBits<n, 0>(a);
+    if ((n + p) >= 64)
+      return ShiftRightHalf<p>(a);
+
+    return MaskBits<n, 0>(ShiftRightHalf<p>(a));
+  }
+
+  friend Col4 ExtrBits( Col4::Arg a, const int n, const int p )
+  {
+    return MaskBits(ShiftRightHalf(a, p), n, 0);
+  }
+
+  template<const int n, const int p>
+  friend void ExtrBits( Col4::Arg left, Col4 &right )
+  {
+    right  = ExtrBits<n, p>( left );
+  }
+
+  template<const int n, const int p>
+  friend void ConcBits( Col4::Arg left, Col4 &right )
+  {
+    right  = ShiftLeft<32>( right );
+    if (n > 0)
+      right |= ExtrBits<n, p>( left );
+  }
+
+  template<const int n, const int p>
+  friend void ReplBits( Col4::Arg left, Col4 &right )
+  {
+    if (!n)
+      return;
+    if ((n < 0)) {
+      right = ExtrBits<-n, p>( left );
+      right = Col4(right.r, right.r, right.r, right.a);
+    }
+    else {
+      right = ExtrBits< n, p>( left );
+      right = Col4(right.r, right.r, right.r, right.r);
+    }
   }
 
   //! Returns a*b + c
@@ -366,6 +553,62 @@ public:
     return c - a*b;
   }
 
+  template<const int f, const int t>
+  friend Col4 Shuffle( Arg a )
+  {
+    Col4 b = a;
+
+    int *bb = (int *)&b.r;
+    int *ba = (int *)&a.r;
+
+    bb[t] = ba[f];
+
+    return b;
+  }
+
+  template<const int f, const int t>
+  friend Col4 Exchange( Arg a )
+  {
+    Col4 b = a;
+
+    int *bb = (int *)&b.r;
+    int *ba = (int *)&a.r;
+
+    std::swap(bb[t], ba[f]);
+
+    return b;
+  }
+
+  friend Col4 HorizontalAdd( Arg a )
+  {
+    return Col4( a.r + a.g + a.b + a.a );
+  }
+
+  friend Col4 HorizontalAdd( Arg a, Arg b )
+  {
+    return HorizontalAdd( a ) + HorizontalAdd( b );
+  }
+
+  friend Col4 HorizontalAddTiny( Arg a )
+  {
+    return HorizontalAdd( a );
+  }
+
+  friend Col4 HorizontalAddTiny( Arg a, Arg b )
+  {
+    return HorizontalAdd( a, b );
+  }
+
+  friend Col4 Dot( Arg left, Arg right )
+  {
+    return HorizontalAdd( left*right );
+  }
+
+  friend Col4 DotTiny( Arg left, Arg right )
+  {
+    return HorizontalAddTiny( left*right );
+  }
+
   friend Col4 Min( Col4::Arg left, Col4::Arg right )
   {
     return Col4(
@@ -373,7 +616,7 @@ public:
       std::min<int>( left.g, right.g ),
       std::min<int>( left.b, right.b ),
       std::min<int>( left.a, right.a )
-      );
+    );
   }
 
   friend Col4 Max( Col4::Arg left, Col4::Arg right )
@@ -383,15 +626,143 @@ public:
       std::max<int>( left.g, right.g ),
       std::max<int>( left.b, right.b ),
       std::max<int>( left.a, right.a )
-      );
+    );
   }
 
   friend bool CompareAnyLessThan( Col4::Arg left, Col4::Arg right )
   {
-    return left.r < right.r
-      || left.g < right.g
-      || left.b < right.b
-      || left.a < right.a;
+    return
+      left.r < right.r ||
+      left.g < right.g ||
+      left.b < right.b ||
+      left.a < right.a;
+  }
+
+  friend bool CompareAllEqualTo( Col4::Arg left, Col4::Arg right )
+  {
+    return
+      left.r == right.r &&
+      left.g == right.g &&
+      left.b == right.b &&
+      left.a == right.a;
+  }
+
+  friend Col4 IsNotZero( Col4::Arg v )
+  {
+    return Col4(
+      v.r > 0 ? ~0 : 0,
+      v.g > 0 ? ~0 : 0,
+      v.b > 0 ? ~0 : 0,
+      v.a > 0 ? ~0 : 0
+    );
+  }
+
+  friend Col4 IsOne( Col4::Arg v )
+  {
+    return Col4(
+      v.r == 0xFF ? ~0 : 0,
+      v.g == 0xFF ? ~0 : 0,
+      v.b == 0xFF ? ~0 : 0,
+      v.a == 0xFF ? ~0 : 0
+    );
+  }
+
+  friend Col4 TransferA( Col4::Arg left, Col4::Arg right )
+  {
+    return Col4( left.r, left.g, left.b, right.a );
+  }
+
+  friend Col4 KillA( Col4::Arg left )
+  {
+    return Col4( left.r, left.g, left.b, 0xFF );
+  }
+
+  friend void PackBytes( Col4::Arg v, int &loc )
+  {
+    loc  = v.a; loc <<= 8;
+    loc |= v.b; loc <<= 8;
+    loc |= v.g; loc <<= 8;
+    loc |= v.r; loc <<= 0;
+  }
+
+  // clamp the output to [0, 1]
+  Col4 Clamp() const {
+    Col4 const one (0xFF);
+    Col4 const zero(0x00);
+
+    return Min(one, Max(zero, *this));
+  }
+
+  friend void LoadAligned( Col4 &a, Col4 &b, Col4::Arg c )
+  {
+    a.r = c.r;
+    a.g = c.g;
+
+    b.b = c.b;
+    b.a = c.a;
+  }
+
+  friend void LoadAligned( Col4 &a, void const *source )
+  {
+    a.r = ((int *)source)[0];
+    a.g = ((int *)source)[1];
+
+    a.b = ((int *)source)[2];
+    a.a = ((int *)source)[3];
+  }
+
+  friend void LoadAligned( Col4 &a, Col4 &b, void const *source )
+  {
+    a.r = ((int *)source)[0];
+    a.g = ((int *)source)[1];
+
+    b.b = ((int *)source)[2];
+    b.a = ((int *)source)[3];
+  }
+
+  friend void LoadUnaligned( Col4 &a, Col4 &b, void const *source )
+  {
+    a.r = ((int *)source)[0];
+    a.g = ((int *)source)[1];
+
+    b.b = ((int *)source)[2];
+    b.a = ((int *)source)[3];
+  }
+
+  friend void StoreAligned( Col4::Arg a, Col4::Arg b, Col4 &c )
+  {
+    c.r = a.r;
+    c.g = a.g;
+
+    c.b = b.b;
+    c.a = b.a;
+  }
+
+  friend void StoreAligned( Col4::Arg a, void *destination )
+  {
+    ((int *)destination)[0] = a.r;
+    ((int *)destination)[1] = a.g;
+
+    ((int *)destination)[2] = a.b;
+    ((int *)destination)[3] = a.a;
+  }
+
+  friend void StoreAligned( Col4::Arg a, Col4::Arg b, void *destination )
+  {
+    ((int *)destination)[0] = a.r;
+    ((int *)destination)[1] = a.g;
+
+    ((int *)destination)[2] = b.b;
+    ((int *)destination)[3] = b.a;
+  }
+
+  friend void StoreUnaligned( Col4::Arg a, Col4::Arg b, void *destination )
+  {
+    ((int *)destination)[0] = a.r;
+    ((int *)destination)[1] = a.g;
+
+    ((int *)destination)[2] = b.b;
+    ((int *)destination)[3] = b.a;
   }
 
 #if	!defined(USE_AMP)
@@ -402,9 +773,436 @@ private:
   int b;
   int a;
 };
+
+#if	!defined(USE_COMPUTE)
+#define VEC4_CONST( X ) Vec4( X )
+
+class Vec4
+{
+public:
+  typedef Vec4 const& Arg;
+
+  Vec4() {}
+
+  explicit Vec4( float _s )
+    : x( _s ),
+      y( _s ),
+      z( _s ),
+      w( _s )
+  {
+  }
+
+  explicit Vec4( int _s )
+    : x( (float) _s ),
+      y( (float) _s ),
+      z( (float) _s ),
+      w( (float) _s )
+  {
+  }
+
+  Vec4( float _x, float _y, float _z, float _w )
+    : x( _x ),
+      y( _y ),
+      z( _z ),
+      w( _w )
+  {
+  }
+
+  Vec4( Vec3 _v, float _w )
+    : x( _v.x ),
+      y( _v.y ),
+      z( _v.z ),
+      w( _w )
+  {
+  }
+
+  Vec3 GetVec3() const
+  {
+    return Vec3( x, y, z );
+  }
+
+  float X() const { return x; }
+  float Y() const { return y; }
+  float Z() const { return z; }
+  float W() const { return w; }
+
+  float &GetX() { return x; }
+  float &GetY() { return y; }
+  float &GetZ() { return z; }
+  float &GetW() { return w; }
+  // let the compiler figure this one out, probably spills to memory
+  float &GetO(int o) { return ((float *)this)[o]; }
+
+  Vec4 SplatX() const { return Vec4( x ); }
+  Vec4 SplatY() const { return Vec4( y ); }
+  Vec4 SplatZ() const { return Vec4( z ); }
+  Vec4 SplatW() const { return Vec4( w ); }
+
+  template<const int inv>
+  void SetXYZW( int _x, int _y, int _z, int _w ) {
+    x = (float)(inv ? inv - _x : _x);
+    y = (float)(inv ? inv - _y : _y);
+    z = (float)(inv ? inv - _z : _z);
+    w = (float)(inv ? inv - _w : _w);
+  }
+
+  template<const int inv>
+  void SetXYZWpow2( int _x, int _y, int _z, int _w ) {
+    x = (float)(1 << (inv ? inv - _x : _x));
+    y = (float)(1 << (inv ? inv - _y : _y));
+    z = (float)(1 << (inv ? inv - _z : _z));
+    w = (float)(1 << (inv ? inv - _w : _w));
+  }
+
+  operator Vec3() const
+  {
+    Vec3 v;
+    v.x = x;
+    v.y = y;
+    v.z = z;
+    return v;
+  }
+
+  Vec4 operator-() const
+  {
+    Vec4 v;
+
+    v.x = -x;
+    v.y = -y;
+    v.z = -z;
+    v.w = -w;
+
+    return v;
+  }
+
+  Vec4& operator=(const float &f)
+  {
+    x = f;
+    y = f;
+    z = f;
+    w = f;
+
+    return *this;
+  }
+
+  Vec4& operator+=( Arg v )
+  {
+    x += v.x;
+    y += v.y;
+    z += v.z;
+    w += v.w;
+
+    return *this;
+  }
+
+  Vec4& operator-=( Arg v )
+  {
+    x -= v.x;
+    y -= v.y;
+    z -= v.z;
+    w -= v.w;
+
+    return *this;
+  }
+
+  Vec4& operator*=( Arg v )
+  {
+    x *= v.x;
+    y *= v.y;
+    z *= v.z;
+    w *= v.w;
+
+    return *this;
+  }
+
+  Vec4& operator/=( float v )
+  {
+    *this *= Reciprocal( Vec4( v ) );
+    return *this;
+  }
+
+  friend Vec4 operator&( Vec4::Arg left, Vec4::Arg right  )
+  {
+    Vec4 copy( left );
+
+    *((int *)&copy.x) &= *((int *)&right.x);
+    *((int *)&copy.y) &= *((int *)&right.y);
+    *((int *)&copy.z) &= *((int *)&right.z);
+    *((int *)&copy.w) &= *((int *)&right.w);
+
+    return copy;
+  }
+
+  friend Vec4 operator+( Vec4::Arg left, Vec4::Arg right  )
+  {
+    Vec4 copy( left );
+    return copy += right;
+  }
+
+  friend Vec4 operator-( Vec4::Arg left, Vec4::Arg right  )
+  {
+    Vec4 copy( left );
+    return copy -= right;
+  }
+
+  friend Vec4 operator*( Vec4::Arg left, Vec4::Arg right  )
+  {
+    Vec4 copy( left );
+    return copy *= right;
+  }
+
+  friend Vec4 operator*( Vec4::Arg left, float right  )
+  {
+    Vec4 copy( left );
+
+    copy.x *= right;
+    copy.y *= right;
+    copy.z *= right;
+    copy.w *= right;
+
+    return copy;
+  }
+
+  friend Vec4 operator*( float left, Vec4::Arg right  )
+  {
+    Vec4 copy( right );
+    return copy * left;
+  }
+
+  friend Vec4 operator/( Vec4::Arg left, float right  )
+  {
+    Vec4 copy( left );
+    copy /= right;
+    return copy;
+  }
+
+  friend Vec4 operator*( Vec4::Arg left, int right  )
+  {
+    Vec4 copy( left );
+
+    copy.x *= right;
+    copy.y *= right;
+    copy.z *= right;
+    copy.w *= right;
+
+    return copy;
+  }
+
+  //! Returns a*b + c
+  friend Vec4 MultiplyAdd( Vec4::Arg a, Vec4::Arg b, Vec4::Arg c )
+  {
+    return a*b + c;
+  }
+
+  //! Returns -( a*b - c )
+  friend Vec4 NegativeMultiplySubtract( Vec4::Arg a, Vec4::Arg b, Vec4::Arg c )
+  {
+    return c - a*b;
+  }
+
+  template<const int f, const int t>
+  friend Vec4 Shuffle( Arg a )
+  {
+    Vec4 b = a;
+
+    float *bb = (float *)&b.x;
+    float *ba = (float *)&a.x;
+
+    bb[t] = ba[f];
+
+    return b;
+  }
+
+  template<const int f, const int t>
+  friend Vec4 Exchange( Arg a )
+  {
+    Vec4 b = a;
+
+    float *bb = (float *)&b.x;
+    float *ba = (float *)&a.x;
+
+    std::swap(bb[t], ba[f]);
+
+    return b;
+  }
+
+  friend Vec4 Reciprocal( Vec4::Arg v )
+  {
+    return Vec4(
+      1.0f / v.x,
+      1.0f / v.y,
+      1.0f / v.z,
+      1.0f / v.w
+    );
+  }
+
+  friend Vec4 HorizontalAdd( Arg a )
+  {
+    return Vec4( a.x + a.y + a.z + a.w );
+  }
+
+  friend Vec4 HorizontalAdd( Arg a, Arg b )
+  {
+    return HorizontalAdd( a ) + HorizontalAdd( b );
+  }
+
+  friend Vec4 Dot( Arg left, Arg right )
+  {
+    return HorizontalAdd( left*right );
+  }
+
+  friend void Dot( Arg left, Arg right, float *r )
+  {
+    *r = HorizontalAdd( left*right ).x;
+  }
+
+  friend Vec4 Min( Vec4::Arg left, Vec4::Arg right )
+  {
+    return Vec4(
+      std::min<float>( left.x, right.x ),
+      std::min<float>( left.y, right.y ),
+      std::min<float>( left.z, right.z ),
+      std::min<float>( left.w, right.w )
+    );
+  }
+
+  friend Vec4 Max( Vec4::Arg left, Vec4::Arg right )
+  {
+    return Vec4(
+      std::max<float>( left.x, right.x ),
+      std::max<float>( left.y, right.y ),
+      std::max<float>( left.z, right.z ),
+      std::max<float>( left.w, right.w )
+    );
+  }
+
+  // clamp the output to [0, 1]
+  Vec4 Clamp() const {
+    Vec4 const one (1.0f);
+    Vec4 const zero(0.0f);
+
+    return Min(one, Max(zero, *this));
+  }
+
+  template<const bool round>
+  friend Col4 FloatToInt( Vec4::Arg v )
+  {
+    return Col4(
+      (int)(v.x > 0.0f ? std::floor( v.x + (round ? 0.5f : 0.0f) ) : std::ceil( v.x - (round ? 0.5f : 0.0f) )),
+      (int)(v.y > 0.0f ? std::floor( v.y + (round ? 0.5f : 0.0f) ) : std::ceil( v.y - (round ? 0.5f : 0.0f) )),
+      (int)(v.z > 0.0f ? std::floor( v.z + (round ? 0.5f : 0.0f) ) : std::ceil( v.z - (round ? 0.5f : 0.0f) )),
+      (int)(v.w > 0.0f ? std::floor( v.w + (round ? 0.5f : 0.0f) ) : std::ceil( v.w - (round ? 0.5f : 0.0f) ))
+    );
+  }
+
+  friend Vec4 Truncate( Vec4::Arg v )
+  {
+    return Vec4(
+      v.x > 0.0f ? std::floor( v.x ) : std::ceil( v.x ),
+      v.y > 0.0f ? std::floor( v.y ) : std::ceil( v.y ),
+      v.z > 0.0f ? std::floor( v.z ) : std::ceil( v.z ),
+      v.w > 0.0f ? std::floor( v.w ) : std::ceil( v.w )
+    );
+  }
+
+  friend bool CompareAnyLessThan( Vec4::Arg left, Vec4::Arg right )
+  {
+    return
+      left.x < right.x ||
+      left.y < right.y ||
+      left.z < right.z ||
+      left.w < right.w;
+  }
+
+  friend int CompareFirstLessThan( Vec4::Arg left, Vec4::Arg right )
+  {
+    return left.x < right.x;
+  }
+
+  friend int CompareFirstGreaterThan( Vec4::Arg left, Vec4::Arg right )
+  {
+    return left.x > right.x;
+  }
+
+  Vec4 IsNotOne( ) const
+  {
+    Vec4 m;
+
+    *((int *)&m.x) = (x != 1.0f ? ~0 : 0);
+    *((int *)&m.y) = (y != 1.0f ? ~0 : 0);
+    *((int *)&m.z) = (z != 1.0f ? ~0 : 0);
+    *((int *)&m.w) = (w != 1.0f ? ~0 : 0);
+
+    return m;
+  }
+
+  friend Vec4 TransferW( Vec4::Arg left, Vec4::Arg right )
+  {
+    return Vec4( left.x, left.y, left.z, right.w );
+  }
+
+  friend Vec4 KillW( Vec4::Arg left )
+  {
+    return Vec4( left.x, left.y, left.z, 0.0f );
+  }
+
+  friend Vec4 OnlyW( Vec4::Arg left )
+  {
+    return Vec4( 0.0f, 0.0f, 0.0f, left.w );
+  }
+
+  void SwapXYZW( Vec4 &with )
+  {
+    std::swap(x, with.x);
+    std::swap(y, with.y);
+    std::swap(z, with.z);
+    std::swap(w, with.w);
+  }
+
+  void SwapXYZ ( Vec4 &with )
+  {
+    std::swap(x, with.x);
+    std::swap(y, with.y);
+    std::swap(z, with.z);
+  }
+
+  void SwapW   ( Vec4 &with )
+  {
+    std::swap(w, with.w);
+  }
+
+  // 5-6% of execution time as std::sqrt
+  static doinline float sqrt(float in) {
+    return std::sqrt(in);
+  }
+
+  // 3-5% of execution time as std::pow
+  static doinline float cbrt(float in) {
+    return std::pow(in, 1.0f / 3.0f);
+  }
+
+#if	!defined(USE_AMP)
+private:
 #endif
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+#if	!defined(USE_PRE)
+inline Vec4 LengthSquared( Vec4::Arg v )
+{
+  return Dot( v, v );
+}
+
+inline void LengthSquared( Vec4::Arg v , float *r )
+{
+  Dot( v, v, r );
+}
+#endif
+#endif // ndef USE_COMPUTE
 
 } // namespace squish
 
 #endif // ndef SQUISH_SIMD_FLOAT_H
-

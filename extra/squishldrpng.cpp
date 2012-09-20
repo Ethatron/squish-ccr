@@ -1,32 +1,33 @@
 /* -----------------------------------------------------------------------------
 
 	Copyright (c) 2006 Simon Brown                          si@sjbrown.co.uk
+	Copyright (c) 2012 Niels Fröhling              niels@paradice-insight.us
 
 	Permission is hereby granted, free of charge, to any person obtaining
-	a copy of this software and associated documentation files (the 
+	a copy of this software and associated documentation files (the
 	"Software"), to	deal in the Software without restriction, including
 	without limitation the rights to use, copy, modify, merge, publish,
-	distribute, sublicense, and/or sell copies of the Software, and to 
-	permit persons to whom the Software is furnished to do so, subject to 
+	distribute, sublicense, and/or sell copies of the Software, and to
+	permit persons to whom the Software is furnished to do so, subject to
 	the following conditions:
 
 	The above copyright notice and this permission notice shall be included
 	in all copies or substantial portions of the Software.
 
 	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-	OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+	OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY 
-	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
-	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
+	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-	
+
    -------------------------------------------------------------------------- */
-   
+
 /*! @file
 
 	@brief	Example program that converts between the PNG and DXT/BTC formats.
-	
+
 	This program requires libpng for PNG input and output, and is designed
 	to show how to prepare data for the squish library when it is not simply
 	a contiguous block of memory.
@@ -40,10 +41,40 @@
 #include <cmath>
 #include <squish.h>
 #include <png.h>
+#include <intrin.h>
 
 #ifdef _MSC_VER
 #pragma warning( disable: 4511 4512 )
 #endif // def _MSC_VER
+
+#if defined(__cplusplus) || defined(c_plusplus)
+extern "C" {
+#endif
+
+void PNGRead(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+  FILE *ar = (FILE *)png_ptr->io_ptr;
+
+  fread(data, 1, length, ar);
+}
+
+void PNGWrite(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+  FILE *ar = (FILE *)png_ptr->io_ptr;
+
+  fwrite(data, 1, length, ar);
+}
+
+void PNGFlush(png_structp png_ptr)
+{
+  FILE *ar = (FILE *)png_ptr->io_ptr;
+
+  fflush(ar);
+}
+
+#if defined(__cplusplus) || defined(c_plusplus)
+}
+#endif
 
 using namespace squish;
 
@@ -53,9 +84,9 @@ class Error : public std::exception
 public:
 	Error( std::string const& excuse ) : m_excuse( excuse ) {}
 	~Error() throw() {}
-	
+
 	virtual char const* what() const throw() { return m_excuse.c_str(); }
-	
+
 private:
 	std::string m_excuse;
 };
@@ -65,7 +96,7 @@ class NonCopyable
 {
 public:
 	NonCopyable() {}
-	
+
 private:
 	NonCopyable( NonCopyable const& );
 	NonCopyable& operator=( NonCopyable const& );
@@ -77,9 +108,9 @@ class Mem : NonCopyable
 public:
 	explicit Mem( int size ) : m_p( new u8[size] ) {}
 	~Mem() { delete[] m_p; }
-	
+
 	u8* Get() const { return m_p; }
-	
+
 private:
 	u8* m_p;
 };
@@ -90,7 +121,7 @@ class File : NonCopyable
 public:
 	explicit File( FILE* fp ) : m_fp( fp ) {}
 	~File() { if( m_fp ) fclose( m_fp ); }
-	
+
 	bool IsValid() const { return m_fp != 0; }
 	FILE* Get() const { return m_fp; }
 
@@ -103,14 +134,14 @@ class PngReadStruct : NonCopyable
 {
 public:
 	PngReadStruct()
-	  : m_png( 0 ), 
-		m_info( 0 ), 
+	  : m_png( 0 ),
+		m_info( 0 ),
 		m_end( 0 )
 	{
 		m_png = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
 		if( !m_png )
-			throw Error( "failed to create png read struct" );	
-			
+			throw Error( "failed to create png read struct" );
+
 		m_info = png_create_info_struct( m_png );
 		m_end = png_create_info_struct( m_png );
 		if( !m_info || !m_end )
@@ -121,9 +152,9 @@ public:
 			throw Error( "failed to create png info structs" );
 		}
 	}
-	
-	~PngReadStruct() 
-	{ 
+
+	~PngReadStruct()
+	{
 		png_destroy_read_struct( &m_png, &m_info, &m_end );
 	}
 
@@ -140,13 +171,13 @@ class PngWriteStruct : NonCopyable
 {
 public:
 	PngWriteStruct()
-	  : m_png( 0 ), 
+	  : m_png( 0 ),
 		m_info( 0 )
 	{
 		m_png = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
 		if( !m_png )
-			throw Error( "failed to create png read struct" );	
-			
+			throw Error( "failed to create png read struct" );
+
 		m_info = png_create_info_struct( m_png );
 		if( !m_info )
 		{
@@ -155,12 +186,12 @@ public:
 			throw Error( "failed to create png info structs" );
 		}
 	}
-	
+
 	~PngWriteStruct()
 	{
 		png_destroy_write_struct( &m_png, &m_info );
 	}
-	
+
 	png_structp GetPng() const { return m_png; }
 	png_infop GetInfo() const { return m_info; }
 
@@ -179,16 +210,28 @@ public:
 		for( int i = 0; i < m_height; ++i )
 			m_rows[i] = ( png_bytep )malloc( m_width*stride );
 	}
-	
-	~PngRows() 
+
+	~PngRows()
 	{
 		for( int i = 0; i < m_height; ++i )
 			free( m_rows[i] );
 		free( m_rows );
 	}
-	
-	png_bytep* Get() const { return m_rows; }
-	
+
+	png_bytep* Get() const {
+	  return m_rows;
+	}
+	png_bytep const GetRow( int row ) const {
+	  return ( png_bytep )m_rows[row];
+	}
+
+	void Read( PngReadStruct *m_png ) {
+	  png_read_image( m_png->GetPng(), m_rows );
+	}
+	void Write( PngWriteStruct *m_png ) {
+	  png_write_image( m_png->GetPng(), m_rows );
+	}
+
 private:
 	png_bytep* m_rows;
 	int m_width, m_height;
@@ -204,8 +247,16 @@ public:
 	int GetStride() const { return m_stride; }
 	bool IsColour() const { return m_colour; }
 	bool IsAlpha() const { return m_alpha; }
-	
+
+#if (PNG_LIBPNG_VER_MINOR >= 3)
+	png_bytep* Get() const { return ( png_bytep* )m_rows->Get( ); }
+	PngRows* GetRows( ) const { return m_rows; }
 	u8 const* GetRow( int row ) const { return ( u8* )m_rows[row]; }
+#else
+	png_bytep* Get() const { return ( png_bytep* )m_rows->Get( ); }
+	PngRows* GetRows( ) const { return m_rows; }
+	u8 const* GetRow( int row ) const { return ( u8* )m_rows->GetRow( row ); }
+#endif
 
 private:
 	PngReadStruct m_png;
@@ -215,8 +266,12 @@ private:
 	int m_stride;
 	bool m_colour;
 	bool m_alpha;
-	
+
+#if (PNG_LIBPNG_VER_MINOR >= 3)
 	png_bytep* m_rows;
+#else
+	PngRows* m_rows;
+#endif
 };
 
 PngImage::PngImage( std::string const& fileName )
@@ -229,7 +284,7 @@ PngImage::PngImage( std::string const& fileName )
 		oss << "failed to open \"" << fileName << "\" for reading";
 		throw Error( oss.str() );
 	}
-	
+
 	// check the signature bytes
 	png_byte header[8];
 	fread( header, 1, 8, file.Get() );
@@ -239,19 +294,25 @@ PngImage::PngImage( std::string const& fileName )
 		oss << "\"" << fileName << "\" does not look like a png file";
 		throw Error( oss.str() );
 	}
-	
+
 	// read the image into memory
-	png_init_io( m_png.GetPng(), file.Get() );
+	png_set_read_fn( m_png.GetPng(), (void *)file.Get(), PNGRead);
+//	png_init_io( m_png.GetPng(), file.Get() );
 	png_set_sig_bytes( m_png.GetPng(), 8 );
+#if (PNG_LIBPNG_VER_MINOR >= 3)
 	png_read_png( m_png.GetPng(), m_png.GetInfo(), PNG_TRANSFORM_EXPAND, 0 );
+#else
+	png_read_info( m_png.GetPng(), m_png.GetInfo() );
+#endif
 
 	// get the image info
 	png_uint_32 width;
 	png_uint_32 height;
 	int bitDepth;
 	int colourType;
+
 	png_get_IHDR( m_png.GetPng(), m_png.GetInfo(), &width, &height, &bitDepth, &colourType, 0, 0, 0 );
-	
+
 	// check the image is 8 bit
 	if( bitDepth != 8 )
 	{
@@ -259,7 +320,7 @@ PngImage::PngImage( std::string const& fileName )
 		oss << "cannot process " << bitDepth << "-bit image (bit depth must be 8)";
 		throw Error( oss.str() );
 	}
-	
+
 	// save the info
 	m_width = width;
 	m_height = height;
@@ -268,12 +329,19 @@ PngImage::PngImage( std::string const& fileName )
 	m_stride = ( m_colour ? 3 : 1 ) + ( m_alpha ? 1 : 0 );
 
 	// get the image rows
+#if (PNG_LIBPNG_VER_MINOR >= 3)
 	m_rows = png_get_rows( m_png.GetPng(), m_png.GetInfo() );
 	if( !m_rows )
 		throw Error( "failed to get image rows" );
+#else
+	m_rows = new PngRows( m_width, m_height, m_stride );
+	m_rows->Read( &m_png );
+
+	png_read_end( m_png.GetPng(), m_png.GetInfo() );
+#endif
 }
 
-static void Compress( std::string const& sourceFileName, std::string const& targetFileName, int flags )
+static void Compress( std::string const& sourceFileName, std::string const& targetFileName, int paint, int flags )
 {
 	// load the source image
 	PngImage sourceImage( sourceFileName );
@@ -285,6 +353,10 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 	bool colour = sourceImage.IsColour();
 	bool alpha = sourceImage.IsAlpha();
 
+	/* kill alpha-channel */
+	if (!alpha)
+		flags = (flags | kExcludeAlphaFromPalette) & (~kWeightColourByAlpha);
+
 	// check the image dimensions
 	if( ( width % 4 ) != 0 || ( height % 4 ) != 0 )
 	{
@@ -293,12 +365,12 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 			<< "image (dimensions must be multiples of 4)";
 		throw Error( oss.str() );
 	}
-	
+
 	// create the target data
-	int bytesPerBlock = ( ( flags & kBtc1 ) != 0 ) ? 8 : 16;
+	int bytesPerBlock = 16;
 	int targetDataSize = bytesPerBlock*width*height/16;
 	Mem targetData( targetDataSize );
-	
+
 	// loop over blocks and compress them
 	clock_t start = std::clock();
 	u8* targetBlock = targetData.Get();
@@ -314,7 +386,7 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 				u8 const* row = sourceImage.GetRow( y + py ) + x*stride;
 				for( int px = 0; px < 4; ++px, ++i )
 				{
-					// get the pixel colour 
+					// get the pixel colour
 					if( colour )
 					{
 						for( int j = 0; j < 3; ++j )
@@ -326,7 +398,7 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 							sourceRgba[4*i + j] = *row;
 						++row;
 					}
-					
+
 					// skip alpha for now
 					if( alpha )
 						sourceRgba[4*i + 3] = *row++;
@@ -334,17 +406,63 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 						sourceRgba[4*i + 3] = 255;
 				}
 			}
-			
+
 			// compress this block
 			Compress( sourceRgba, targetBlock, flags );
 			
+#if !defined(NDEBUG) && (defined(DEBUG_QUANTIZER) || defined(DEBUG_ENCODER))
+			// write the data into the target rows
+			for( int py = 0, i = 0; py < 4; ++py )
+			{
+				u8* row = ( u8* )sourceImage.Get()[y + py] + x*stride;
+				for( int px = 0; px < 4; ++px, ++i )
+				{
+					// get the pixel colour
+					if( colour )
+					{
+						for( int j = 0; j < 3; ++j )
+							*row++ = sourceRgba[4*i + j];
+					}
+
+					// skip alpha for now
+					if( alpha )
+						*row++ = sourceRgba[4*i + 3];
+				}
+			}
+#endif
+			if (flags & kBtc7) {
+			      // draw the mode
+			      if ( paint == 2 ) {
+				      unsigned long btcvalue = *((int *)targetBlock);
+				      unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+
+				      fprintf(stderr, "%1d", btcmode);
+			      }
+			      // draw the pattern
+			      else if ( paint == 1 ) {
+				      char *patchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzµß";
+				      unsigned long btcvalue = *((int *)targetBlock);
+				      unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+				      unsigned long btcpat = (btcmode == 5 || btcmode == 6 || btcmode == 7 ? 0 : (btcmode == 1 ? (1 << 4) - 1 : (1 << 6) - 1));
+
+				      fprintf(stderr, "%c", patchar[(btcvalue >> btcmode) & btcpat]);
+			      }
+			}
+
 			// advance
-			targetBlock += bytesPerBlock;			
+			targetBlock += bytesPerBlock;
+		}
+
+		// draw the mode
+		if ( (flags & kBtc7) && paint ) {
+			fprintf(stderr, "\n");
 		}
 	}
+
 	clock_t end = std::clock();
 	double duration = ( double )( end - start ) / CLOCKS_PER_SEC;
 	std::cout << "time taken: " << duration << " seconds" << std::endl;
+	std::cout << "compression speed: " << ( ( double ) ( width * height ) / ( duration * 1024 * 1024 )) << " MPixel/s" << std::endl;
 	
 	// open the target file
 	File targetFile( fopen( targetFileName.c_str(), "wb" ) );
@@ -354,16 +472,57 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 		oss << "failed to open \"" << sourceFileName << "\" for writing";
 		throw Error( oss.str() );
 	}
-	
+
 	// write the header
 	fwrite( &width, sizeof( int ), 1, targetFile.Get() );
 	fwrite( &height, sizeof( int ), 1, targetFile.Get() );
-	
+
 	// write the data
 	fwrite( targetData.Get(), 1, targetDataSize, targetFile.Get() );
+	
+#if !defined(NDEBUG) && (defined(DEBUG_QUANTIZER) || defined(DEBUG_ENCODER))
+	{
+
+	  // create the target PNG
+	  PngWriteStruct targetPng;
+
+	  // set up the image
+	  png_set_IHDR(
+		  targetPng.GetPng(), targetPng.GetInfo(), width, height,
+		  8, colour && alpha ? PNG_COLOR_TYPE_RGBA : (colour ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_GRAY_ALPHA), PNG_INTERLACE_NONE,
+		  PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
+	  );
+
+	  // open the target file
+	  File targetFile( fopen( "debug.png", "wb" ) );
+	  if( !targetFile.IsValid() )
+	  {
+		  std::ostringstream oss;
+		  oss << "failed to open \"" << targetFileName << "\" for writing";
+		  throw Error( oss.str() );
+	  }
+
+	// write the image
+#if (PNG_LIBPNG_VER_MINOR >= 3)
+	  png_set_rows( targetPng.GetPng(), targetPng.GetInfo(), targetRows.Get() );
+#endif
+	
+	  png_set_write_fn( targetPng.GetPng(), (void *)targetFile.Get(), PNGWrite, PNGFlush);
+//	  png_init_io( targetPng.GetPng(), targetFile.Get() );
+
+#if (PNG_LIBPNG_VER_MINOR >= 3)
+	  png_write_png( targetPng.GetPng(), targetPng.GetInfo(), PNG_TRANSFORM_IDENTITY, 0 );
+#else
+	  png_write_info( targetPng.GetPng(), targetPng.GetInfo() );
+	  sourceImage.GetRows()->Write( &targetPng );
+	  png_write_end( targetPng.GetPng(), targetPng.GetInfo() );
+#endif
+
+	}
+#endif
 }
 
-static void Decompress( std::string const& sourceFileName, std::string const& targetFileName, int flags )
+static void Decompress( std::string const& sourceFileName, std::string const& targetFileName, int paint, int flags )
 {
 	// open the source file
 	File sourceFile( fopen( sourceFileName.c_str(), "rb" ) );
@@ -373,24 +532,26 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 		oss << "failed to open \"" << sourceFileName << "\" for reading";
 		throw Error( oss.str() );
 	}
-	
+
 	// get the width and height
 	int width, height;
-	fread( &width, sizeof( int ), 1, sourceFile.Get() ); 
+	fread( &width, sizeof( int ), 1, sourceFile.Get() );
 	fread( &height, sizeof( int ), 1, sourceFile.Get() );
-	
+
 	// work out the data size
-	int bytesPerBlock = ( ( flags & kBtc1 ) != 0 ) ? 8 : 16;
+	int bytesPerBlock = 16;
 	int sourceDataSize = bytesPerBlock*width*height/16;
 	Mem sourceData( sourceDataSize );
-	
+
 	// read the source data
 	fread( sourceData.Get(), 1, sourceDataSize, sourceFile.Get() );
-		
+
 	// create the target rows
 	PngRows targetRows( width, height, 4 );
-	
+
 	// loop over blocks and compress them
+	clock_t start = std::clock();
+
 	u8 const* sourceBlock = sourceData.Get();
 	for( int y = 0; y < height; y += 4 )
 	{
@@ -399,24 +560,52 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 		{
 			// decompress back
 			u8 targetRgba[16*4];
+
 			Decompress( targetRgba, sourceBlock, flags );
-			
+
 			// write the data into the target rows
 			for( int py = 0, i = 0; py < 4; ++py )
 			{
 				u8* row = ( u8* )targetRows.Get()[y + py] + x*4;
 				for( int px = 0; px < 4; ++px, ++i )
-				{	
+				{
 					for( int j = 0; j < 4; ++j )
 						*row++ = targetRgba[4*i + j];
 				}
 			}
-			
+
+			// draw the mode
+			if ( paint == 2 ) {
+				unsigned long btcvalue = *((int *)sourceBlock);
+				unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+
+				fprintf(stderr, "%1d", btcmode);
+			}
+			// draw the pattern
+			else if ( paint == 1 ) {
+				char *patchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzµß";
+				unsigned long btcvalue = *((int *)sourceBlock);
+				unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+				unsigned long btcpat = (btcmode == 5 || btcmode == 6 || btcmode == 7 ? 0 : (btcmode == 1 ? (1 << 4) - 1 : (1 << 6) - 1));
+
+				fprintf(stderr, "%c", patchar[(btcvalue >> btcmode) & btcpat]);
+			}
+
 			// advance
 			sourceBlock += bytesPerBlock;
 		}
+
+		// draw the mode
+		if ( paint ) {
+			fprintf(stderr, "\n");
+		}
 	}
-	
+
+	clock_t end = std::clock();
+	double duration = ( double )( end - start ) / CLOCKS_PER_SEC;
+	std::cout << "time taken: " << duration << " seconds" << std::endl;
+	std::cout << "decompression speed: " << ( ( double ) ( width * height ) / ( duration * 1024 * 1024 )) << " MPixel/s" << std::endl;
+
 	// create the target PNG
 	PngWriteStruct targetPng;
 
@@ -424,9 +613,9 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 	png_set_IHDR(
 		targetPng.GetPng(), targetPng.GetInfo(), width, height,
 		8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT 
+		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
 	);
-	   
+
 	// open the target file
 	File targetFile( fopen( targetFileName.c_str(), "wb" ) );
 	if( !targetFile.IsValid() )
@@ -435,11 +624,23 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 		oss << "failed to open \"" << targetFileName << "\" for writing";
 		throw Error( oss.str() );
 	}
-	
+
 	// write the image
+#if (PNG_LIBPNG_VER_MINOR >= 3)
 	png_set_rows( targetPng.GetPng(), targetPng.GetInfo(), targetRows.Get() );
-	png_init_io( targetPng.GetPng(), targetFile.Get() );
+#endif
+	
+	png_set_write_fn( targetPng.GetPng(), (void *)targetFile.Get(), PNGWrite, PNGFlush);
+//	png_init_io( targetPng.GetPng(), targetFile.Get() );
+
+#if (PNG_LIBPNG_VER_MINOR >= 3)
 	png_write_png( targetPng.GetPng(), targetPng.GetInfo(), PNG_TRANSFORM_IDENTITY, 0 );
+#else
+	png_write_info( targetPng.GetPng(), targetPng.GetInfo() );
+	targetRows.Write( &targetPng );
+	png_write_end( targetPng.GetPng(), targetPng.GetInfo() );
+#endif
+
 }
 
 static void Diff( std::string const& sourceFileName, std::string const& targetFileName )
@@ -447,7 +648,7 @@ static void Diff( std::string const& sourceFileName, std::string const& targetFi
 	// load the images
 	PngImage sourceImage( sourceFileName );
 	PngImage targetImage( targetFileName );
-	
+
 	// get the image info
 	int width = sourceImage.GetWidth();
 	int height = sourceImage.GetHeight();
@@ -458,7 +659,7 @@ static void Diff( std::string const& sourceFileName, std::string const& targetFi
 	// check they match
 	if( width != targetImage.GetWidth() || height != targetImage.GetHeight() )
 		throw Error( "source and target dimensions do not match" );
-		
+
 	// work out the error
 	double error = 0.0;
 	for( int y = 0; y < height; ++y )
@@ -466,7 +667,7 @@ static void Diff( std::string const& sourceFileName, std::string const& targetFi
 		u8 const* sourceRow = sourceImage.GetRow( y );
 		u8 const* targetRow = targetImage.GetRow( y );
 		for( int x = 0; x < width; ++x )
-		{	
+		{
 			u8 const* sourcePixel = sourceRow + x*sourceStride;
 			u8 const* targetPixel = targetRow + x*targetStride;
 			for( int i = 0; i < stride; ++i )
@@ -477,14 +678,14 @@ static void Diff( std::string const& sourceFileName, std::string const& targetFi
 		}
 	}
 	error = std::sqrt( error / ( width*height ) );
-	
+
 	// print it out
 	std::cout << "rms error: " << error << std::endl;
 }
 
 enum Mode
 {
-	kCompress, 
+	kCompress,
 	kDecompress,
 	kDiff
 };
@@ -497,10 +698,11 @@ int main( int argc, char* argv[] )
 		std::string sourceFileName;
 		std::string targetFileName;
 		Mode mode = kCompress;
-		int method = kBtc1;
+		int method = kBtc7;
 		int metric = kColourMetricPerceptual;
 		int fit = kColourClusterFit;
 		int extra = 0;
+		int paint = 0;
 		bool help = false;
 		bool arguments = true;
 		for( int i = 1; i < argc; ++i )
@@ -517,12 +719,18 @@ int main( int argc, char* argv[] )
 					case 'c': mode = kCompress; break;
 					case 'd': mode = kDecompress; break;
 					case 'e': mode = kDiff; break;
+					case 'p': paint = 1; break;
+					case 'm': paint = 2; break;
 					case '1': method = kBtc1; break;
-					case '3': method = kBtc2; break;
-					case '5': method = kBtc3; break;
+					case '2': method = kBtc2; break;
+					case '3': method = kBtc3; break;
+					case '4': method = kBtc4; break;
+					case '5': method = kBtc5; break;
+					case '7': method = kBtc7; break;
 					case 'u': metric = kColourMetricUniform; break;
 					case 'r': fit = kColourRangeFit; break;
 					case 'i': fit = kColourIterativeClusterFit; break;
+					case 'x': fit = kColourClusterFit * 15; break;
 					case 'w': extra = kWeightColourByAlpha; break;
 					case '-': arguments = false; break;
 					default:
@@ -543,24 +751,29 @@ int main( int argc, char* argv[] )
 				}
 			}
 		}
-		
+
 		// check arguments
 		if( help )
 		{
-			std::cout 
+			std::cout
 				<< "SYNTAX" << std::endl
-				<< "\tsquishpng [-cde135] <source> <target>" << std::endl 
+				<< "\tsquishpng [-cde135] <source> <target>" << std::endl
 				<< "OPTIONS" << std::endl
-				<< "\t-c\tCompress source png to target raw dxt (default)" << std::endl
-				<< "\t-135\tSpecifies whether to use DXT1/BC1 (default), DXT3/BC2 or DXT5/BC3 compression" << std::endl
+				<< "\t-c\tCompress source png to target raw btc (default)" << std::endl
+				<< "\t-123\tSpecifies whether to use DXT1/BC1, DXT3/BC2 or DXT5/BC3 compression" << std::endl
+				<< "\t-45\tSpecifies whether to use ATI/BC4, ATI2/BC5 compression" << std::endl
+				<< "\t-7\tSpecifies whether to use BC7 (default) compression" << std::endl
 				<< "\t-u\tUse a uniform colour metric during colour compression" << std::endl
 				<< "\t-r\tUse the fast but inferior range-based colour compressor" << std::endl
 				<< "\t-i\tUse the very slow but slightly better iterative colour compressor" << std::endl
+				<< "\t-x\tUse the extreme slow but slightly better iterative colour compressor" << std::endl
 				<< "\t-w\tWeight colour values by alpha in the cluster colour compressor" << std::endl
-				<< "\t-d\tDecompress source raw dxt to target png" << std::endl
+				<< "\t-d\tDecompress source raw btc to target png" << std::endl
 				<< "\t-e\tDiff source and target png" << std::endl
+				<< "\t-p\tpaint the patterns used to stderr" << std::endl
+				<< "\t-m\tpaint the modes used to stderr" << std::endl
 				;
-			
+
 			return 0;
 		}
 		if( sourceFileName.empty() )
@@ -578,17 +791,17 @@ int main( int argc, char* argv[] )
 		switch( mode )
 		{
 		case kCompress:
-			Compress( sourceFileName, targetFileName, method | metric | fit | extra );
+			Compress( sourceFileName, targetFileName, paint, method | metric | fit | extra );
 			break;
-		
+
 		case kDecompress:
-			Decompress( sourceFileName, targetFileName, method );
+			Decompress( sourceFileName, targetFileName, paint, method );
 			break;
-			
+
 		case kDiff:
 			Diff( sourceFileName, targetFileName );
 			break;
-			
+
 		default:
 			std::cerr << "unknown mode" << std::endl;
 			throw std::exception();
@@ -600,7 +813,7 @@ int main( int argc, char* argv[] )
 		std::cerr << "squishpng error: " << excuse.what() << std::endl;
 		return -1;
 	}
-	
+
 	// done
 	return 0;
 }

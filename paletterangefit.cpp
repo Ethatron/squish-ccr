@@ -24,186 +24,282 @@
 
    -------------------------------------------------------------------------- */
 
-#include "rangefit.h"
-#include "colourset.h"
-#include "colourblock.h"
+#include "paletterangefit.h"
+#include "paletteset.h"
+#include "paletteblock.h"
+
+#include "inlineables.cpp"
 
 namespace squish {
 
+/* *****************************************************************************
+ */
 #if	!defined(USE_PRE)
-RangeFit::RangeFit( ColourSet const* colours, int flags )
-  : ColourFit( colours, flags )
+PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap)
+  : SinglePaletteFit(palette, flags, swap)
 {
-  // initialise the metric
-  bool perceptual = ( ( m_flags & kColourMetricPerceptual ) != 0 );
-  bool unit = ( ( m_flags & kColourMetricUnit ) != 0 );
-  if( unit )
-    m_metric = Vec3( 1.0f, 1.0f, 0.0f );
-  else if( perceptual )
-    m_metric = Vec3( 0.2126f, 0.7152f, 0.0722f );
+  // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
+  int const isets = m_palette->GetSets();
+  int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+
+  for (int s = 0; s < isets; s++) {
+    // cache some values
+    int const count = m_palette->GetCount(s);
+    Vec4 const* values = m_palette->GetPoints(s);
+    float const* weights = m_palette->GetWeights(s);
+
+    // we don't do this for sparse sets
+    if (count != 1) {
+      // get the covariance matrix
+      Sym3x3 covariance = ComputeWeightedCovariance(count, values, weights);
+
+      // compute the principle component
+      Vec4 principle = Vec4(ComputePrincipleComponent(covariance), 0.0f);
+
+      // get the min and max range as the codebook endpoints
+      Vec4 start(0.0f);
+      Vec4 end(0.0f);
+
+      if (count > 0) {
+	// compute the range
+	start = end = values[0];
+
+	Vec4 min, max; min = max = Dot(values[0], principle);
+	Vec4 mmn, mmx; mmn = mmx =     values[0];
+
+	for (int i = 1; i < count; ++i) {
+	  Vec4 val = Dot(values[i], principle);
+
+	  if (CompareFirstLessThan(val, min)) {
+	    start = values[i];
+	    min = val;
+	  }
+	  else if (CompareFirstGreaterThan(val, max)) {
+	    end = values[i];
+	    max = val;
+	  }
+
+	  mmn = Min(mmn, values[i]);
+	  mmx = Max(mmx, values[i]);
+	}
+
+	// exclude alpha from PCA
+	start = TransferW(start, mmn);
+	end   = TransferW(end  , mmx);
+      }
+
+      // clamp the output to [0, 1]
+      m_start[s] = start;
+      m_end  [s] = end;
+    }
+  }
+
+  // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
+  for (int a = isets; a < (isets + asets); a++) {
+    // cache some values
+    int const count = m_palette->GetCount(a);
+    Vec4 const* values = m_palette->GetPoints(a);
+
+    // we don't do this for sparse sets
+    if (count != 1) {
+      // get the min and max range as the codebook endpoints
+      Vec4 start(1.0f);
+      Vec4 end(1.0f);
+
+      if (count > 0) {
+	// compute the range
+	start = end = values[0];
+
+	for (int i = 1; i < count; ++i) {
+	  start = Min(start, values[i]);
+	  end   = Max(end  , values[i]);
+	}
+      }
+
+      // clamp the output to [0, 1]
+      m_start[a] = start;
+      m_end  [a] = end;
+    }
+  }
+}
+
+void PaletteRangeFit::Compress(void* block, int mode)
+{
+  int ib = GetIndexBits(mode);
+  int jb = ib >> 16; ib = ib & 0xFF;
+  int cb = GetPrecisionBits(mode);
+  int ab = cb >> 16; cb = cb & 0xFF;
+
+  vQuantizer q = vQuantizer(cb, cb, cb, ab);
+
+  // match each point to the closest code
+  Vec4 error = Vec4(0.0f);
+  a16 u8 closest[4][16];
+
+  // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
+  int const isets = m_palette->GetSets();
+  int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+
+  // create a codebook
+  Vec4 codes[1 << 4];
+
+  // loop over all sets
+  for (int s = 0; s < (isets + asets); s++) {
+    // how big is the codebook for the current set
+    int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
+
+    // cache some values
+    int const count = m_palette->GetCount(s);
+    Vec4 const* values = m_palette->GetPoints(s);
+    u8 const* freq = m_palette->GetFrequencies(s);
+
+    // in case of separate alpha the colors of the alpha-set have all been set to alpha
+    Vec4 metric = m_metric[s < isets ? 0 : 1];
+
+    // we do single entry fit for sparse sets
+    if (count == 1) {
+      // clear alpha-weight if alpha is disabled
+      // in case of separate alpha the colors of the alpha-set have all been set to alpha
+      u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
+
+      // find the closest code
+      Vec4 dist = ComputeEndPoints(s, metric, q, cb, ab, kb, mask);
+
+      // save the index (it's just a single one)
+      closest[s][0] = GetIndex();
+
+      // accumulate the error
+      error += dist * 16.0f;
+    }
+    else {
+      // snap floating-point-values to the integer-lattice
+      Vec4 start = q.SnapToLattice(m_start[s]);
+      Vec4 end   = q.SnapToLattice(m_end  [s]);
+
+      // swap the code-book when the swap-index bit is set
+      int ccs = CodebookP(codes, kb, start, end);
+
+      for (int i = 0; i < count; ++i) {
+	// find the closest code
+	Vec4 dist = Vec4(FLT_MAX);
+	int idx = 0;
+
+	for (int j = 0; j < ccs; ++j) {
+	  Vec4 d = LengthSquared(metric * (values[i] - codes[j]));
+	  if (CompareFirstLessThan(d, dist)) {
+	    dist = d;
+	    idx = j;
+	  }
+	}
+
+	// save the index
+	closest[s][i] = (u8)idx;
+
+	// accumulate the error
+	error += dist * freq[i];
+      }
+    }
+
+#ifdef NDEBUG
+    // kill early if this scheme looses
+    if (CompareFirstGreaterThan(error, m_besterror))
+      return;
+#endif // NDEBUG
+  }
+  
+  // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
+  if (!m_palette->IsTransparent()) {
+    switch (m_palette->GetRotation()) {
+      case 0: for (int a = 0; a < (isets + asets); a++) m_start[a].GetW() = m_end[a].GetW() = 1.0f; break;
+      case 1: for (int a = 0; a < (isets + asets); a++) m_start[a].GetX() = m_end[a].GetX() = 1.0f; break;
+      case 2: for (int a = 0; a < (isets + asets); a++) m_start[a].GetY() = m_end[a].GetY() = 1.0f; break;
+      case 3: for (int a = 0; a < (isets + asets); a++) m_start[a].GetZ() = m_end[a].GetZ() = 1.0f; break;
+    }
+  }
+
+#ifndef NDEBUG
+  // kill late if this scheme looses
+  Vec4 verify_error = Vec4(0.0f); SumError(closest, mode, verify_error);
+  // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
+  if (CompareFirstGreaterThan(verify_error, error + Vec4(0.00005f)))
+    abort();
+  if (CompareFirstGreaterThan(error, m_besterror))
+    return;
+#endif
+
+#if !defined(NDEBUG) && defined(DEBUG_DETAILS)
+  fprintf(stderr, "m: %1d, s: %1d+%1d, n:", mode, isets, asets);
+  fprintf(stderr, " %2d", 0 < (isets + asets) ? m_palette->GetCount(0) : 0);
+  fprintf(stderr, " %2d", 1 < (isets + asets) ? m_palette->GetCount(1) : 0);
+  fprintf(stderr, " %2d", 2 < (isets + asets) ? m_palette->GetCount(2) : 0);
+  fprintf(stderr, ", c: %1d, a: %1d", cb, ab);
+  if (GetPartitionBits(mode) > 0)
+    fprintf(stderr, ", p: %2d",  m_palette->GetPartition());
+  else if (GetRotationBits(mode) > 0)
+    fprintf(stderr, ", r: %2d", m_palette->GetRotation());
   else
-    m_metric = Vec3( 1.0f );
+    fprintf(stderr, ", r: --");
+  if (GetSelectionBits(mode) > 0)
+    fprintf(stderr, ", i: %1d,%1d", GetSelection() ? ib : jb, GetSelection() ? jb : ib);
+  else
+    fprintf(stderr, ", i:  %1d ", ib);
 
-  // initialise the best error
-  m_besterror = FLT_MAX;
-
-  // cache some values
-  int const count = m_colours->GetCount();
-  Vec3 const* values = m_colours->GetPoints();
-  float const* weights = m_colours->GetWeights();
-
-  // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance( count, values, weights );
-
-  // compute the principle component
-  Vec3 principle = ComputePrincipleComponent( covariance );
-
-  // get the min and max range as the codebook endpoints
-  Vec3 start( 0.0f );
-  Vec3 end( 0.0f );
-  if( count > 0 )
-  {
-    float min, max;
-
-    // compute the range
-    start = end = values[0];
-    min = max = Dot( values[0], principle );
-    for( int i = 1; i < count; ++i )
-    {
-      float val = Dot( values[i], principle );
-      if( val < min )
-      {
-	start = values[i];
-	min = val;
-      }
-      else if( val > max )
-      {
-	end = values[i];
-	max = val;
-      }
-    }
+  if (CompareFirstGreaterThan(error, m_besterror)) {
+    fprintf(stderr, ", e: %.8f (> %.8f)\n", error.X(), m_besterror.X());
+    return;
   }
 
-  // clamp the output to [0, 1]
-  Vec3 const one( 1.0f );
-  Vec3 const zero( 0.0f );
-  start = Min( one, Max( zero, start ) );
-  end = Min( one, Max( zero, end ) );
+  fprintf(stderr, ", e: %.8f (< %.8f)\n", error.X(), m_besterror.X());
+#endif // NDEBUG
 
-  // clamp to the grid and save
-  Vec3 const grid( 31.0f, 63.0f, 31.0f );
-  Vec3 const gridrcp( 1.0f/31.0f, 1.0f/63.0f, 1.0f/31.0f );
-  Vec3 const half( 0.5f );
-  m_start = Truncate( grid*start + half )*gridrcp;
-  m_end = Truncate( grid*end + half )*gridrcp;
-}
+  // remap the indices
+  for (int s = 0;     s <  isets         ; s++)
+    m_palette->RemapIndices(closest[s], m_indices[0], s);
+  for (int a = isets; a < (isets + asets); a++) {
+    m_palette->RemapIndices(closest[a], m_indices[1], a);
 
-void RangeFit::Compress3( void* block )
-{
-  // cache some values
-  int const count = m_colours->GetCount();
-  Vec3 const* values = m_colours->GetPoints();
-
-  // create a codebook
-  Vec3 codes[3];
-  codes[0] = m_start;
-  codes[1] = m_end;
-  codes[2] = 0.5f*m_start + 0.5f*m_end;
-
-  // match each point to the closest code
-  u8 closest[16];
-  float error = 0.0f;
-  for( int i = 0; i < count; ++i )
-  {
-    // find the closest code
-    float dist = FLT_MAX;
-    int idx = 0;
-    for( int j = 0; j < 3; ++j )
-    {
-      float d = LengthSquared( m_metric*( values[i] - codes[j] ) );
-      if( d < dist )
-      {
-	dist = d;
-	idx = j;
-      }
-    }
-
-    // save the index
-    closest[i] = ( u8 )idx;
-
-    // accumulate the error
-    error += dist;
+    // copy alpha into the common start/end definition
+    m_start[a - isets] = TransferW(m_start[a - isets], m_start[a]);
+    m_end  [a - isets] = TransferW(m_end  [a - isets], m_end  [a]);
   }
 
-  // save this scheme if it wins
-  if( error < m_besterror )
-  {
-    // remap the indices
-    u8 indices[16];
-    m_colours->RemapIndices( closest, indices );
+  typedef u8 (&Itwo)[2][16];
+  typedef u8 (&Ione)[1][16];
 
-    // save the block
-    WriteColourBlock3( m_start, m_end, indices, block );
+  typedef Vec4 (&V4thr)[3];
+  typedef Vec4 (&V4two)[2];
+  typedef Vec4 (&V4one)[1];
 
-    // save the error
-    m_besterror = error;
-  }
-}
-
-void RangeFit::Compress4( void* block )
-{
-  // cache some values
-  int const count = m_colours->GetCount();
-  Vec3 const* values = m_colours->GetPoints();
-
-  // create a codebook
-  Vec3 codes[4];
-  codes[0] = m_start;
-  codes[1] = m_end;
-  codes[2] = ( 2.0f/3.0f )*m_start + ( 1.0f/3.0f )*m_end;
-  codes[3] = ( 1.0f/3.0f )*m_start + ( 2.0f/3.0f )*m_end;
-
-  // match each point to the closest code
-  u8 closest[16];
-  float error = 0.0f;
-  for( int i = 0; i < count; ++i )
-  {
-    // find the closest code
-    float dist = FLT_MAX;
-    int idx = 0;
-    for( int j = 0; j < 4; ++j )
-    {
-      float d = LengthSquared( m_metric*( values[i] - codes[j] ) );
-      if( d < dist )
-      {
-	dist = d;
-	idx = j;
-      }
-    }
-
-    // save the index
-    closest[i] = ( u8 )idx;
-
-    // accumulate the error
-    error += dist;
+  // save the block
+  int partition = m_palette->GetPartition();
+  int rot = m_palette->GetRotation(), sel = m_swapindex;
+  switch (mode) {
+    case 0: WritePaletteBlock3_m1(partition, (V4thr)m_start, (V4thr)m_end, (Ione)m_indices, block); break;
+    case 1: WritePaletteBlock3_m2(partition, (V4two)m_start, (V4two)m_end, (Ione)m_indices, block); break;
+    case 2: WritePaletteBlock3_m3(partition, (V4thr)m_start, (V4thr)m_end, (Ione)m_indices, block); break;
+    case 3: WritePaletteBlock3_m4(partition, (V4two)m_start, (V4two)m_end, (Ione)m_indices, block); break;
+    case 4: WritePaletteBlock4_m5(rot, sel , (V4one)m_start, (V4one)m_end, (Itwo)m_indices, block); break;
+    case 5: WritePaletteBlock4_m6(rot,       (V4one)m_start, (V4one)m_end, (Itwo)m_indices, block); break;
+    case 6: WritePaletteBlock4_m7(partition, (V4one)m_start, (V4one)m_end, (Ione)m_indices, block); break;
+    case 7: WritePaletteBlock4_m8(partition, (V4two)m_start, (V4two)m_end, (Ione)m_indices, block); break;
   }
 
-  // save this scheme if it wins
-  if( error < m_besterror )
-  {
-    // remap the indices
-    u8 indices[16];
-    m_colours->RemapIndices( closest, indices );
-
-    // save the block
-    WriteColourBlock4( m_start, m_end, indices, block );
-
-    // save the error
-    m_besterror = error;
+#if !defined(NDEBUG) && defined(DEBUG_QUANTIZER)
+  // m4/m5 may have swap alpha, get the change back
+  for (int a = isets; a < (isets + asets); a++) {
+    m_start[a] = TransferW(m_start[a], m_start[a - isets]);
+    m_end  [a] = TransferW(m_end  [a], m_end  [a - isets]);
   }
+#endif
+
+  // save the error
+  m_besterror = error;
+  m_best = true;
 }
 #endif
 
+/* *****************************************************************************
+ */
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 #if	defined(USE_COMPUTE)
     tile_static float dist[16];
@@ -211,29 +307,29 @@ void RangeFit::Compress4( void* block )
     tile_static int   maxs[8];
 #endif
 
-void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit ) amp_restricted
+void PaletteRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, const int metric, const int fit ) amp_restricted
 {
-  ColourFit_CCR::AssignSet(barrier, thread, m_colours, metric, fit);
+  SinglePaletteFit_CCR::AssignSet(barrier, thread, m_palette, metric, fit);
 
 #if	!defined(USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
   threaded_cse(0) {
-    // initialise the metric
+    // initialize the metric
     if (metric == SQUISH_METRIC_UNIT)
-      m_metric = float3(1.0f, 1.0f, 0.0f);
+      m_metric = float3(0.5000f, 0.5000f, 0.0000f);
     else if (metric == SQUISH_METRIC_PERCEPTUAL)
       m_metric = float3(0.2126f, 0.7152f, 0.0722f);
     else
-      m_metric = 1.0f;
+      m_metric = float3(0.3333f, 0.3334f, 0.3333f);
   }
 
   // cache some values
   // AMP: causes a full copy, for indexibility
-  const int count = m_colours.GetCount();
-  point16 values = m_colours.GetPoints();
-  weight16 weights = m_colours.GetWeights();
+  const int count = m_palette.GetCount();
+  point16 values = m_palette.GetPoints();
+  weight16 weights = m_palette.GetWeights();
 
   // get the covariance smatrix
   Sym3x3 covariance = ComputeWeightedCovariance(barrier, thread, count, values, weights);
@@ -311,7 +407,7 @@ void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_C
     cline[CSTOP] = values[max];
   }
 
-  // clamp to the grid and save
+  // snap floating-point-values to the integer-lattice and save
   const float3 grid = float3( 31.0f, 63.0f, 31.0f );
   const float3 gridrcp = float3( 1.0f/31.0f, 1.0f/63.0f, 1.0f/31.0f );
   const float3 half = 0.5f;
@@ -328,24 +424,24 @@ void RangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_C
   }
 }
 
-void RangeFit_CCR::Compress(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block, const bool trans,
+void PaletteRangeFit_CCR::Compress(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block, const bool trans,
 			    IndexBlockLUT yArr) amp_restricted
 {
   /* all or nothing branches, OK, same for all threads */
-  bool isDxt1 = (trans);
-  if (isDxt1 && m_colours.IsTransparent())
-    Compress3 (barrier, thread, m_colours, block, yArr);
-  else if (!isDxt1)
-    Compress4 (barrier, thread, m_colours, block, yArr);
+  bool isBtc1 = (trans);
+  if (isBtc1 && m_palette.IsTransparent())
+    Compress3 (barrier, thread, m_palette, block, yArr);
+  else if (!isBtc1)
+    Compress4 (barrier, thread, m_palette, block, yArr);
   else
-    Compress34(barrier, thread, m_colours, block, yArr);
+    Compress34(barrier, thread, m_palette, block, yArr);
 }
 
 #define CASE3	0
 #define CASE4	1
 #define CASES	2
 
-void RangeFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+void PaletteRangeFit_CCR::Compress3(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			     IndexBlockLUT yArr) amp_restricted
 {
 #if	!defined(USE_COMPUTE)
@@ -354,8 +450,8 @@ void RangeFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_C
 
   // cache some values
   // AMP: causes a full copy, for indexibility
-  const int count = m_colours.GetCount();
-  point16 values = m_colours.GetPoints();
+  const int count = m_palette.GetCount();
+  point16 values = m_palette.GetPoints();
 
   float3 codes[3];
   float  dists[3];
@@ -393,11 +489,11 @@ void RangeFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_C
   {
     // remap the indices
     // save the block
-    ColourFit_CCR::Compress3(barrier, thread, m_colours, block, yArr);
+    PaletteFit_CCR::Compress3(barrier, thread, m_palette, block, yArr);
   }
 }
 
-void RangeFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+void PaletteRangeFit_CCR::Compress4(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			     IndexBlockLUT yArr) amp_restricted
 {
 #if	!defined(USE_COMPUTE)
@@ -406,8 +502,8 @@ void RangeFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_C
 
   // cache some values
   // AMP: causes a full copy, for indexibility
-  const int count = m_colours.GetCount();
-  point16 values = m_colours.GetPoints();
+  const int count = m_palette.GetCount();
+  point16 values = m_palette.GetPoints();
 
   float3 codes[4];
   float  dists[4];
@@ -447,7 +543,7 @@ void RangeFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_C
   {
     // remap the indices
     // save the block
-    ColourFit_CCR::Compress4(barrier, thread, m_colours, block, yArr);
+    PaletteFit_CCR::Compress4(barrier, thread, m_palette, block, yArr);
   }
 }
 
@@ -457,7 +553,7 @@ void RangeFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_C
   tile_static float errors[16][CASES];
 #endif
 
-void RangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+void PaletteRangeFit_CCR::Compress34(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			      IndexBlockLUT yArr) amp_restricted
 {
 #if	!defined(USE_COMPUTE)
@@ -466,8 +562,8 @@ void RangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_
 
   // cache some values
   // AMP: causes a full copy, for indexibility
-  const int count = m_colours.GetCount();
-  point16 values = m_colours.GetPoints();
+  const int count = m_palette.GetCount();
+  point16 values = m_palette.GetPoints();
 
   // match each point to the closest code
 #if	!defined(USE_COMPUTE)
@@ -575,7 +671,7 @@ void RangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_
 
     // remap the indices
     // save the block
-    ColourFit_CCR::Compress34(barrier, thread, m_colours, block, is4, yArr);
+    PaletteFit_CCR::Compress34(barrier, thread, m_palette, block, is4, yArr);
   }
 
 #undef	CASE3

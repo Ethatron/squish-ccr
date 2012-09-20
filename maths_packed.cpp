@@ -24,6 +24,8 @@
 
    -------------------------------------------------------------------------- */
 
+namespace squish {
+
 #if	defined(USE_COMPUTE)
   tile_static float4 centroid_t[8];
   tile_static Sym3x3 covariance[8];
@@ -310,3 +312,5 @@ float3 ComputePrincipleComponent(tile_barrier barrier, const int thread, Sym3x3r
       return GetMultiplicity1Evector(barrier, thread, smatrix, l2);
   }
 }
+
+} // namespace squish

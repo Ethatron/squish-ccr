@@ -25,31 +25,37 @@
 
    -------------------------------------------------------------------------- */
 
-#include "clusterfit.h"
+#include "colourclusterfit.h"
 #include "colourset.h"
 #include "colourblock.h"
 
 namespace squish {
 
+/* *****************************************************************************
+ */
 #if	!defined(USE_PRE)
-ClusterFit::ClusterFit( ColourSet const* colours, int flags )
+ColourClusterFit::ColourClusterFit( ColourSet const* colours, int flags )
   : ColourFit( colours, flags )
 {
   // set the iteration count
-  m_iterationCount = ( m_flags & kColourIterativeClusterFit ) ? kMaxIterations : 1;
+  m_iterationCount = (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
 
-  // initialise the best error
+  if (m_iterationCount > kMaxIterations) m_iterationCount = kMaxIterations;
+  if (m_iterationCount < kMinIterations) m_iterationCount = kMinIterations;
+
+  // initialize the best error
   m_besterror = VEC4_CONST( FLT_MAX );
 
-  // initialise the metric
-  bool perceptual = ( ( m_flags & kColourMetricPerceptual ) != 0 );
-  bool unit = ( ( m_flags & kColourMetricUnit ) != 0 );
-  if( unit )
-    m_metric = Vec4( 1.0f, 1.0f, 0.0f, 0.0f );
-  else if( perceptual )
-    m_metric = Vec4( 0.2126f, 0.7152f, 0.0722f, 0.0f );
+  // initialize the metric
+  bool perceptual = ((m_flags & kColourMetricPerceptual) != 0);
+  bool unit       = ((m_flags & kColourMetricUnit      ) != 0);
+
+  if (unit)
+    m_metric = Vec4(0.5000f, 0.5000f, 0.0000f, 0.0f);
+  else if (perceptual)	// linear RGB luminance
+    m_metric = Vec4(0.2126f, 0.7152f, 0.0722f, 0.0f);
   else
-    m_metric = VEC4_CONST( 1.0f );
+    m_metric = Vec4(0.3333f, 0.3334f, 0.3333f, 0.0f);
 
   // cache some values
   int const count = m_colours->GetCount();
@@ -62,7 +68,7 @@ ClusterFit::ClusterFit( ColourSet const* colours, int flags )
   m_principle = ComputePrincipleComponent( covariance );
 }
 
-bool ClusterFit::ConstructOrdering( Vec3 const& axis, int iteration )
+bool ColourClusterFit::ConstructOrdering( Vec3 const& axis, int iteration )
 {
   // cache some values
   int const count = m_colours->GetCount();
@@ -120,17 +126,15 @@ bool ClusterFit::ConstructOrdering( Vec3 const& axis, int iteration )
   return true;
 }
 
-void ClusterFit::Compress3( void* block )
+void ColourClusterFit::Compress3( void* block )
 {
+  cQuantizer4<5,6,5,0> q = cQuantizer4<5,6,5,0>();
+
   // declare variables
   int const count = m_colours->GetCount();
-  Vec4 const two = VEC4_CONST( 2.0 );
+  Vec4 const two = VEC4_CONST( 2.0f );
   Vec4 const one = VEC4_CONST( 1.0f );
   Vec4 const half_half2( 0.5f, 0.5f, 0.5f, 0.25f );
-  Vec4 const zero = VEC4_CONST( 0.0f );
-  Vec4 const half = VEC4_CONST( 0.5f );
-  Vec4 const grid( 31.0f, 63.0f, 31.0f, 0.0f );
-  Vec4 const gridrcp( 1.0f/31.0f, 1.0f/63.0f, 1.0f/31.0f, 0.0f );
 
   // prepare an ordering using the principle axis
   ConstructOrdering( m_principle, 0 );
@@ -172,11 +176,9 @@ void ClusterFit::Compress3( void* block )
 	Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_sum, alphax_sum*beta2_sum )*factor;
 	Vec4 b = NegativeMultiplySubtract( alphax_sum, alphabeta_sum, betax_sum*alpha2_sum )*factor;
 
-	// clamp to the grid
-	a = Min( one, Max( zero, a ) );
-	b = Min( one, Max( zero, b ) );
-	a = Truncate( MultiplyAdd( grid, a, half ) )*gridrcp;
-	b = Truncate( MultiplyAdd( grid, b, half ) )*gridrcp;
+	// snap floating-point-values to the integer-lattice
+	a = q.SnapToLattice(a);
+	b = q.SnapToLattice(b);
 
 	// compute the error (we skip the constant xxsum)
 	Vec4 e1 = MultiplyAdd( a*a, alpha2_sum, b*b*beta2_sum );
@@ -249,19 +251,18 @@ void ClusterFit::Compress3( void* block )
   }
 }
 
-void ClusterFit::Compress4( void* block )
+void ColourClusterFit::Compress4( void* block )
 {
+  cQuantizer4<5,6,5,0> q = cQuantizer4<5,6,5,0>();
+
   // declare variables
   int const count = m_colours->GetCount();
   Vec4 const two = VEC4_CONST( 2.0f );
   Vec4 const one = VEC4_CONST( 1.0f );
-  Vec4 const onethird_onethird2( 1.0f/3.0f, 1.0f/3.0f, 1.0f/3.0f, 1.0f/9.0f );
-  Vec4 const twothirds_twothirds2( 2.0f/3.0f, 2.0f/3.0f, 2.0f/3.0f, 4.0f/9.0f );
-  Vec4 const twonineths = VEC4_CONST( 2.0f/9.0f );
-  Vec4 const zero = VEC4_CONST( 0.0f );
-  Vec4 const half = VEC4_CONST( 0.5f );
-  Vec4 const grid( 31.0f, 63.0f, 31.0f, 0.0f );
-  Vec4 const gridrcp( 1.0f/31.0f, 1.0f/63.0f, 1.0f/31.0f, 0.0f );
+
+  Vec4 const onethird_onethird2  (1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
+  Vec4 const twothirds_twothirds2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
+  Vec4 const twonineths                                     = VEC4_CONST(2.0f / 9.0f);
 
   // prepare an ordering using the principle axis
   ConstructOrdering( m_principle, 0 );
@@ -294,24 +295,22 @@ void ClusterFit::Compress4( void* block )
 	  Vec4 part3 = m_xsum_wsum - part2 - part1 - part0;
 
 	  // compute least squares terms directly
-	  Vec4 const alphax_sum = MultiplyAdd( part2, onethird_onethird2, MultiplyAdd( part1, twothirds_twothirds2, part0 ) );
+	  Vec4 const alphax_sum = MultiplyAdd(part2, onethird_onethird2, MultiplyAdd(part1, twothirds_twothirds2, part0));
 	  Vec4 const alpha2_sum = alphax_sum.SplatW();
 
-	  Vec4 const betax_sum = MultiplyAdd( part1, onethird_onethird2, MultiplyAdd( part2, twothirds_twothirds2, part3 ) );
-	  Vec4 const beta2_sum = betax_sum.SplatW();
+	  Vec4 const  betax_sum = MultiplyAdd(part1, onethird_onethird2, MultiplyAdd(part2, twothirds_twothirds2, part3));
+	  Vec4 const  beta2_sum = betax_sum.SplatW();
 
 	  Vec4 const alphabeta_sum = twonineths*( part1 + part2 ).SplatW();
 
 	  // compute the least-squares optimal points
-	  Vec4 factor = Reciprocal( NegativeMultiplySubtract( alphabeta_sum, alphabeta_sum, alpha2_sum*beta2_sum ) );
-	  Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_sum, alphax_sum*beta2_sum )*factor;
-	  Vec4 b = NegativeMultiplySubtract( alphax_sum, alphabeta_sum, betax_sum*alpha2_sum )*factor;
+	  Vec4 factor = Reciprocal(NegativeMultiplySubtract(alphabeta_sum, alphabeta_sum, alpha2_sum * beta2_sum));
+	  Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_sum, alphax_sum * beta2_sum ) * factor;
+	  Vec4 b = NegativeMultiplySubtract(alphax_sum, alphabeta_sum,  betax_sum * alpha2_sum) * factor;
 
-	  // clamp to the grid
-	  a = Min( one, Max( zero, a ) );
-	  b = Min( one, Max( zero, b ) );
-	  a = Truncate( MultiplyAdd( grid, a, half ) )*gridrcp;
-	  b = Truncate( MultiplyAdd( grid, b, half ) )*gridrcp;
+	  // snap floating-point-values to the integer-lattice
+	  a = q.SnapToLattice(a);
+	  b = q.SnapToLattice(b);
 
 	  // compute the error (we skip the constant xxsum)
 	  Vec4 e1 = MultiplyAdd( a*a, alpha2_sum, b*b*beta2_sum );
@@ -395,6 +394,8 @@ void ClusterFit::Compress4( void* block )
 }
 #endif
 
+/* *****************************************************************************
+ */
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit ) amp_restricted
 {
@@ -404,10 +405,10 @@ void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet
     // set the iteration count
     m_iterationCount = (fit == SQUISH_FIT_CLUSTER) ? 1 : kMaxIterations;
 
-    // initialise the best error
+    // initialize the best error
     m_besterror = FLT_MAX;
 
-    // initialise the metric
+    // initialize the metric
     if (metric == SQUISH_METRIC_UNIT)
       m_metric4 = float4( 1.0f, 1.0f, 0.0f, 0.0f );
     else if (metric == SQUISH_METRIC_PERCEPTUAL)
@@ -501,8 +502,8 @@ void ClusterFit_CCR::Compress(tile_barrier barrier, const int thread, ColourSet_
 			        IndexBlockLUT yArr) amp_restricted
 {
   /* all or nothing branches, OK, same for all threads */
-  bool isDxt1 = (trans);
-  if (isDxt1) {
+  bool isBtc1 = (trans);
+  if (isBtc1) {
     Compress3(barrier, thread, m_colours, block, yArr);
     if (!m_colours.IsTransparent())
       Compress4(barrier, thread, m_colours, block, yArr);
@@ -570,7 +571,7 @@ void ClusterFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet
 	float4 a = submul( betax_sum, alphabeta_sum, alphax_sum*beta2_sum )*factor;
 	float4 b = submul( alphax_sum, alphabeta_sum, betax_sum*alpha2_sum )*factor;
 
-	// clamp to the grid
+	// snap floating-point-values to the integer-lattice
 	a = saturate( a );
 	b = saturate( b );
 	a = truncate( muladd( grid, a, half ) )*gridrcp;
@@ -705,7 +706,7 @@ void ClusterFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet
 	  float4 a = submul( betax_sum, alphabeta_sum, alphax_sum*beta2_sum )*factor;
 	  float4 b = submul( alphax_sum, alphabeta_sum, betax_sum*alpha2_sum )*factor;
 
-	  // clamp to the grid
+	  // snap floating-point-values to the integer-lattice
 	  a = saturate( a );
 	  b = saturate( b );
 	  a = truncate( muladd( grid, a, half ) )*gridrcp;

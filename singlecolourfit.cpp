@@ -28,50 +28,12 @@
 #include "colourset.h"
 #include "colourblock.h"
 
+#include "inlineables.cpp"
+
 namespace squish {
 
-#ifndef FLOATTOINT
-#define FLOATTOINT
-  static int FloatToInt( float a, int limit ) ccr_restricted
-  {
-    // use ANSI round-to-zero behaviour to get round-to-nearest
-    int i = ( int )( a + 0.5f );
-
-    // clamp to the limit
-    if( i < 0 )
-      i = 0;
-    else if( i > limit )
-      i = limit;
-
-    // done
-    return i;
-  }
-
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
-  static int3 FloatToInt( float3 a, int3 limit ) ccr_restricted
-  {
-    // use ANSI round-to-zero behaviour to get round-to-nearest
-    int3 i = (int3)(a + 0.5f);
-
-    // clamp to the limit
-    return minimax(i, 0, limit);
-  }
-
-  static int4 FloatToInt( float4 a, int4 limit ) amp_restricted
-  {
-#if	!defined(USE_COMPUTE)
-    using namespace Concurrency::vector_math;
-#endif
-
-    // use ANSI round-to-zero behaviour to get round-to-nearest
-    int4 i = (int4)(a + 0.5f);
-
-    // clamp to the limit
-    return minimax(i, 0, limit);
-  }
-#endif
-#endif
-
+/* *****************************************************************************
+ */
 #if	!defined(USE_PRE)
 struct SourceBlock
 {
@@ -87,20 +49,21 @@ struct SingleColourLookup
 
 #include "singlecolourlookup.inl"
 
-SingleColourFit::SingleColourFit( ColourSet const* colours, int flags )
-  : ColourFit( colours, flags )
+SingleColourFit::SingleColourFit(ColourSet const* colours, int flags)
+  : ColourFit(colours, flags)
 {
   // grab the single colour
   Vec3 const* values = m_colours->GetPoints();
-  m_colour[0] = ( u8 )FloatToInt( 255.0f*values->X(), 255 );
-  m_colour[1] = ( u8 )FloatToInt( 255.0f*values->Y(), 255 );
-  m_colour[2] = ( u8 )FloatToInt( 255.0f*values->Z(), 255 );
 
-  // initialise the best error
+  m_colour[0] = (u8)FloatToInt(255.0f * values->X(), 255);
+  m_colour[1] = (u8)FloatToInt(255.0f * values->Y(), 255);
+  m_colour[2] = (u8)FloatToInt(255.0f * values->Z(), 255);
+
+  // initialize the best error
   m_besterror = INT_MAX;
 }
 
-void SingleColourFit::Compress3( void* block )
+void SingleColourFit::Compress3(void* block)
 {
   // build the table of lookups
   SingleColourLookup const* const lookups[] =
@@ -111,24 +74,24 @@ void SingleColourFit::Compress3( void* block )
   };
 
   // find the best end-points and index
-  ComputeEndPoints( lookups );
+  ComputeEndPoints(lookups);
 
   // build the block if we win
-  if( m_error < m_besterror )
-  {
+  if (m_error < m_besterror) {
     // remap the indices
     u8 indices[16];
-    m_colours->RemapIndices( &m_index, indices );
+
+    m_colours->RemapIndices(&m_index, indices);
 
     // save the block
-    WriteColourBlock3( m_start, m_end, indices, block );
+    WriteColourBlock3(m_start, m_end, indices, block);
 
     // save the error
     m_besterror = m_error;
   }
 }
 
-void SingleColourFit::Compress4( void* block )
+void SingleColourFit::Compress4(void* block)
 {
   // build the table of lookups
   SingleColourLookup const* const lookups[] =
@@ -139,34 +102,34 @@ void SingleColourFit::Compress4( void* block )
   };
 
   // find the best end-points and index
-  ComputeEndPoints( lookups );
+  ComputeEndPoints(lookups);
 
   // build the block if we win
-  if( m_error < m_besterror )
-  {
+  if (m_error < m_besterror) {
     // remap the indices
     u8 indices[16];
-    m_colours->RemapIndices( &m_index, indices );
+
+    m_colours->RemapIndices(&m_index, indices);
 
     // save the block
-    WriteColourBlock4( m_start, m_end, indices, block );
+    WriteColourBlock4(m_start, m_end, indices, block);
 
     // save the error
     m_besterror = m_error;
   }
 }
 
-void SingleColourFit::ComputeEndPoints( SingleColourLookup const* const* lookups )
+void SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
 {
   // check each index combination (endpoint or intermediate)
   m_error = INT_MAX;
-  for( int index = 0; index < 2; ++index )
-  {
+
+  for (int index = 0; index < 2; ++index) {
     // check the error for this codebook index
     SourceBlock const* sources[3];
     int error = 0;
-    for( int channel = 0; channel < 3; ++channel )
-    {
+
+    for (int channel = 0; channel < 3; ++channel) {
       // grab the lookup table and index for this channel
       SingleColourLookup const* lookup = lookups[channel];
       int target = m_colour[channel];
@@ -176,23 +139,24 @@ void SingleColourFit::ComputeEndPoints( SingleColourLookup const* const* lookups
 
       // accumulate the error
       int diff = sources[channel]->error;
-      error += diff*diff;
+      error += diff * diff;
     }
 
     // keep it if the error is lower
-    if( error < m_error )
-    {
+    if (error < m_error) {
       m_start = Vec3(
-	( float )sources[0]->start/31.0f,
-	( float )sources[1]->start/63.0f,
-	( float )sources[2]->start/31.0f
+	(float)sources[0]->start / 31.0f,
+	(float)sources[1]->start / 63.0f,
+	(float)sources[2]->start / 31.0f
       );
+
       m_end = Vec3(
-	( float )sources[0]->end/31.0f,
-	( float )sources[1]->end/63.0f,
-	( float )sources[2]->end/31.0f
+	(float)sources[0]->end / 31.0f,
+	(float)sources[1]->end / 63.0f,
+	(float)sources[2]->end / 31.0f
       );
-      m_index = ( u8 )( 2*index );
+
+      m_index = (u8)(2 * index);
       m_error = error;
     }
   }

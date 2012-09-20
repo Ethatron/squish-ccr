@@ -42,7 +42,7 @@ namespace squish {
   void WriteColourBlock3( Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block );
   void WriteColourBlock4( Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block );
 
-  void DecompressColour( u8* rgba, void const* block, bool isDxt1 );
+  void DecompressColourBtc( u8* rgba, void const* block, bool isBtc1 );
 #endif
 
 // -----------------------------------------------------------------------------
@@ -52,8 +52,8 @@ namespace squish {
   void WriteColourBlock4(tile_barrier barrier, const int thread,
 			 lineC2 cline, inout index16 indices, out code64 block) amp_restricted;
 
-/*void DecompressColour(tile_barrier barrier, const int thread,
-			out pixel16 rgba, bool isDxt1) amp_restricted;*/
+/*void DecompressColourBtc(tile_barrier barrier, const int thread,
+			out pixel16 rgba, bool isBtc1) amp_restricted;*/
 #endif
 
 } // namespace squish

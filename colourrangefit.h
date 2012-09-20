@@ -24,84 +24,67 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_SINGLECOLOURFIT_H
-#define SQUISH_SINGLECOLOURFIT_H
+#ifndef SQUISH_RANGEFIT_H
+#define SQUISH_RANGEFIT_H
 
 #include <squish.h>
-#include <limits.h>
 #include "colourfit.h"
-
-// pull in structure definitions
-#if	defined(USE_AMP)
-#include "singlecolourlookup_ccr.inl"
-#endif
+#include "maths.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
 class ColourSet;
-struct SingleColourLookup;
-class SingleColourFit : public ColourFit
+class ColourRangeFit : public ColourFit
 {
 public:
-  SingleColourFit( ColourSet const* colours, int flags );
+  ColourRangeFit( ColourSet const* colours, int flags );
 
 private:
   virtual void Compress3( void* block );
   virtual void Compress4( void* block );
 
-  void ComputeEndPoints( SingleColourLookup const* const* lookups );
-
-  u8 m_colour[3];
+  Vec3 m_metric;
   Vec3 m_start;
   Vec3 m_end;
-  u8 m_index;
-  int m_error;
-  int m_besterror;
+  float m_besterror;
 };
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
-struct SingleColourFit_CCR : inherit_hlsl ColourFit_CCR
+struct ColourRangeFit_CCR : inherit_hlsl ColourFit_CCR
 {
 public_hlsl
   void AssignSet (tile_barrier barrier, const int thread,
                   ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
   void Compress  (tile_barrier barrier, const int thread,
                   ColourSet_CCRr m_colours, out code64 block, const bool trans,
-		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+                  IndexBlockLUT yArr) amp_restricted;
 
 protected_hlsl
   void Compress3 (tile_barrier barrier, const int thread,
                   ColourSet_CCRr m_colours, out code64 block,
-		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+                  IndexBlockLUT yArr) amp_restricted;
   void Compress4 (tile_barrier barrier, const int thread,
                   ColourSet_CCRr m_colours, out code64 block,
-		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+                  IndexBlockLUT yArr) amp_restricted;
   void Compress34(tile_barrier barrier, const int thread,
                   ColourSet_CCRr m_colours, out code64 block,
-		  IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
-
-  void ComputeEndPoints(tile_barrier barrier, const int thread, const int is4,
-		        SingleColourLUT lArr) amp_restricted;
-  int  ComputeEndPoints(tile_barrier barrier, const int thread,
-		        SingleColourLUT lArr) amp_restricted;
+                  IndexBlockLUT yArr) amp_restricted;
 
 #if	!defined(USE_COMPUTE)
 private_hlsl
-  int3 m_colour;
-  ccr8 m_index;
+  float3 m_metric;
 #endif
 };
 
 #if	defined(USE_COMPUTE)
-  tile_static int3 m_colour;
-  tile_static ccr8 m_index;
+  tile_static float3 m_metric;
 #endif
 #endif
 
-} // namespace squish
+} // squish
 
-#endif // ndef SQUISH_SINGLECOLOURFIT_H
+#endif // ndef SQUISH_RANGEFIT_H

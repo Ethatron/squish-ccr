@@ -56,7 +56,7 @@
 // - READ_STRUCTURED is bandwidth intensive, read 4 ints, no datatype
 //   conversion
 // - not WRTE_STRUCTURED is a bit odd, and you have to setup a 2 component
-//   DXT imposter
+//   DXT/BTC/BTC imposter
 // - not WRTE_STRUCTURED + not READ_STRUCTURED will make all i/o dimensionality
 //   implicit, no need to calculate anything at all
 
@@ -162,7 +162,7 @@ void main(
   /* TODO: check why this leads to compile errors */
 #if 0
   /* compress */
-  squish::CompressColorDxt1(
+  squish::CompressColorBtc1(
     0,
     thread,
     ins,
@@ -192,7 +192,7 @@ void main(
   squish::colours.CountSet(barrier, thread, ins, mask, true, trans);
 
   // compress colour
-  squish::CompressColorDxt(barrier, thread, ins, squish::colours, block, metric, trans, fit, yArr, lArr);
+  squish::CompressColorBtc(barrier, thread, ins, squish::colours, block, metric, trans, fit, yArr, lArr);
 
   if (thread == 0) {
     ous[1] = block;

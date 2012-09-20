@@ -27,14 +27,28 @@
 #ifndef SQUISH_CONFIG_H
 #define SQUISH_CONFIG_H
 
+// code only a specific mode-setting
+#define	DEBUG_SETTING
+// throw the quantized rgba values back into the input-image
+#define	DEBUG_QUANTIZER
+// throw the decoded rgba values back into the input-image
+#undef	DEBUG_ENCODER
+// print out lots of information about the search
+#undef	DEBUG_DETAILS
+
 // Set to 1 when building squish to use Altivec instructions.
 #ifndef SQUISH_USE_ALTIVEC
 #define SQUISH_USE_ALTIVEC 0
 #endif
 
-// Set to 1 or 2 when building squish to use SSE or SSE2 instructions.
+// Set to 1 or 2 or 3 or 4 when building squish to use SSE or SSE2, SSE3 or SSE4 instructions.
 #ifndef SQUISH_USE_SSE
-#define SQUISH_USE_SSE 2
+#define SQUISH_USE_SSE 0
+#endif
+
+// Set to 3 or 4 when building squish to use SSSE3 or SSE4A instructions.
+#ifndef SQUISH_USE_XSSE
+#define SQUISH_USE_XSSE 0
 #endif
 
 // Internally et SQUISH_USE_SIMD when either Altivec or SSE is available.
@@ -43,9 +57,21 @@
 #endif
 #if SQUISH_USE_ALTIVEC || SQUISH_USE_SSE
 #define SQUISH_USE_SIMD 1
+#ifdef __GNUC__
+#define a16		__attribute__ ((__aligned__ (16)))
+typedef long long	__int64;
+#else
 #define a16		__declspec(align(16))
+#endif
 #else
 #define SQUISH_USE_SIMD 0
+#ifdef __GNUC__
+#define a16		__attribute__ ((__aligned__ (4)))
+typedef unsigned long long unsigned__int64;
+#else
+#define a16		__declspec(align(4))
+typedef unsigned __int64 unsigned__int64;
+#endif
 #endif
 
 /* *****************************************************************************
@@ -206,12 +232,22 @@ using namespace ::Concurrency;
 #endif
 
 /* *****************************************************************************
- */
+*/
+#if	defined(USE_AMP)
 #ifndef	DIM
 #pragma message( "Input-array dimensionality has been set to 4" )
 
 // at least RGBA, which is 4 components, can be more
 #define	DIM	4
+#endif
+#endif
+
+#ifdef __GNUC__
+#define assume
+#define doinline
+#else
+#define assume		__assume
+#define doinline	__forceinline
 #endif
 
 #endif // ndef SQUISH_CONFIG_H

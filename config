@@ -14,7 +14,7 @@ CXXFLAGS += -maltivec
 endif
 ifeq ($(USE_SSE),1)
 CPPFLAGS += -DSQUISH_USE_SSE=2
-CXXFLAGS += -msse
+CXXFLAGS += -msse2
 endif
 
 # where should we install to

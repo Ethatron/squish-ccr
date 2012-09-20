@@ -29,6 +29,8 @@
 
 namespace squish {
 
+/* *****************************************************************************
+ */
 #if	!defined(USE_PRE)
 ColourFit::ColourFit( ColourSet const* colours, int flags )
   : m_colours( colours ),
@@ -38,8 +40,8 @@ ColourFit::ColourFit( ColourSet const* colours, int flags )
 
 void ColourFit::Compress( void* block )
 {
-  bool isDxt1 = ( ( m_flags & kDxt1 ) != 0 );
-  if( isDxt1 )
+  bool isBtc1 = ( ( m_flags & kBtc1 ) != 0 );
+  if( isBtc1 )
   {
     Compress3( block );
     if( !m_colours->IsTransparent() )
@@ -50,6 +52,8 @@ void ColourFit::Compress( void* block )
 }
 #endif
 
+/* *****************************************************************************
+ */
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 void ColourFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, int metric, int fit) amp_restricted
 {
@@ -65,10 +69,10 @@ void ColourFit_CCR::Compress(tile_barrier barrier, const int thread, ColourSet_C
 			     IndexBlockLUT yArr) amp_restricted
 {
   /* all or nothing branches, OK, same for all threads */
-  bool isDxt1 = (trans);
-  if (isDxt1 && m_colours.IsTransparent())
+  bool isBtc1 = (trans);
+  if (isBtc1 && m_colours.IsTransparent())
     Compress3 (barrier, thread, m_colours, block, yArr);
-  else if (!isDxt1)
+  else if (!isBtc1)
     Compress4 (barrier, thread, m_colours, block, yArr);
   else
     Compress34(barrier, thread, m_colours, block, yArr);

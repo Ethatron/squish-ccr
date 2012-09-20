@@ -1,0 +1,42 @@
+kWeightColourByAlpha
+
+	weights color by alpha
+
+kExcludeAlphaFromPalette
+
+	weights color by alpha
+
+kWeightColourByAlpha + kExcludeAlphaFromPalette
+
+	interpretes the alpha-channel as weight-channel
+	allows you to apply custom weighting
+
+kColourRangeFit
+
+	Use a slow but high quality colour compressor
+
+kColourClusterFit
+
+	Use a very slow but very high quality colour compressor
+
+kColourRangeFit + kColourClusterFit
+
+	for btc12345 rangefit takes precedence
+	for btc7 search partition with rangefit,
+	then make best out of the partition with clusterfit
+
+kBtc6 + no kVariableCodingMode
+kBtc7 + no kVariableCodingMode
+
+	search the best mode
+
+kColourMetricPerceptual
+
+	linear RGB luminance weighting
+
+kSrgbIn
+
+	Transform input values/points from sRGB to linear RGB
+
+kSrgbOut
+	Transform output points/values from linear RGB to sRGB

@@ -24,42 +24,73 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_COLOURSET_H
-#define SQUISH_COLOURSET_H
+#ifndef SQUISH_PALETTESET_H
+#define SQUISH_PALETTESET_H
 
 #include <squish.h>
+#include <memory.h>
 #include "maths.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
-/*! @brief Represents a set of block colours
+/*! @brief Represents a set of block palettes
 */
-class ColourSet
+class PaletteSet
 {
 public:
-  ColourSet( u8 const* rgba, int mask, int flags );
+  static void GetMasks(int flags, int partition, int (&masks)[4]);
 
-  int GetCount() const { return m_count; }
-  Vec3 const* GetPoints() const { return m_points; }
-  float const* GetWeights() const { return m_weights; }
+public:
+  // constructor for regular operation
+  PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation);
+  // constructors for managing backups of palette-sets
+  PaletteSet() {};
+  PaletteSet(PaletteSet const &palette) { memcpy(this, &palette, sizeof(this)); };
+
+  // active attributes based the parameters passed on initializaton
+  int GetSets() const { return m_numsets; }
+  int GetRotation() const { return m_rotid; }
+  int GetPartition() const { return m_partid; }
+
+  // information determined when the palette-set has been formed
   bool IsTransparent() const { return m_transparent; }
+  bool IsSeperateAlpha() const { return /*m_transparent &&*/ m_seperatealpha; }
+  Vec4 const* GetPoints(int idx) const { return m_points[idx]; }
+  float const* GetWeights(int idx) const { return m_weights[idx]; }
+  u8 const* GetFrequencies(int idx) const { return m_frequencies[idx]; }
+  int GetCount(int idx) const { return m_count[idx]; }
+  int GetCount() const {
+    return             m_count[0]      +
+    /*(m_numsets > 0 ? m_count[0] : 0)*/ (m_seperatealpha ? m_count[m_numsets + 0] : 0) +
+      (m_numsets > 1 ? m_count[1] : 0) /*(m_seperatealpha ? m_count[m_numsets + 1] : 0)*/ +
+      (m_numsets > 2 ? m_count[2] : 0) /*(m_seperatealpha ? m_count[m_numsets + 2] : 0)*/; }
 
-  void RemapIndices(u8 const* source, u8* target) const;
+  // map from the set to indices and back to colours
+  void RemapIndices(u8 const* source, u8* target, int set) const;
+  void UnmapIndices(u8 const* source, u8* rgba, int set, int *codes, int cmask) const;
 
 private:
-  int m_count;
-  Vec3 m_points[16];
-  float m_weights[16];
-  int m_remap[16];
-  bool m_transparent;
+  int   m_numsets;
+  int   m_rotid;
+  int   m_partid;
+  int   m_partmask;
+  bool  m_seperatealpha;
+
+  int   m_mask[4];
+  int   m_count[4];
+  Vec4  m_points[4][16];
+  float m_weights[4][16];
+  u8    m_frequencies[4][16];
+  int   m_remap[4][16];
+  bool  m_transparent;
 };
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
-struct ColourSet_CCR
+struct PaletteSet_CCR
 {
 public_hlsl
   int GetCount() amp_restricted;
@@ -81,7 +112,7 @@ protected_hlsl
 private_hlsl
   int m_transparent;
   int     m_count;
-  float3 m_points[16];
+  float4 m_points[16];
   float m_weights[16];
   int     m_remap[16];
   ccr8  m_indices[16];
@@ -91,20 +122,20 @@ private_hlsl
 #if	defined(USE_COMPUTE)
   tile_static int m_transparent;
   tile_static int     m_count;
-  tile_static float3 m_points[16];
+  tile_static float4 m_points[16];
   tile_static float m_weights[16];
   tile_static int     m_remap[16];
   tile_static ccr8  m_indices[16];
 #endif
 
 #if	!defined(USE_COMPUTE)
-  typedef ColourSet_CCR &ColourSet_CCRr;
+  typedef PaletteSet_CCR &PaletteSet_CCRr;
 #else
-  typedef ColourSet_CCR  ColourSet_CCRr;
+  typedef PaletteSet_CCR  PaletteSet_CCRr;
 #endif
 
 #endif
 
 } // namespace sqish
 
-#endif // ndef SQUISH_COLOURSET_H
+#endif // ndef SQUISH_PALETTESET_H

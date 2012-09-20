@@ -125,12 +125,6 @@ namespace vector_math {
       left.w * right.w + offset.w
     );
   }
-#endif
-
-  float4 submul( float4 left, float4 right, float4 offset ) amp_restricted
-  {
-    return muladd(-left, right, offset);
-  }
 
   float4 truncate( float4 center ) amp_restricted
   {
@@ -140,6 +134,22 @@ namespace vector_math {
       center.z > 0.0f ? floorf( center.z ) : ceilf( center.z ),
       center.w > 0.0f ? floorf( center.w ) : ceilf( center.w )
     );
+  }
+
+  float4 round( float4 center ) amp_restricted
+  {
+    return float4(
+      floorf( center.x + 0.5f ),
+      floorf( center.y + 0.5f ),
+      floorf( center.z + 0.5f ),
+      floorf( center.w + 0.5f )
+    );
+  }
+#endif
+
+  float4 submul( float4 left, float4 right, float4 offset ) amp_restricted
+  {
+    return muladd(-left, right, offset);
   }
 
   bool less( float4 left, float4 right ) amp_restricted

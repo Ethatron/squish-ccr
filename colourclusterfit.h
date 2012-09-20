@@ -25,8 +25,8 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_CLUSTERFIT_H
-#define SQUISH_CLUSTERFIT_H
+#ifndef SQUISH_COLOURCLUSTERFIT_H
+#define SQUISH_COLOURCLUSTERFIT_H
 
 #include <squish.h>
 #include "maths.h"
@@ -37,10 +37,10 @@ namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
-class ClusterFit : public ColourFit
+class ColourClusterFit : public ColourFit
 {
 public:
-  ClusterFit( ColourSet const* colours, int flags );
+  ColourClusterFit( ColourSet const* colours, int flags );
 
 private:
   bool ConstructOrdering( Vec3 const& axis, int iteration );
@@ -48,11 +48,14 @@ private:
   virtual void Compress3( void* block );
   virtual void Compress4( void* block );
 
-  enum { kMaxIterations = 8 };
+  enum {
+    kMinIterations = 1,
+    kMaxIterations = 15
+  };
 
   int m_iterationCount;
   Vec3 m_principle;
-  u8 m_order[16*kMaxIterations];
+  u8 m_order[16 * kMaxIterations];
   Vec4 m_points_weights[16];
   Vec4 m_xsum_wsum;
   Vec4 m_metric;
@@ -108,4 +111,4 @@ private_hlsl
 #endif
 } // namespace squish
 
-#endif // ndef SQUISH_CLUSTERFIT_H
+#endif // ndef SQUISH_COLOURCLUSTERFIT_H

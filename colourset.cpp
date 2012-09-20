@@ -28,15 +28,12 @@
 
 namespace squish {
 
+/* *****************************************************************************
+ */
 #if	!defined(USE_PRE)
 ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
-  : m_count( 0 ),
-	m_transparent( false )
+  : m_count(0), m_transparent(false)
 {
-  // check the compression mode for dxt1
-  bool isDxt1 = ( ( flags & kDxt1 ) != 0 );
-  bool weightByAlpha = ( ( flags & kWeightColourByAlpha ) != 0 );
-
   /*
   static const float dw[] = {
     sqrtf(1.5 * 1.5 + 1.5 * 1.5),
@@ -61,42 +58,43 @@ ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
   };
   */
 
+  // check the compression mode for dxt1
+  bool isBtc1        = ((flags & kBtc1                   ) != 0);
+  bool clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
+  bool weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
+  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
+
   // create the minimal set
-  for( int i = 0; i < 16; ++i )
-  {
+  for (int i = 0; i < 16; ++i) {
     // check this pixel is enabled
     int bit = 1 << i;
-    if( ( mask & bit ) == 0 )
-    {
+    if ((mask & bit) == 0) {
       m_remap[i] = -1;
       continue;
     }
 
     // check for transparent pixels when using dxt1
-    if( isDxt1 && rgba[4*i + 3] < 128 )
-    {
+    if (isBtc1 && !clearAlpha && (rgba[4 * i + 3] < 128)) {
       m_remap[i] = -1;
       m_transparent = true;
       continue;
     }
 
     // loop over previous points for a match
-    for( int j = 0;; ++j )
-    {
+    for (int j = 0;; ++j) {
       // allocate a new point
-      if( j == i )
-      {
-	// normalise coordinates to [0,1]
-	float x = ( float )rgba[4*i] / 255.0f;
-	float y = ( float )rgba[4*i + 1] / 255.0f;
-	float z = ( float )rgba[4*i + 2] / 255.0f;
+      if (j == i) {
+	// normalize coordinates to [0,1]
+	float x = rgbLUT[rgba[4 * i + 0]];
+	float y = rgbLUT[rgba[4 * i + 1]];
+	float z = rgbLUT[rgba[4 * i + 2]];
 
 	// ensure there is always non-zero weight even for zero alpha
-	float w = ( float )( rgba[4*i + 3] + 1 ) / 256.0f;
+	float w = (float)(rgba[4 * i + 3] + 1) / 256.0f;
 
 	// add the point
-	m_points[m_count] = Vec3( x, y, z );
-	m_weights[m_count] = ( weightByAlpha ? w : 1.0f );
+	m_points[m_count] = Vec3(x, y, z);
+	m_weights[m_count] = (weightByAlpha ? w : 1.0f);
 	m_remap[i] = m_count;
 
 	// advance
@@ -106,21 +104,21 @@ ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
 
       // check for a match
       int oldbit = 1 << j;
-      bool match = ( ( mask & oldbit ) != 0 )
-	&& ( rgba[4*i] == rgba[4*j] )
-	&& ( rgba[4*i + 1] == rgba[4*j + 1] )
-	&& ( rgba[4*i + 2] == rgba[4*j + 2] )
-	&& ( rgba[4*j + 3] >= 128 || !isDxt1 );
-      if( match )
-      {
+      bool match = ((mask & oldbit) != 0)
+	&& (rgba[4 * i + 0] == rgba[4 * j + 0])
+	&& (rgba[4 * i + 1] == rgba[4 * j + 1])
+	&& (rgba[4 * i + 2] == rgba[4 * j + 2])
+	&& (rgba[4 * j + 3] >= 128 || !isBtc1 || clearAlpha);
+
+      if (match) {
 	// get the index of the match
 	int index = m_remap[j];
 
 	// ensure there is always non-zero weight even for zero alpha
-	float w = ( float )( rgba[4*i + 3] + 1 ) / 256.0f;
+	float w = (float)(rgba[4 * i + 3] + 1) / 256.0f;
 
 	// map to this point and increase the weight
-	m_weights[index] += ( weightByAlpha ? w : 1.0f );
+	m_weights[index] += (weightByAlpha ? w : 1.0f);
 	m_remap[i] = index;
 	break;
       }
@@ -128,8 +126,8 @@ ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
   }
 
   // square root the weights
-  for( int i = 0; i < m_count; ++i )
-    m_weights[i] = std::sqrt( m_weights[i] );
+  for (int i = 0; i < m_count; ++i)
+    m_weights[i] = std::sqrt(m_weights[i]);
 }
 
 void ColourSet::RemapIndices( u8 const* source, u8* target ) const
@@ -140,11 +138,13 @@ void ColourSet::RemapIndices( u8 const* source, u8* target ) const
 }
 #endif
 
+/* *****************************************************************************
+ */
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 void ColourSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rgba, int mask, const bool tresh, const bool trans) amp_restricted
 {
   // check the compression mode for dxt1
-  const bool isDxt1 = (tresh);
+  const bool isBtc1 = (tresh);
   const bool weightByAlpha = (trans);
 
   // clear counters
@@ -169,7 +169,7 @@ void ColourSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rgb
     int bit = 1 << i;
     if ((mask & bit) != 0) {
       // check for transparent pixels when using dxt1
-      if (isDxt1 && (rgba[i][0] < 128)) {
+      if (isBtc1 && (rgba[i][0] < 128)) {
         // AMP: all thread end up here (CXCHG won't block concurrent reads)
         int zero = 0; threaded_set(m_transparent, zero, 1);
       }
@@ -187,7 +187,7 @@ void ColourSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rgb
 	    && (rgba[i][3] == rgba[j][3])
 	    && (rgba[i][2] == rgba[j][2])
 	    && (rgba[i][1] == rgba[j][1])
-	    && (!isDxt1 || (rgba[j][0] >= 128));
+	    && (!isBtc1 || (rgba[j][0] >= 128));
 
           // AMP: there is only one thread max. which could find a match
           //      so it's only one thread which writes to index, no
@@ -230,14 +230,14 @@ void ColourSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rgb
   // square root the weights
 #if	!defined(USE_COMPUTE)
   wavefrnt_for(wscan, 16) {
-    // normalise coordinates to [0,1]
+    // normalize coordinates to [0,1]
     m_points [wscan] /= 255.0f;
     m_weights[wscan]  = sqrtf(m_weights[wscan]);
   }
 #else
   // error X3695: race condition writing to shared memory detected, consider making this write conditional.
   threaded_for(wscan, m_count) {
-    // normalise coordinates to [0,1]
+    // normalize coordinates to [0,1]
     m_points [wscan] /= 255.0f;
     m_weights[wscan]  = sqrtf(m_weights[wscan]);
   }
