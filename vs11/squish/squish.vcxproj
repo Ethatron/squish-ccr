@@ -93,7 +93,8 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;USE_CPP
+;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -103,7 +104,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Lib>
       <OutputFile>../../lib/squishd.lib</OutputFile>
@@ -113,7 +114,8 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;USE_CPP
+;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
@@ -134,7 +136,8 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;USE_CPP
+;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
       <PrecompiledHeader>
@@ -142,6 +145,10 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Lib>
       <OutputFile>../../lib/squish.lib</OutputFile>
@@ -153,7 +160,8 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>..\..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;USE_CPP
+;SQUISH_USE_SSE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
       <PrecompiledHeader>
@@ -161,6 +169,10 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Lib>
       <OutputFile>../../lib/x64/squish.lib</OutputFile>
@@ -168,34 +180,75 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\alpha.cpp" />
-    <ClCompile Include="..\..\clusterfit.cpp" />
     <ClCompile Include="..\..\colourblock.cpp" />
+    <ClCompile Include="..\..\colourclusterfit.cpp" />
     <ClCompile Include="..\..\colourfit.cpp" />
+    <ClCompile Include="..\..\colourrangefit.cpp" />
     <ClCompile Include="..\..\colourset.cpp" />
+    <ClCompile Include="..\..\inlineables.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\maths.cpp" />
-    <ClCompile Include="..\..\rangefit.cpp" />
+    <ClCompile Include="..\..\maths_packed.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\maths_vector.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\paletteblock.cpp" />
+    <ClCompile Include="..\..\paletteclusterfit.cpp" />
+    <ClCompile Include="..\..\palettefit.cpp" />
+    <ClCompile Include="..\..\paletterangefit.cpp" />
+    <ClCompile Include="..\..\paletteset.cpp" />
     <ClCompile Include="..\..\singlecolourfit.cpp" />
+    <ClCompile Include="..\..\singlepalettefit.cpp" />
     <ClCompile Include="..\..\squish.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\alpha.h" />
-    <ClInclude Include="..\..\clusterfit.h" />
     <ClInclude Include="..\..\colourblock.h" />
+    <ClInclude Include="..\..\colourclusterfit.h" />
     <ClInclude Include="..\..\colourfit.h" />
+    <ClInclude Include="..\..\colourrangefit.h" />
     <ClInclude Include="..\..\colourset.h" />
     <ClInclude Include="..\..\config.h" />
     <ClInclude Include="..\..\maths.h" />
-    <ClInclude Include="..\..\rangefit.h" />
+    <ClInclude Include="..\..\paletteblock.h" />
+    <ClInclude Include="..\..\paletteclusterfit.h" />
+    <ClInclude Include="..\..\palettefit.h" />
+    <ClInclude Include="..\..\paletterangefit.h" />
+    <ClInclude Include="..\..\paletteset.h" />
     <ClInclude Include="..\..\simd.h" />
     <ClInclude Include="..\..\simd_float.h" />
     <ClInclude Include="..\..\simd_sse.h" />
     <ClInclude Include="..\..\simd_ve.h" />
     <ClInclude Include="..\..\singlecolourfit.h" />
+    <ClInclude Include="..\..\singlepalettefit.h" />
     <ClInclude Include="..\..\squish.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\singlecolourlookup.inl" />
+    <None Include="..\..\singlecolourlookup_ccr.inl" />
+    <None Include="..\..\singlecolourlookup_ccr_flat.inl" />
+    <None Include="..\..\singlecolourlookup_ccr_packed.inl" />
+    <None Include="..\..\singlecolourlookup_ccr_vector.inl" />
+    <None Include="..\..\singlepalettelookup.inl" />
     <None Include="..\..\texture_compression_s3tc.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\texture_compression_bptc.txt" />
+    <Text Include="..\..\texture_compression_fxt1.txt" />
+    <Text Include="..\..\texture_compression_latc.txt" />
+    <Text Include="..\..\texture_compression_rgtc.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

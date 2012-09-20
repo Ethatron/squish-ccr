@@ -375,10 +375,10 @@ void PaletteSet::UnmapIndices(u8 const* source, u8* destination, int set, int *c
       if ((pmask & bit) == 0)
 	continue;
 
-      if ((cmask >>  0) & 0xFF) destination[4 * i + 0] = (codes[source[i]] >>  0) & 0xFF;
-      if ((cmask >>  8) & 0xFF) destination[4 * i + 1] = (codes[source[i]] >>  8) & 0xFF;
-      if ((cmask >> 16) & 0xFF) destination[4 * i + 2] = (codes[source[i]] >> 16) & 0xFF;
-      if ((cmask >> 24) & 0xFF) destination[4 * i + 3] = (codes[source[i]] >> 24) & 0xFF;
+      if ((cmask >>  0) & 0xFF) destination[4 * i + 0] = (u8)(codes[source[i]] >>  0);
+      if ((cmask >>  8) & 0xFF) destination[4 * i + 1] = (u8)(codes[source[i]] >>  8);
+      if ((cmask >> 16) & 0xFF) destination[4 * i + 2] = (u8)(codes[source[i]] >> 16);
+      if ((cmask >> 24) & 0xFF) destination[4 * i + 3] = (u8)(codes[source[i]] >> 24);
     }
   }
 }

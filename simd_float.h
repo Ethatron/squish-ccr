@@ -27,6 +27,9 @@
 #ifndef SQUISH_SIMD_FLOAT_H
 #define SQUISH_SIMD_FLOAT_H
 
+#pragma warning(disable: 4127)
+#pragma warning(disable: 4293)	// line 459
+
 #if	!defined(USE_COMPUTE)
 #include <cmath>
 #include <algorithm>

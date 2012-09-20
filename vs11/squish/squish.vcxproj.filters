@@ -13,12 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx</Extensions>
     </Filter>
+    <Filter Include="Header Files\AMP">
+      <UniqueIdentifier>{346d33cf-d6a0-4c19-bbdf-ff7d5564ca7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\AMP">
+      <UniqueIdentifier>{f2015983-80d8-455f-9288-7ceace03441d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\alpha.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\clusterfit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\colourblock.cpp">
@@ -33,21 +36,48 @@
     <ClCompile Include="..\..\maths.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\rangefit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\singlecolourfit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\squish.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\colourclusterfit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\colourrangefit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\inlineables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\paletteblock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\paletteclusterfit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\palettefit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\paletterangefit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\paletteset.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\maths_packed.cpp">
+      <Filter>Source Files\AMP</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\maths_vector.cpp">
+      <Filter>Source Files\AMP</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\singlepalettefit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\alpha.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\clusterfit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\colourblock.h">
@@ -63,9 +93,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\maths.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\rangefit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\simd.h">
@@ -86,6 +113,30 @@
     <ClInclude Include="..\..\squish.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\colourclusterfit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\colourrangefit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\paletteblock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\paletteclusterfit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\palettefit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\paletterangefit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\paletteset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\singlepalettefit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\singlecolourlookup.inl">
@@ -94,5 +145,34 @@
     <None Include="..\..\texture_compression_s3tc.txt">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="..\..\singlecolourlookup_ccr.inl">
+      <Filter>Header Files\AMP</Filter>
+    </None>
+    <None Include="..\..\singlecolourlookup_ccr_flat.inl">
+      <Filter>Header Files\AMP</Filter>
+    </None>
+    <None Include="..\..\singlecolourlookup_ccr_packed.inl">
+      <Filter>Header Files\AMP</Filter>
+    </None>
+    <None Include="..\..\singlecolourlookup_ccr_vector.inl">
+      <Filter>Header Files\AMP</Filter>
+    </None>
+    <None Include="..\..\singlepalettelookup.inl">
+      <Filter>Header Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\texture_compression_bptc.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="..\..\texture_compression_fxt1.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="..\..\texture_compression_latc.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="..\..\texture_compression_rgtc.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

@@ -113,25 +113,58 @@
 				RelativePath="..\..\alpha.cpp">
 			</File>
 			<File
-				RelativePath="..\..\clusterfit.cpp">
+				RelativePath="..\..\colourblock.cpp">
 			</File>
 			<File
-				RelativePath="..\..\colourblock.cpp">
+				RelativePath="..\..\colourclusterfit.cpp">
 			</File>
 			<File
 				RelativePath="..\..\colourfit.cpp">
 			</File>
 			<File
+				RelativePath="..\..\colourrangefit.cpp">
+			</File>
+			<File
 				RelativePath="..\..\colourset.cpp">
+			</File>
+			<File
+				RelativePath="..\..\inlineables.cpp">
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\maths.cpp">
 			</File>
 			<File
-				RelativePath="..\..\rangefit.cpp">
+				RelativePath="..\..\paletteblock.cpp">
+			</File>
+			<File
+				RelativePath="..\..\paletteclusterfit.cpp">
+			</File>
+			<File
+				RelativePath="..\..\palettefit.cpp">
+			</File>
+			<File
+				RelativePath="..\..\paletterangefit.cpp">
+			</File>
+			<File
+				RelativePath="..\..\paletteset.cpp">
 			</File>
 			<File
 				RelativePath="..\..\singlecolourfit.cpp">
+			</File>
+			<File
+				RelativePath="..\..\singlepalettefit.cpp">
 			</File>
 			<File
 				RelativePath="..\..\squish.cpp">
@@ -145,13 +178,16 @@
 				RelativePath="..\..\alpha.h">
 			</File>
 			<File
-				RelativePath="..\..\clusterfit.h">
-			</File>
-			<File
 				RelativePath="..\..\colourblock.h">
 			</File>
 			<File
+				RelativePath="..\..\colourclusterfit.h">
+			</File>
+			<File
 				RelativePath="..\..\colourfit.h">
+			</File>
+			<File
+				RelativePath="..\..\colourrangefit.h">
 			</File>
 			<File
 				RelativePath="..\..\colourset.h">
@@ -163,7 +199,19 @@
 				RelativePath="..\..\maths.h">
 			</File>
 			<File
-				RelativePath="..\..\rangefit.h">
+				RelativePath="..\..\paletteblock.h">
+			</File>
+			<File
+				RelativePath="..\..\paletteclusterfit.h">
+			</File>
+			<File
+				RelativePath="..\..\palettefit.h">
+			</File>
+			<File
+				RelativePath="..\..\paletterangefit.h">
+			</File>
+			<File
+				RelativePath="..\..\paletteset.h">
 			</File>
 			<File
 				RelativePath="..\..\simd.h">
@@ -184,6 +232,12 @@
 				RelativePath="..\..\singlecolourlookup.inl">
 			</File>
 			<File
+				RelativePath="..\..\singlepalettefit.h">
+			</File>
+			<File
+				RelativePath="..\..\singlepalettelookup.inl">
+			</File>
+			<File
 				RelativePath="..\..\squish.h">
 			</File>
 		</Filter>
@@ -191,6 +245,18 @@
 			Name="Resource Files"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
+			<File
+				RelativePath="..\..\texture_compression_bptc.txt">
+			</File>
+			<File
+				RelativePath="..\..\texture_compression_fxt1.txt">
+			</File>
+			<File
+				RelativePath="..\..\texture_compression_latc.txt">
+			</File>
+			<File
+				RelativePath="..\..\texture_compression_rgtc.txt">
+			</File>
 			<File
 				RelativePath="..\..\texture_compression_s3tc.txt">
 			</File>
