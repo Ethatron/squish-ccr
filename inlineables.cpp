@@ -37,14 +37,9 @@
 
 namespace squish {
 
-extern const u16 fweights_u16[5][16];
-extern const u16 iweights_u16[5][16];
-
-extern const Vec4 fweights_V4[5][16];
-extern const Vec4 iweights_V4[5][16];
-
-extern const Col4 fweights_C4[5][16];
-extern const Col4 iweights_C4[5][16];
+extern const u16 weights_u16[5][16];
+extern const Vec4 weights_V4[5][16];
+extern const Col4 weights_C4[5][16];
 
 /* *****************************************************************************
  */
@@ -114,11 +109,11 @@ static doinline void FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]) ccr_re
 //const int am = (1 << (ab + eb + sb)) - 1;
   const int em = (1 << (     eb + sb)) - 1;
   const int sm = (1 << (          sb)) - 1;
-  
+
   vQuantizer q = vQuantizer(
-    rb + eb + sb, 
-    gb + eb + sb, 
-    bb + eb + sb, 
+    rb + eb + sb,
+    gb + eb + sb,
+    bb + eb + sb,
     ab + eb + sb
   );
 
@@ -204,11 +199,11 @@ static doinline void FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]) ccr_re
 //const int am = (1 << (ab + eb + sb)) - 1;
   const int em = (1 << (     eb + sb)) - 1;
   const int sm = (1 << (          sb)) - 1;
-  
+
   vQuantizer q = vQuantizer(
-    rb + eb + sb, 
-    gb + eb + sb, 
-    bb + eb + sb, 
+    rb + eb + sb,
+    gb + eb + sb,
+    bb + eb + sb,
     ab + eb + sb
   );
 
@@ -308,11 +303,11 @@ static doinline void FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]) ccr_re
 //const int am = (1 << (ab + eb + sb)) - 1;
   const int em = (1 << (     eb + sb)) - 1;
   const int sm = (1 << (          sb)) - 1;
-  
+
   vQuantizer q = vQuantizer(
-    rb + eb + sb, 
-    gb + eb + sb, 
-    bb + eb + sb, 
+    rb + eb + sb,
+    gb + eb + sb,
+    bb + eb + sb,
     ab + eb + sb
   );
 
@@ -627,12 +622,15 @@ static int CodebookP(u8 *codes, int bits) ccr_restricted
 {
   // generate the midpoints
   for (int m = 0; m < 4; ++m) {
-    int c = codes[               0  * 4 + m];
-    int d = codes[((1 << bits) - 1) * 4 + m];
+    const int j = (1 << bits) - 1;
 
-    for (int i = 1; i < ((1 << bits) - 1); i++) {
-      int s = (iweights_u16[bits][i]) * c;
-      int e = (fweights_u16[bits][i]) * d;
+    int c = codes[0 * 4 + m];
+    int d = codes[j * 4 + m];
+
+    // the quantizer is not equi-distant, but it is symmetric
+    for (int i = 1; i < j; i++) {
+      int s = (weights_u16[bits][j - i]) * c;
+      int e = (weights_u16[bits][i + 0]) * d;
 
       codes[i * 4 + m] = (u8)((s + e + 32) >> 6);
     }
@@ -667,8 +665,8 @@ static int CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg end) ccr_
   codes[j] = end;
 
   for (int i = 1; i < j; i++) {
-    Vec4 s = iweights_V4[bits][i] * start;
-    Vec4 e = fweights_V4[bits][i] * end;
+    Vec4 s = weights_V4[bits][j - i] * start;
+    Vec4 e = weights_V4[bits][i + 0] * end;
 
     codes[i] = s + e;
   }
@@ -686,8 +684,8 @@ static int CodebookP(Col4 *codes, int bits, Col4::Arg start, Col4::Arg end) ccr_
   codes[j] = end;
 
   for (int i = 1; i < j; i++) {
-    Col4 s = (iweights_C4[bits][i]) * start;
-    Col4 e = (fweights_C4[bits][i]) * end;
+    Col4 s = (weights_C4[bits][j - i]) * start;
+    Col4 e = (weights_C4[bits][i + 0]) * end;
 
     codes[i] = (s + e + Col4(32)) >> 6;
   }
@@ -704,8 +702,8 @@ static int CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_restricted
   PackBytes(end  , codes[j]);
 
   for (int i = 1; i < j; i++) {
-    Col4 s = (iweights_C4[bits][i]) * start;
-    Col4 e = (fweights_C4[bits][i]) * end;
+    Col4 s = (weights_C4[bits][j - i]) * start;
+    Col4 e = (weights_C4[bits][i + 0]) * end;
 
     PackBytes((s + e + Col4(32)) >> 6, codes[i]);
   }

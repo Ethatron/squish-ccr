@@ -39,18 +39,7 @@ namespace squish {
  */
 #define S1(x)  u16(x)
   // http://msdn.microsoft.com/en-us/library/hh308953%28v=vs.85%29
-  const u16 fweights_u16[5][16] = {
-    {S1(0)                                                                                                                        },  // 0
-    {S1(0),                                                                                                                 S1(64)},  // 1
-    {S1(0),                                 S1(21),                                 S1(43),                                 S1(64)},  // 2
-    {S1(0),          S1(9),         S1(18),         S1(27),                 S1(37),         S1(46),         S1(55),         S1(64)},  // 3
-    {S1(0),  S1(4),  S1(9), S1(13), S1(17), S1(21), S1(26), S1(30), S1(34), S1(38), S1(43), S1(47), S1(51), S1(55), S1(60), S1(64)}   // 4
-  };
-#undef S1
-
-#define S1(x)  u16(64 - x)
-  // http://msdn.microsoft.com/en-us/library/hh308953%28v=vs.85%29
-  const u16 iweights_u16[5][16] = {
+  const u16 weights_u16[5][16] = {
     {S1(0)                                                                                                                        },  // 0
     {S1(0),                                                                                                                 S1(64)},  // 1
     {S1(0),                                 S1(21),                                 S1(43),                                 S1(64)},  // 2
@@ -61,18 +50,7 @@ namespace squish {
 
 #define V4(x)  Vec4((1.0f / 64.0f) * x)
   // http://msdn.microsoft.com/en-us/library/hh308953%28v=vs.85%29
-  const Vec4 fweights_V4[5][16] = {
-    {V4(0)                                                                                                                        },  // 0
-    {V4(0),                                                                                                                 V4(64)},  // 1
-    {V4(0),                                 V4(21),                                 V4(43),                                 V4(64)},  // 2
-    {V4(0),          V4(9),         V4(18),         V4(27),                 V4(37),         V4(46),         V4(55),         V4(64)},  // 3
-    {V4(0),  V4(4),  V4(9), V4(13), V4(17), V4(21), V4(26), V4(30), V4(34), V4(38), V4(43), V4(47), V4(51), V4(55), V4(60), V4(64)}   // 4
-  };
-#undef V4
-
-#define V4(x)  Vec4((1.0f / 64.0f) * (64.0f - x))
-  // http://msdn.microsoft.com/en-us/library/hh308953%28v=vs.85%29
-  const Vec4 iweights_V4[5][16] = {
+  const Vec4 weights_V4[5][16] = {
     {V4(0)                                                                                                                        },  // 0
     {V4(0),                                                                                                                 V4(64)},  // 1
     {V4(0),                                 V4(21),                                 V4(43),                                 V4(64)},  // 2
@@ -83,18 +61,7 @@ namespace squish {
 
 #define C4(x)  Col4(x)
   // http://msdn.microsoft.com/en-us/library/hh308953%28v=vs.85%29
-  const Col4 fweights_C4[5][16] = {
-    {C4(0)                                                                                                                        },  // 0
-    {C4(0),                                                                                                                 C4(64)},  // 1
-    {C4(0),                                 C4(21),                                 C4(43),                                 C4(64)},  // 2
-    {C4(0),          C4(9),         C4(18),         C4(27),                 C4(37),         C4(46),         C4(55),         C4(64)},  // 3
-    {C4(0),  C4(4),  C4(9), C4(13), C4(17), C4(21), C4(26), C4(30), C4(34), C4(38), C4(43), C4(47), C4(51), C4(55), C4(60), C4(64)}   // 4
-  };
-#undef C4
-
-#define C4(x)  Col4(64 - x)
-  // http://msdn.microsoft.com/en-us/library/hh308953%28v=vs.85%29
-  const Col4 iweights_C4[5][16] = {
+  const Col4 weights_C4[5][16] = {
     {C4(0)                                                                                                                        },  // 0
     {C4(0),                                                                                                                 C4(64)},  // 1
     {C4(0),                                 C4(21),                                 C4(43),                                 C4(64)},  // 2
