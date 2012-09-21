@@ -157,7 +157,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
 
-  /// TODO: vectorize
+  // TODO: vectorize
   m_entry[set][0] = (u8)FloatToInt(255.0f * values->X(), 255);
   m_entry[set][1] = (u8)FloatToInt(255.0f * values->Y(), 255);
   m_entry[set][2] = (u8)FloatToInt(255.0f * values->Z(), 255);
