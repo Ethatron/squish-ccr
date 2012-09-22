@@ -128,9 +128,9 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
   Vec4 const weight1(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
   Vec4 const weight2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
   Vec4 const twonineths                        = VEC4_CONST(2.0f / 9.0f);
-  // onenineths = sqr(1.0 / distance) = sqr(1.0 / 3.0) = sqr(21.0 / 64.0)
-  // twonineths = numberofpointssummed * onenineths = 2 * onenineths
-  
+  // onenineths = sqr(1.0 / distance) = sqr(1.0 / 3.0) = (1.0 / 9.0)
+  // twonineths = weight1 * weight2 = (2.0 / 9.0)
+
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
 
@@ -176,16 +176,23 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 
 	  Vec4 const alphabeta_sum = twonineths * (part1 + part2).SplatW();
 
-	  // part2 * weight1 + part1 * weight2 + part0
-	  // part1 * weight1 + part2 * weight2 + part3
-	  // twonineths * (part1 + part2)
-	  // ^= onenineths * part1 + onenineths * part2
-	  // ^= (weight1) * part1 + (1.0 - weight1) * part2
+	  //   alpha.x = p3 * 0/3  + p2 * 1/3  + p1 * 2/3  + p0 * 3/3
+	  //    beta.x = p3 * 3/3  + p2 * 2/3  + p1 * 1/3  + p0 * 0/3
+	  //
+	  //   alpha.w =      0/3² +      1/3² +      2/3² +      ?.?²
+	  //    beta.w =      ?.?² +      2/3² +      1/3² +      0/3²
+	  // alphabeta = p3 * 0/-- + p2 * 2/9  + p1 * 2/9  + p0 * 0/--
 
 	  // compute the least-squares optimal points
 	  Vec4 factor = Reciprocal(NegativeMultiplySubtract(alphabeta_sum, alphabeta_sum, alpha2_sum * beta2_sum));
 	  Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_sum, alphax_sum *  beta2_sum) * factor;
 	  Vec4 b = NegativeMultiplySubtract(alphax_sum, alphabeta_sum,  betax_sum * alpha2_sum) * factor;
+
+	  // factor = 1.0 / (alpha.w * beta.w - alphabeta * alphabeta)
+	  // a = (alpha.x * beta.w -  beta.x * alphabeta) * factor
+	  // b = (beta.x * alpha.w - alpha.x * alphabeta) * factor
+	  // a = (alpha.x * beta.w -  beta.x * alphabeta) / (alpha.w * beta.w - alphabeta * alphabeta)
+	  // b = (beta.x * alpha.w - alpha.x * alphabeta) / (alpha.w * beta.w - alphabeta * alphabeta)
 
 	  // snap floating-point-values to the integer-lattice
 	  a = q.SnapToLattice(a);
@@ -196,6 +203,34 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 	  Vec4 e2 = NegativeMultiplySubtract(a, alphax_sum, a * b * alphabeta_sum);
 	  Vec4 e3 = NegativeMultiplySubtract(b, betax_sum, e2);
 	  Vec4 e4 = MultiplyAdd(two, e3, e1);
+
+	  // e1 = a * a * alpha2_sum + b * b * beta2_sum
+	  // e2 = a * b * alphabeta_sum - a * alphax_sum
+	  // e3 = e2 - b * betax_sum
+	  // e4 = 2 * e3 + e1
+	  //
+	  // 9 muls, 4 adds
+
+	  // e =
+	  //     2 * a * b * alphabeta_sum -
+	  //     2 * a * alphax_sum -
+	  //     a * a * alpha2_sum +
+	  //     2 * b * betax_sum +
+	  //     b * b * beta2_sum
+
+	  // e =
+	  //     a * b * 2 * alphabeta_sum -
+	  //     a * (a * alpha2_sum + 2 * alphax_sum) +
+	  //     b * (b *  beta2_sum + 2 *  betax_sum)
+	  //
+	  // 9 muls, 4 adds
+
+	  // e / 2 =
+	  //     a * b * alphabeta_sum -
+	  //     a * (a * alpha2_sum / 2 + alphax_sum) +
+	  //     b * (b *  beta2_sum / 2 +  betax_sum)
+	  //
+	  // 8 muls, 4 adds
 
 	  // apply the metric to the error term
 	  Vec4 eS = HorizontalAdd(e4 * metric);
@@ -276,9 +311,13 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
   Vec4 const weight4(4.0f / 7.0f, 4.0f / 7.0f, 4.0f / 7.0f, 16.0f / 49.0f);
   Vec4 const weight5(5.0f / 7.0f, 5.0f / 7.0f, 5.0f / 7.0f, 25.0f / 49.0f);
   Vec4 const weight6(6.0f / 7.0f, 6.0f / 7.0f, 6.0f / 7.0f, 36.0f / 49.0f);
-  Vec4 const twonineths                         = VEC4_CONST(6.0f / 49.0f);
-  // onenineths = sqr(1.0 / distance) = sqr(1.0 / 7.0) = sqr(9.0 / 64.0)
-  // twonineths = numberofpointssummed * onenineths = 6 * onenineths
+  Vec4 const twonineths                        = VEC4_CONST( 6.0f / 49.0f);
+  Vec4 const threenineths                      = VEC4_CONST(10.0f / 49.0f);
+  Vec4 const fournineths                       = VEC4_CONST(12.0f / 49.0f);
+  // onenineths   = sqr(1.0 / distance) = sqr(1.0 / 7.0) = (1.0 / 49.0)
+  // twonineths   = weight1 * weight6 = (6.0 / 49.0)
+  // threenineths = weight2 * weight5 = (10.0 / 49.0)
+  // fournineths  = weight3 * weight4 = (12.0 / 49.0)
 
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
@@ -357,12 +396,28 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
 	  Vec4 const alpha2_sum = alphax_sum.SplatW();
 	  Vec4 const  beta2_sum =  betax_sum.SplatW();
 
-	  Vec4 const alphabeta_sum = twonineths * (part1 + part2 + part3 + part4 + part5 + part6).SplatW();
+	  Vec4 const alphabeta_sum =
+	  	twonineths   * (part1 + part6).SplatW() +
+	  	threenineths * (part2 + part5).SplatW() +
+	  	fournineths  * (part3 + part4).SplatW();
+
+	  //  alphax.t = p7 * 0/7  + p6 * 1/7  + p5 *  2/7  + p4 *  3/7  + p3 *  4/7  + p2 *  5/7  + p1 * 6/7  + p0 * 7/7
+	  //   betax.t = p7 * 7/7  + p6 * 6/7  + p5 *  5/7  + p4 *  4/7  + p3 *  3/7  + p2 *  2/7  + p1 * 1/7  + p0 * 0/7
+	  //
+	  //  alphax.w =      0/7² +      1/7² +       2/7² +       3.7² +       4/7² +       5/7² +      6/7² +      ?/?²
+	  //   betax.w =      ?.?² +      6/7² +       5/7² +       4/7² +       3/7² +       2/7² +      1/7² +      0/7²
+	  // alphabeta = p7 * 0/-- + p6 * 6/49 + p5 * 10/49 + p4 * 12/49 + p3 * 12/49 + p2 * 10/49 + p1 * 6/49 + p0 * 0/--
 
 	  // compute the least-squares optimal points
 	  Vec4 factor = Reciprocal(NegativeMultiplySubtract(alphabeta_sum, alphabeta_sum, alpha2_sum * beta2_sum));
 	  Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_sum, alphax_sum *  beta2_sum) * factor;
 	  Vec4 b = NegativeMultiplySubtract(alphax_sum, alphabeta_sum,  betax_sum * alpha2_sum) * factor;
+
+	  // factor = 1.0 / (alpha.w * beta.w - alphabeta * alphabeta)
+	  // a = (alpha.x * beta.w -  beta.x * alphabeta) * factor
+	  // b = (beta.x * alpha.w - alpha.x * alphabeta) * factor
+	  // a = (alpha.x * beta.w -  beta.x * alphabeta) / (alpha.w * beta.w - alphabeta * alphabeta)
+	  // b = (beta.x * alpha.w - alpha.x * alphabeta) / (alpha.w * beta.w - alphabeta * alphabeta)
 
 	  // snap floating-point-values to the integer-lattice
 	  a = q.SnapToLattice(a);
@@ -473,7 +528,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
 
 //vQuantizer c = vQuantizer(cb, cb, cb, ab);
 //vQuantizer a = vQuantizer(ab, ab, ab, ab);
-  
+
   vQuantizer c = vQuantizer(5, 6, 5, ab);
   vQuantizer a = vQuantizer(ab, ab, ab, ab);
 
@@ -530,7 +585,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
     if (CompareFirstGreaterThan(error, m_besterror))
       return;
   }
-  
+
   // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
   if (!m_palette->IsTransparent()) {
     switch (m_palette->GetRotation()) {
@@ -597,12 +652,18 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
 void PaletteClusterFit::Compress(void* block, int mode) {
   // TODO: cluster-fit of 8 points doesn't work at all yet
   switch (mode) {
-//  case 0: /*3*/ CompressS23(block, mode); break;
-//  case 1: /*3*/ CompressS23(block, mode); break;
+#if (CLUSTERINDICES >= 2)
     case 2: /*2*/ CompressS23(block, mode); break;
     case 3: /*2*/ CompressS23(block, mode); break;
-//  case 4: /*23*/ CompressS23(block, mode); break;
     case 5: /*22*/ CompressS23(block, mode); break;
+#endif
+
+#if (CLUSTERINDICES >= 3)
+    case 0: /*3*/ CompressS23(block, mode); break;
+    case 1: /*3*/ CompressS23(block, mode); break;
+    case 4: /*23*/ CompressS23(block, mode); break;
+#endif
+
     case 6: /*CompressC4(block, mode);*/ break;
     case 7: /*CompressC2(block, mode);*/ break;
   }

@@ -46,6 +46,7 @@ public:
 private:
   virtual void Compress(void* block, int mode);
 
+#define CLUSTERINDICES	3
   // separate components, 4/8 colors, 4/8 alphas
   void CompressS23(void* block, int mode);
   // combined components, 4/16 colors+alphas
