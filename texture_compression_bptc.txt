@@ -44,7 +44,7 @@ Dependencies
 
     GL_ARB_texture_compression is required.
 
-    This extension is written against the OpenGL 3.2 Specification
+    This extension is written against the OpenGL 3.2 Specification 
     (Compatibility Profile).
 
 Overview
@@ -102,7 +102,7 @@ Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
         COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB    RGB                   Specific
         COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB  RGB                   Specific
 
-
+    
     Modify Section 3.9.2, Alternate Texture Image Specification Commands
 
     (add to end of TexSubImage discussion, p.231 -- after edit from the
@@ -151,7 +151,7 @@ Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
     <border> is non-zero.
 
 
-    Add to Section 3.9.3, Compressed Texture Images (adding to the end of the
+    Add to Section 3.9.3, Compressed Texture Images (adding to the end of the 
     CompressedTexSubImage section introduced by the ARB_texture_compression
     spec)
 
@@ -297,7 +297,7 @@ Appendix
     When a BPTC image with a width of <w>, height of <h>, and block size of
     <blocksize> (16 bytes) is decoded, the corresponding image size (in bytes)
     is:
-
+    
         ceil(<w>/4) * ceil(<h>/4) * blocksize.
 
     When decoding a BPTC image, the block containing the texel at offset
@@ -308,7 +308,7 @@ Appendix
 
     The data corresponding to a specific texel (<x>, <y>) are extracted from a
     4x4 texel block using a relative (x,y) value of
-
+    
         (<x> modulo 4, <y> modulo 4).
 
     There are two distinct BPTC image formats each of which has two
@@ -430,24 +430,24 @@ Appendix
     PB: Partition bits
 
     RB: Rotation bits
-
+    
     ISB: Index selection bits
-
+    
     CB: Color bits
 
     AB: Alpha bits
 
     EPB: Endpoint P-bits
-
+  
     SPB: Shared P-bits
 
     IB: Index bits per element
-
+    
     IB2: Secondary index bits per element
 
 
     Table.P2
-
+    
     (each row is one 4x4 block)
 
 
@@ -586,7 +586,7 @@ Appendix
     Table.A2 (Anchor index values for the second subset of two-subset
     partitioning)
 
-    (wrapped for readability - values run right then down)
+    (wrapped for readability - values run right then down)    
 
     15,15,15,15,15,15,15,15,
     15,15,15,15,15,15,15,15,
@@ -600,7 +600,7 @@ Appendix
     Table.A3a (Anchor index values for the second subset of three-subset
     partitioning)
 
-    (wrapped for readability - values run right then down)
+    (wrapped for readability - values run right then down)    
 
      3, 3,15,15, 8, 3,15,15,
      8, 8, 6, 6, 6, 5, 3, 3,
@@ -610,12 +610,12 @@ Appendix
     15, 3,15, 5,15,15,15,15,
      3,15, 5, 5, 5, 8, 5,10,
      5,10, 8,13,15,12, 3, 3,
-
+    
     Table.A3b (Anchor index values for the third subset of three-subset
     partitioning)
 
-    (wrapped for readability - values run right then down)
-
+    (wrapped for readability - values run right then down)    
+    
     15, 8, 8, 3,15,15, 3, 8,
     15,15,15,15,15,15,15, 8,
     15, 8,15, 3,15, 8,15, 8,
@@ -844,7 +844,7 @@ Issues
      (7) Does this spec require bit-exact decompression?
 
        RESOLVED: Yes.
-
+     
      (8) Does the data format depend on the endianness of the system?
 
        RESOLVED: No. The data is interpeted as an endian-independent
@@ -894,7 +894,7 @@ Revision History
      3    12/07/09  pdaniell  ARBify.
 
      2    10/13/09  ewerness  Fix errors in the anchor index tables caused
-                              by incorrect conversion scripts and a couple
+                              by incorrect conversion scripts and a couple 
                               typos in the input.
 
      1              ewerness  Internal revisions.

@@ -1,10 +1,10 @@
 Name
 
-    ARB_texture_compression_rgtc
+    EXT_texture_compression_rgtc
 
 Name Strings
 
-    GL_ARB_texture_compression_rgtc
+    GL_EXT_texture_compression_rgtc
 
 Contributors
 
@@ -12,23 +12,23 @@ Contributors
     Pat Brown, NVIDIA
     Yanjun Zhang, S3
     Attila Barsi, Holografika
-
+     
 Contact
 
     Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
 
 Status
 
-    Approved by the ARB on July 11, 2008
+    Shipping for GeForce 8 Series (November 2006, Release 95)
 
 Version
 
-    Last Modified Date: May 27, 2009
-    Revision: 1.5
+    Date: April 14, 2008
+    Revision: 1.3
 
 Number
 
-    ARB Extension #52
+    332
 
 Dependencies
 
@@ -70,10 +70,10 @@ New Tokens
     CopyTexImage2D, and CompressedTexImage2D and the <format> parameter
     of CompressedTexSubImage2D:
 
-        COMPRESSED_RED_RGTC1                       0x8DBB
-        COMPRESSED_SIGNED_RED_RGTC1                0x8DBC
-        COMPRESSED_RG_RGTC2                        0x8DBD
-        COMPRESSED_SIGNED_RG_RGTC2                 0x8DBE
+        COMPRESSED_RED_RGTC1_EXT                       0x8DBB
+        COMPRESSED_SIGNED_RED_RGTC1_EXT                0x8DBC
+        COMPRESSED_RED_GREEN_RGTC2_EXT                 0x8DBD
+        COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT          0x8DBE
 
 Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
 
@@ -85,21 +85,21 @@ Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
 
     Add to Table 3.17 (page 155):  Specific compressed internal formats
 
-        Compressed Internal Format              Base Internal Format
-        ---------------------------------       --------------------
-        COMPRESSED_RED_RGTC1                    RGB
-        COMPRESSED_SIGNED_RED_RGTC1             RGB
-        COMPRESSED_RG_RGTC2              RGB
-        COMPRESSED_SIGNED_RG_RGTC2       RGB
+        Compressed Internal Format                   Base Internal Format
+        -------------------------------------------  --------------------
+        COMPRESSED_RED_RGTC1_EXT                     RGB
+        COMPRESSED_SIGNED_RED_RGTC1_EXT              RGB
+        COMPRESSED_RED_GREEN_RGTC2_EXT               RGB
+        COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT        RGB
 
  -- Section 3.8.2, Alternative Texture Image Specification Commands
 
     Add to the end of the section (page 163):
 
     "If the internal format of the texture image
-    being modified is COMPRESSED_RED_RGTC1,
-    COMPRESSED_SIGNED_RED_RGTC1, COMPRESSED_RG_RGTC2,
-    or COMPRESSED_SIGNED_RG_RGTC2, the texture is stored
+    being modified is COMPRESSED_RED_RGTC1_EXT,
+    COMPRESSED_SIGNED_RED_RGTC1_EXT, COMPRESSED_RED_GREEN_RGTC2_EXT,
+    or COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT, the texture is stored
     using one of the two RGTC compressed texture image encodings (see
     appendix).  Such images are easily edited along 4x4 texel boundaries,
     so the limitations on TexSubImage2D or CopyTexSubImage2D parameters
@@ -126,9 +126,9 @@ Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
     Add after the 4th paragraph (page 164) at the end of the
     CompressedTexImage discussion:
 
-    "If <internalformat> is COMPRESSED_RED_RGTC1,
-    COMPRESSED_SIGNED_RED_RGTC1, COMPRESSED_RG_RGTC2,
-    or COMPRESSED_SIGNED_RG_RGTC2, the compressed texture is
+    "If <internalformat> is COMPRESSED_RED_RGTC1_EXT,
+    COMPRESSED_SIGNED_RED_RGTC1_EXT, COMPRESSED_RED_GREEN_RGTC2_EXT,
+    or COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT, the compressed texture is
     stored using one of several RGTC compressed texture image formats.
     The RGTC texture compression algorithm supports only 2D images
     without borders.  CompressedTexImage1D and CompressedTexImage3D
@@ -140,9 +140,9 @@ Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
     CompressedTexSubImage discussion:
 
     "If the internal format of the texture image
-    being modified is COMPRESSED_RED_RGTC1,
-    COMPRESSED_SIGNED_RED_RGTC1, COMPRESSED_RG_RGTC2,
-    or COMPRESSED_SIGNED_RG_RGTC2, the texture is stored
+    being modified is COMPRESSED_RED_RGTC1_EXT,
+    COMPRESSED_SIGNED_RED_RGTC1_EXT, COMPRESSED_RED_GREEN_RGTC2_EXT,
+    or COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT, the texture is stored
     using one of the several RGTC compressed texture image formats.
     Since the RGTC texture compression algorithm supports only 2D images,
     CompressedTexSubImage1D and CompressedTexSubImage3D produce an
@@ -172,11 +172,11 @@ Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
     "If the texture's internal format lacks components that exist in
     the texture's base internal format, such components are considered
     zero when the texture border color is sampled.  (So despite the
-    RGB base internal format of the COMPRESSED_RED_RGTC1 and
-    COMPRESSED_SIGNED_RED_RGTC1 formats, the green and blue
+    RGB base internal format of the COMPRESSED_RED_RGTC1_EXT and
+    COMPRESSED_SIGNED_RED_RGTC1_EXT formats, the green and blue
     components of the texture border color are always considered
-    zero.  Likewise for the COMPRESSED_RG_RGTC2, and
-    COMPRESSED_SIGNED_RG_RGTC2 formats, the blue component
+    zero.  Likewise for the COMPRESSED_RED_GREEN_RGTC2_EXT, and
+    COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT formats, the blue component
     is always considered zero.)"
 
 Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
@@ -230,26 +230,26 @@ Errors
 
     INVALID_ENUM is generated by CompressedTexImage1D
     or CompressedTexImage3D if <internalformat> is
-    COMPRESSED_RED_RGTC1, COMPRESSED_SIGNED_RED_RGTC1,
-    COMPRESSED_RG_RGTC2, or
-    COMPRESSED_SIGNED_RG_RGTC2.
+    COMPRESSED_LUMINANCE_LACT1_EXT, COMPRESSED_SIGNED_RED_RGTC1_EXT,
+    COMPRESSED_RED_GREEN_RGTC2_EXT, or
+    COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT.
 
     INVALID_OPERATION is generated by CompressedTexImage2D
-    if <internalformat> is COMPRESSED_RED_RGTC1,
-    COMPRESSED_SIGNED_RED_RGTC1, COMPRESSED_RG_RGTC2,
-    or COMPRESSED_SIGNED_RG_RGTC2 and <border> is not equal
+    if <internalformat> is COMPRESSED_LUMINANCE_LACT1_EXT,
+    COMPRESSED_SIGNED_RED_RGTC1_EXT, COMPRESSED_RED_GREEN_RGTC2_EXT,
+    or COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT and <border> is not equal
     to zero.
 
     INVALID_ENUM is generated by CompressedTexSubImage1D
     or CompressedTexSubImage3D if
-    <format> is COMPRESSED_RED_RGTC1,
-    COMPRESSED_SIGNED_RED_RGTC1, COMPRESSED_RG_RGTC2,
-    or COMPRESSED_SIGNED_RG_RGTC2.
+    <format> is COMPRESSED_LUMINANCE_LACT1_EXT,
+    COMPRESSED_SIGNED_RED_RGTC1_EXT, COMPRESSED_RED_GREEN_RGTC2_EXT,
+    or COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT.
 
     INVALID_OPERATION is generated by TexSubImage2D or CopyTexSubImage2D if
-    TEXTURE_INTERNAL_FORMAT is COMPRESSED_RED_RGTC1,
-    COMPRESSED_SIGNED_RED_RGTC1, COMPRESSED_RG_RGTC2, or
-    COMPRESSED_SIGNED_RG_RGTC2 and any of the following apply:
+    TEXTURE_INTERNAL_FORMAT is COMPRESSED_LUMINANCE_LACT1_EXT,
+    COMPRESSED_SIGNED_RED_RGTC1_EXT, COMPRESSED_RED_GREEN_RGTC2_EXT, or
+    COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT and any of the following apply:
 
         * <width> is not a multiple of four, <width> plus <xoffset> is not
           equal to TEXTURE_WIDTH, and either <xoffset> or <yoffset> is
@@ -262,9 +262,9 @@ Errors
         * <xoffset> or <yoffset> is not a multiple of four.
 
     INVALID_OPERATION is generated by CompressedTexSubImage2D if
-    TEXTURE_INTERNAL_FORMAT is COMPRESSED_RED_RGTC1,
-    COMPRESSED_SIGNED_RED_RGTC1, COMPRESSED_RG_RGTC2, or
-    COMPRESSED_SIGNED_RG_RGTC2 and any of the following apply:
+    TEXTURE_INTERNAL_FORMAT is COMPRESSED_LUMINANCE_LACT1_EXT,
+    COMPRESSED_SIGNED_RED_RGTC1_EXT, COMPRESSED_RED_GREEN_RGTC2_EXT, or
+    COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT and any of the following apply:
 
         * <width> is not a multiple of four, and <width> plus <xoffset> is not
           equal to TEXTURE_WIDTH;
@@ -320,13 +320,13 @@ Appendix
     where each block contains 64 or 128 bits of texel data.  The image
     is encoded as a normal 2D raster image in which each 4x4 block is
     treated as a single pixel.  If an RGTC image has a width or height
-    that is not a multiple of four, the data corresponding to texels
+    that is not a multiple of four, the data corresponding to texels 
     outside the image are irrelevant and undefined.
 
     When an RGTC image with a width of <w>, height of <h>, and block
     size of <blocksize> (8 or 16 bytes) is decoded, the corresponding
     image size (in bytes) is:
-
+    
         ceil(<w>/4) * ceil(<h>/4) * blocksize.
 
     When decoding an RGTC image, the block containing the texel at offset
@@ -337,14 +337,14 @@ Appendix
 
     The data corresponding to a specific texel (<x>, <y>) are extracted
     from a 4x4 texel block using a relative (x,y) value of
-
+    
         (<x> modulo 4, <y> modulo 4).
 
     There are four distinct RGTC image formats:
 
 
     COMPRESSED_RED_RGTC1:  Each 4x4 block of texels consists of
-    64 bits of unsigned red image data.
+    64 bits of unsigned red image data.  
 
     Each red image data block is encoded as a sequence of 8 bytes, called
     (in order of increasing address):
@@ -358,9 +358,9 @@ Appendix
                      256 * (bits_1 +
                             256 * (bits_2 +
                                    256 * (bits_3 +
-                                          256 * (bits_4 +
+                                          256 * (bits_4 + 
                                                  256 * bits_5))))
-
+        
         red0 and red1 are 8-bit unsigned integers that are unpacked to red
         values RED0 and RED1 as though they were pixels with a <format>
         of LUMINANCE and a type of UNSIGNED_BTYE.
@@ -370,7 +370,7 @@ Appendix
         using:
 
             code(x,y) = bits[3*(4*y+x)+2..3*(4*y+x)+0]
-
+        
         where bit 47 is the most significant and bit 0 is the least
         significant bit.
 
@@ -429,7 +429,7 @@ Appendix
     avoid encoding blocks where red0 equals -127 and red1 equals -128.
 
 
-    COMPRESSED_RG_RGTC2:  Each 4x4 block of texels consists of
+    COMPRESSED_RED_GREEN_RGTC2:  Each 4x4 block of texels consists of
     64 bits of compressed unsigned red image data followed by 64 bits
     of compressed unsigned green image data.
 
@@ -444,7 +444,7 @@ Appendix
     value for the texel is (R,G,0,1).
 
 
-    COMPRESSED_SIGNED_RG_RGTC2:  Each 4x4 block of texels consists
+    COMPRESSED_SIGNED_RED_GREEN_RGTC2:  Each 4x4 block of texels consists
     of 64 bits of compressed signed red image data followed by 64 bits
     of compressed signed green image data.
 
@@ -484,7 +484,7 @@ Issues
         for the Z component.
 
         While GL_RED is a valid external format, core OpenGL provides
-        no GL_RG external format.  Applications can either use
+        no GL_RED_GREEN external format.  Applications can either use
         GL_RGB or GL_RGBA and pad out the blue and alpha components,
         or use the two-component GL_LUMINANCE_ALPHA color format and
         use the color matrix functionality to swizzle the luminance and
@@ -531,7 +531,7 @@ Issues
         slightly more negative than -1.0.
 
         This conversion is intentionally NOT the "byte" conversion listed
-        in Table 2.9 for component conversions.  That conversion says:
+        in Table 2.9 for component conversions.  That conversion says: 
 
             Xf = (2*X + 1) / 255.0
 
@@ -539,8 +539,8 @@ Issues
         zero.
 
     6)  How will signed components resulting
-        from GL_COMPRESSED_SIGNED_RED_RGTC1 and
-        GL_COMPRESSED_SIGNED_RG_RGTC2 texture fetches interact
+        from GL_COMPRESSED_SIGNED_RED_RGTC1_EXT and
+        GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT texture fetches interact
         with fragment coloring?
 
         RESOLVED:  The specification language for this extension is silent
@@ -593,8 +593,8 @@ Issues
         this extension provides the mechanism for compressed normal maps
         based on the more conventional red-green format.
 
-        The GL_COMPRESSED_RG_RGTC2 and
-        GL_COMPRESSED_SIGNED_RG_RGTC2 formats are sufficient
+        The GL_COMPRESSED_RED_GREEN_RGTC2_EXT and
+        GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT formats are sufficient
         for normal maps with additional shader instructions used to
         generate the 3rd component.
 
@@ -715,12 +715,26 @@ Issues
 
     16) Should the token names contain R and RG or RED and RED_GREEN?
 
-        RESOLVED:  RED and RG. See issue #3 in the ARB_texture_rg
-        specification.
+        RESOLVED:  RED and RED_GREEN.
+
+        Saying RGB and RGBA makes sense for three- and four-component
+        formats rather than spelling out the component names because
+        RGB and RGBA are used so commonly and spelling out the names it
+        too wordy.
+
+        But for 1- and 2-component names, we follow the precedent by
+        GL_LUMINANCE and GL_LUMINANCE_ALPHA.  This extension spells out
+        the component names of 1- and 2-component names.
+
+        Another reason to avoid R and RG is the existing meaning of
+        the GL_R and GL_RED tokens.  GL_RED already exists as a token
+        name for a single-component external format.  GL_R also already
+        exists as a token name but refers to the R texture coordinate,
+        not the red color component.
 
     17) Can you use the GL_RED external format with glTexImage2D and other
         such commands to load textures with the
-        GL_COMPRESSED_RED_RGTC1 or GL_COMPRESSED_SIGNED_RED_RGTC1
+        GL_COMPRESSED_RED_RGTC1_EXT or GL_COMPRESSED_SIGNED_RED_RGTC1_EXT
         internal formats?
 
         RESOLVED: Yes.
@@ -756,17 +770,6 @@ Issues
         what GL_NUM_COMPRESSED_TEXTURE_FORMATS and
         GL_COMPRESSED_TEXTURE_FORMATS return.
 
-    20) Why don't the new tokens and entry points in this extension have
-        "ARB" suffixes like other ARB extensions?
-
-        RESOLVED: Unlike most ARB extensions, this is a strict subset
-        of functionality already approved in OpenGL 3.0. This extension
-        exists only to support that functionality on older hardware that
-        cannot implement a full OpenGL 3.0 driver. Since there are no
-        possible behavior changes between the ARB extension and core
-        features, source code compatibility is improved by not using
-        suffixes on the extension.
-
 Implementation Note
 
     This extension allows TexSubImage2D and CompressedTexSubImage2D to perform
@@ -789,7 +792,7 @@ Implementation Note
     if the width or height of the region edited was equal to the full texture
     size.  That language didn't handle cases such as the 70x50 example above.
 
-    This specification was updated in May, 2009 to allow such edits.
+    This specification was updated in April, 2009 to allow such edits.
     Multiple OpenGL implementers correctly implemented the original
     restriction, and partial edits that include partially covered tiles will
     result in INVALID_OPERATION errors on older drivers.
@@ -804,16 +807,9 @@ Revision History
     Revision 1.2, January 21, 2008: mjk
         -  Add issues #18 and #19.
 
-    Revision 1.3, June 30, 2008: js
-        - trivial conversion to ARB from EXT
-
-    Revision 1.4, August 7, 2008: jleech
-        - Remove ARB suffixes.
-
-    Revision 1.5, May 29, 2009: jleech
-        - Sync with pbrown's fixes to the EXT version of this extension:
-          Add interaction with non-power-of-two textures from OpenGL 2.0
-          / ARB_texture_non_power_of_two. Allow CompressedTexSubImage2D
-          to perform edits that include partial tiles at the edge of the
-          image as long as the specified width/height parameters line up
-          with the edge. Thanks to Emil Persson for finding this issue.
+    Revision 1.3, April 14, 2009: pbrown 
+        - Add interaction with non-power-of-two textures from OpenGL 2.0 /
+          ARB_texture_non_power_of_two.  Allow CompressedTexSubImage2D to
+          perform edits that include partial tiles at the edge of the image as
+          long as the specified width/height parameters line up with the edge.
+          Thanks to Emil Persson for finding this issue.
