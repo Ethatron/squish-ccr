@@ -1127,6 +1127,18 @@ public:
     return left.x > right.x;
   }
 
+  Vec4 IsOne( ) const
+  {
+    Vec4 m;
+
+    *((int *)&m.x) = (x == 1.0f ? ~0 : 0);
+    *((int *)&m.y) = (y == 1.0f ? ~0 : 0);
+    *((int *)&m.z) = (z == 1.0f ? ~0 : 0);
+    *((int *)&m.w) = (w == 1.0f ? ~0 : 0);
+
+    return m;
+  }
+  
   Vec4 IsNotOne( ) const
   {
     Vec4 m;

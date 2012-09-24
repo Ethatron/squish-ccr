@@ -508,6 +508,33 @@ namespace vector_math {
 #endif
 
 #if	!defined(USE_COMPUTE)
+class Sym2x2
+{
+public:
+	Sym2x2() ccr_restricted
+	{
+	}
+
+	Sym2x2( float s ) ccr_restricted
+	{
+		for( int i = 0; i < 3; ++i )
+			m_x[i] = s;
+	}
+
+	float operator[]( int index ) const
+	{
+		return m_x[index];
+	}
+
+	float& operator[]( int index ) ccr_restricted
+	{
+		return m_x[index];
+	}
+
+private:
+	float m_x[3];
+};
+
 class Sym3x3
 {
 public:
@@ -534,6 +561,33 @@ public:
 private:
 	float m_x[6];
 };
+
+class Sym4x4
+{
+public:
+	Sym4x4() ccr_restricted
+	{
+	}
+
+	Sym4x4( float s ) ccr_restricted
+	{
+		for( int i = 0; i < 10; ++i )
+			m_x[i] = s;
+	}
+
+	float operator[]( int index ) const
+	{
+		return m_x[index];
+	}
+
+	float& operator[]( int index ) ccr_restricted
+	{
+		return m_x[index];
+	}
+
+private:
+	float m_x[10];
+};
 #endif
 
 } // namespace squish
@@ -545,9 +599,18 @@ private:
 namespace squish {
 
 #if	!defined(USE_PRE)
-Sym3x3 ComputeWeightedCovariance(int n, Vec3 const* points, float const* weights);
-Sym3x3 ComputeWeightedCovariance(int n, Vec4 const* points, float const* weights);
-Vec3   ComputePrincipleComponent(Sym3x3 const& smatrix);
+Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weights);
+Sym2x2 ComputeWeightedCovariance2(int n, Vec4 const* points, float const* weights);
+Sym3x3 ComputeWeightedCovariance3(int n, Vec4 const* points, float const* weights);
+Sym4x4 ComputeWeightedCovariance4(int n, Vec4 const* points, float const* weights);
+void   ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
+void   ComputePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
+void   ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
+void   ComputePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
+void   EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
+void   EstimatePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
+void   EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
+void   EstimatePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
 
 const float *ComputeGammaLUT(bool sRGB);
 #endif
@@ -560,13 +623,13 @@ typedef float4 Sym3x3[2];
 typedef Sym3x3 Sym3x3r;
 #endif
 
-Sym3x3 ComputeWeightedCovariance(tile_barrier barrier, const int thread, int n, point16 points, weight16 weights) amp_restricted;
+Sym3x3 ComputeWeightedCovariance3(tile_barrier barrier, const int thread, int n, point16 points, weight16 weights) amp_restricted;
 float3 ComputePrincipleComponent(tile_barrier barrier, const int thread, Sym3x3r smatrix) amp_restricted;
 #endif
 
 /* -------------------------------------------------------------------------- */
 
-#define	OLD_QUANTIZER
+#undef	OLD_QUANTIZER
 
 template<const int rb, const int gb, const int bb>
 class cQuantizer3 {
@@ -587,11 +650,11 @@ public:
     gridoff( 0.5f     , 0.5f     , 0.5f      ) {
   }
 
-  Vec3 SnapToLattice(Vec3 const &val) {
+  doinline Vec3 SnapToLattice(Vec3 const &val) {
     return Truncate(grid * val.Clamp() + gridoff) * gridrcp;
   }
 
-  Vec3 SnapToLatticeClamped(Vec3 const &val) {
+  doinline Vec3 SnapToLatticeClamped(Vec3 const &val) {
     return Truncate(grid * val + gridoff) * gridrcp;
   }
 #else
@@ -603,11 +666,11 @@ public:
     grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm ) {
   }
 
-  Vec3 SnapToLattice(Vec3 const &val) {
+  doinline Vec3 SnapToLattice(Vec3 const &val) {
     return (Truncate(grid * val) * gridrcp).Clamp();
   }
 
-  Vec3 SnapToLatticeClamped(Vec3 const &val) {
+  doinline Vec3 SnapToLatticeClamped(Vec3 const &val) {
     return Min(Truncate(grid * val) * gridrcp, Vec3(1.0f));
   }
 #endif
@@ -633,11 +696,11 @@ public:
     gridoff( 0.5f     , 0.5f     , 0.5f     , 0.0f ) {
   }
 
-  Vec4 SnapToLattice(Vec4 const &val) {
+  doinline Vec4 SnapToLattice(Vec4 const &val) {
     return Truncate(MultiplyAdd(grid, val.Clamp(), gridoff)) * gridrcp;
   }
 
-  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
     return Truncate(MultiplyAdd(grid, val, gridoff)) * gridrcp;
   }
 #else
@@ -649,11 +712,11 @@ public:
     grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, 0.0f ) {
   }
 
-  Vec4 SnapToLattice(Vec4 const &val) {
+  doinline Vec4 SnapToLattice(Vec4 const &val) {
     return (Truncate(grid * val) * gridrcp).Clamp();
   }
 
-  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
     return Min(Truncate(grid * val) * gridrcp, Vec4(1.0f));
   }
 #endif
@@ -688,20 +751,20 @@ public:
     gridoff = Vec4(0.5f);
   }
 
-  Vec4 SnapToLattice(Vec4 const &val) {
+  doinline Vec4 SnapToLattice(Vec4 const &val) {
     return Truncate(MultiplyAdd(grid, val.Clamp(), gridoff)) * gridrcp;
   }
 
-  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
     return Truncate(MultiplyAdd(grid, val, gridoff)) * gridrcp;
   }
 
-  Col4 QuantizeToInt(Vec4 const &val) {
+  doinline Col4 QuantizeToInt(Vec4 const &val) {
     // rcomplete[?] = FloatToInt(grid * colour[?].Clamp());
     return FloatToInt<false>(MultiplyAdd(grid, val.Clamp(), gridoff));
   }
 
-  Col4 QuantizeToIntClamped(Vec4 const &val) {
+  doinline Col4 QuantizeToIntClamped(Vec4 const &val) {
     // rcomplete[?] = FloatToInt(grid * colour[?]);
     return FloatToInt<false>(MultiplyAdd(grid, val, gridoff));
   }
@@ -710,36 +773,160 @@ public:
   Vec4 grid;
   Col4 gridinv;
 
-  vQuantizer(const int rb, const int gb, const int bb, const int ab)/* :
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  Vec4 gridhlf;		// grid * 0.5f
+  Vec4 griddbl;		// gridrcp * 2.0f
+#endif
+
+  vQuantizer(const int rb, const int gb, const int bb, const int ab, const int sb = 0)/* :
     rm(1 << rb), gm(1 << gb), bm(1 << bb), am(1 << ab),
     gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, ab ? 1.0f / am : 1.0f ),
     grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, ab ? 1.0f + am : 1.0f )*/ {
 
     gridinv.SetRGBApow2<0>(rb, gb, bb, ab);
     grid.SetXYZWpow2<0>(rb, gb, bb, ab);
-    Vec4 mask = grid.IsNotOne();
 
-    grid -= mask & Vec4(1.0f);
+#if 0
+    // set inactive channels to 1.0 (Truncate will zero the channel)
+    Vec4 mask = grid.IsNotOne();
+    Vec4 mone = mask & Vec4(1.0f);
+         mask = mask % Vec4(1.0f);
+
+    // quantization is (x*(1<<b))/(1<<b-1)
+    // except if a value has zero bits, to prevent
+    // the singularity we set rcp to 1 as well
+    grid -= mone;
     gridrcp = Reciprocal(grid);
-    grid += mask & Vec4(1.0f);
+    grid += mone;
     grid -= gridrcp;
+    grid  = Max(grid, mask);
+#else
+    // set inactive channels to 255.0 (Truncate will preserve the channel)
+    Vec4 tff = Vec4(255.0f) & grid.IsOne();
+    Vec4 one = Vec4(  1.0f);
+
+    // quantization is (x*(1<<b))/(1<<b-1)
+    // except if a value has zero bits, to prevent
+    // the singularity we set rcp to 1 as well
+    grid -= one;
+    grid += tff;
+    gridrcp = Reciprocal(grid);
+    grid += one;
+    grid -= gridrcp;
+#endif
+
+#ifdef FEATURE_SHAREDBITS_TRIALS
+    // get a bit more off when truncating
+    gridhlf = grid;
+    griddbl = gridrcp;
+    if (sb) {
+      gridhlf *= Vec4(0.5f);
+      griddbl *= Vec4(2.0f);
+    }
+#else
+    // silence the compiler
+    bool hb = !!sb; hb = false;
+#endif
   }
 
-  Vec4 SnapToLattice(Vec4 const &val) {
+  doinline Vec4 SnapToLattice(Vec4 const &val) {
     return (Truncate(val * grid) * gridrcp).Clamp();
   }
 
-  Vec4 SnapToLatticeClamped(Vec4 const &val) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
     return Min(Truncate(val * grid) * gridrcp, Vec4(1.0f));
   }
 
-  Col4 QuantizeToInt(Vec4 const &val) {
-    return ((FloatToInt<true>(SnapToLattice(val) * Vec4(255.0f))).Clamp() * gridinv) >> 8;
+  doinline Col4 QuantizeToInt(Vec4 const &val) {
+    // [0,255]
+    Vec4 Qf = SnapToLattice(val);
+
+    // [0,1<<b-1]
+    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
-  Col4 QuantizeToIntClamped(Vec4 const &val) {
-    return (FloatToInt<true>(SnapToLattice(val) * Vec4(255.0f)) * gridinv) >> 8;
+  doinline Col4 QuantizeToIntClamped(Vec4 const &val) {
+    // [0,255]
+    Vec4 Qf = SnapToLatticeClamped(val);
+
+    // [0,1<<b-1]
+    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
+
+#ifndef FEATURE_SHAREDBITS_TRIALS
+#define gridhlf	grid
+#define griddbl	gridrcp
+#define bitrial	bittest && 0	// silence compiler
+#else
+#define bitrial	1
+#endif
+
+  // if "bitset & bittest" is a compiler constant it becomes 0 penalty
+  // no-op vs. the regular version (no additional instructions)
+
+  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest) {
+    // truncate the last valid bit (half multiplier)
+    Vec4 Qf = Truncate(val * gridhlf);
+
+    // add it in if wanted (half 1.0f)
+    if (bitrial && (bitset & bittest))
+      Qf += Vec4(0.5f);
+
+    // get the bit back in (double multiplier)
+    return (Qf * griddbl).Clamp();
+  }
+
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val, int bitset, int bittest) {
+    // truncate the last valid bit (half multiplier)
+    Vec4 Qf = Truncate(val * gridhlf);
+
+    // add it in if wanted (half 1.0f)
+    if (bitrial && (bitset & bittest))
+       Qf += Vec4(0.5f);
+
+    // get the bit back in (double multiplier)
+    return Min(Qf * griddbl, Vec4(1.0f));
+  }
+
+  doinline Col4 QuantizeToInt(Vec4 const &val, int bitset, int bittest) {
+    // [0,255]
+    Vec4 Qf = SnapToLattice(val, bitset, bittest) * Vec4(255.0f);
+
+    // [0,1<<b-1]
+    return (FloatToInt<true>(Qf) * gridinv) >> 8;
+  }
+
+  doinline Col4 QuantizeToIntClamped(Vec4 const &val, int bitset, int bittest) {
+    // [0,255]
+    Vec4 Qf = SnapToLatticeClamped(val, bitset, bittest) * Vec4(255.0f);
+
+    // [0,1<<b-1]
+    return (FloatToInt<true>(Qf) * gridinv) >> 8;
+  }
+
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 3)
+  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest, int oppose) {
+    // truncate the last valid bit (half multiplier)
+    Vec4 Qf = Truncate(val * gridhlf);
+
+    // add it in if wanted (half 1.0f)
+    if (bitrial && (bitset & bittest)) {
+      Qf += Vec4(0.5f);
+      // but go down by two as well (half 2.0f) per component
+      if (oppose)
+	Qf -= Vec4(oppose & 0x01 ? 1.0f : 0.0f, oppose & 0x04 ? 1.0f : 0.0f, oppose & 0x10 ? 1.0f : 0.0f, oppose & 0x40 ? 1.0f : 0.0f);
+    }
+    // don't add it in if wanted (half 0.0f)
+    else {
+      // but go up by two as well (half 2.0f) per component
+      if (oppose)
+	Qf += Vec4(oppose & 0x01 ? 1.0f : 0.0f, oppose & 0x04 ? 1.0f : 0.0f, oppose & 0x10 ? 1.0f : 0.0f, oppose & 0x40 ? 1.0f : 0.0f);
+    }
+
+    // get the bit back in (double multiplier)
+    return (Qf * griddbl).Clamp();
+  }
+#endif
 #endif
 };
 

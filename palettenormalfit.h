@@ -24,8 +24,8 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_PALETTERANGEFIT_H
-#define SQUISH_PALETTERANGEFIT_H
+#ifndef SQUISH_PALETTENORMALFIT_H
+#define SQUISH_PALETTENORMALFIT_H
 
 #include <squish.h>
 #include "singlepalettefit.h"
@@ -36,24 +36,20 @@ namespace squish {
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
 class PaletteSet;
-class PaletteRangeFit : public SinglePaletteFit
+class PaletteNormalFit : public SinglePaletteFit
 {
 public:
-  PaletteRangeFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
-  
+  PaletteNormalFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
+
   virtual void Compress(void* block, int mode);
 
 private:
-#ifdef	FEATURE_ELIMINATE_FLATBOOKS
-  Vec4 m_start_candidate[4];
-  Vec4 m_end_candidate[4];
-#endif
 };
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
-struct PaletteRangeFit_CCR : inherit_hlsl SinglePaletteFit_CCR
+struct PaletteNormalFit_CCR : inherit_hlsl SinglePaletteFit_CCR
 {
 public_hlsl
   void AssignSet (tile_barrier barrier, const int thread,
@@ -86,4 +82,4 @@ private_hlsl
 
 } // squish
 
-#endif // ndef SQUISH_PALETTERANGEFIT_H
+#endif // ndef SQUISH_PALETTENORMALFIT_H

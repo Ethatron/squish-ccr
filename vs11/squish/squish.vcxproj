@@ -205,8 +205,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\paletteblock.cpp" />
+    <ClCompile Include="..\..\palettechannelfit.cpp" />
     <ClCompile Include="..\..\paletteclusterfit.cpp" />
     <ClCompile Include="..\..\palettefit.cpp" />
+    <ClCompile Include="..\..\palettenormalfit.cpp" />
     <ClCompile Include="..\..\paletterangefit.cpp" />
     <ClCompile Include="..\..\paletteset.cpp" />
     <ClCompile Include="..\..\singlecolourfit.cpp" />
@@ -223,8 +225,10 @@
     <ClInclude Include="..\..\config.h" />
     <ClInclude Include="..\..\maths.h" />
     <ClInclude Include="..\..\paletteblock.h" />
+    <ClInclude Include="..\..\palettechannelfit.h" />
     <ClInclude Include="..\..\paletteclusterfit.h" />
     <ClInclude Include="..\..\palettefit.h" />
+    <ClInclude Include="..\..\palettenormalfit.h" />
     <ClInclude Include="..\..\paletterangefit.h" />
     <ClInclude Include="..\..\paletteset.h" />
     <ClInclude Include="..\..\simd.h" />

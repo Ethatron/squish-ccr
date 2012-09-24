@@ -44,7 +44,7 @@ extern const Col4 weights_C4[5][16];
 /* *****************************************************************************
  */
 #if	!defined(USE_PRE)
-static doinline int FloatToInt(float a, int limit) ccr_restricted
+static doinline int passreg FloatToInt(float a, int limit) ccr_restricted
 {
   // use ANSI round-to-zero behaviour to get round-to-nearest
   int i = (int)(a + 0.5f);
@@ -59,7 +59,7 @@ static doinline int FloatToInt(float a, int limit) ccr_restricted
   return i;
 }
 
-static doinline int FloatTo565(Vec3::Arg colour) ccr_restricted
+static doinline int passreg FloatTo565(Vec3::Arg colour) ccr_restricted
 {
   // get the components in the correct range
   int r = FloatToInt(31.0f * colour.X(), 31);
@@ -70,7 +70,7 @@ static doinline int FloatTo565(Vec3::Arg colour) ccr_restricted
   return (r << 11) | (g << 5) | b;
 }
 
-static doinline int Unpack565(u8 const* packed, u8* colour) ccr_restricted
+static doinline int passreg Unpack565(u8 const* packed, u8* colour) ccr_restricted
 {
   // build the packed value
   int value = (int)packed[0] | ((int)packed[1] << 8);
@@ -98,7 +98,29 @@ static doinline int Unpack565(u8 const* packed, u8* colour) ccr_restricted
 #define	FIELDN	2	// 3
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]) ccr_restricted
+static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN], int bitset) ccr_restricted
+{
+  /* not both yet */
+  assert(!eb || !sb);
+
+  // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
+  vQuantizer q = vQuantizer(
+    rb + eb + sb,
+    gb + eb + sb,
+    bb + eb + sb,
+    ab + eb + sb
+  );
+  
+  // pack into a single value
+          field[0][COLORA] = q.QuantizeToInt(colour[0]);
+          field[0][COLORA] = field[0][COLORA] >> (eb + sb);
+
+  if (eb) field[0][UNIQUE] = (Col4(bitset) >> 0) & Col4(1);
+  if (sb) field[0][SHARED] = (Col4(bitset) >> 0) & Col4(1);
+}
+
+template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
+static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]) ccr_restricted
 {
   /* not both yet */
   assert(!eb || !sb);
@@ -170,7 +192,7 @@ static doinline void FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]) ccr_re
 }
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void FloatTo(Col4 (&fielda)[1][FIELDN], Col4 (&fieldb)[1][FIELDN]) ccr_restricted
+static doinline void passreg FloatTo(Col4 (&fielda)[1][FIELDN], Col4 (&fieldb)[1][FIELDN]) ccr_restricted
 {
   /* not both yet */
   assert(!eb || !sb);
@@ -188,7 +210,33 @@ static doinline void FloatTo(Col4 (&fielda)[1][FIELDN], Col4 (&fieldb)[1][FIELDN
 }
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]) ccr_restricted
+static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN], int bitset) ccr_restricted
+{
+  /* not both yet */
+  assert(!eb || !sb);
+
+  // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
+  vQuantizer q = vQuantizer(
+    rb + eb + sb,
+    gb + eb + sb,
+    bb + eb + sb,
+    ab + eb + sb
+  );
+  
+  // pack into a single value
+          field[0][COLORA] = q.QuantizeToInt(colour[0]);
+          field[1][COLORA] = q.QuantizeToInt(colour[1]);
+          field[0][COLORA] = field[0][COLORA] >> (eb + sb);
+          field[1][COLORA] = field[1][COLORA] >> (eb + sb);
+
+  if (eb) field[0][UNIQUE] = (Col4(bitset) >> 0) & Col4(1);
+  if (eb) field[1][UNIQUE] = (Col4(bitset) >> 1) & Col4(1);
+  if (sb) field[0][SHARED] = (Col4(bitset) >> 0) & Col4(1);
+  if (sb) field[1][SHARED] = (Col4(bitset) >> 1) & Col4(1);
+}
+
+template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
+static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]) ccr_restricted
 {
   /* not both yet */
   assert(!eb || !sb);
@@ -272,7 +320,7 @@ static doinline void FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]) ccr_re
 }
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void FloatTo(Col4 (&fielda)[2][FIELDN], Col4 (&fieldb)[2][FIELDN]) ccr_restricted
+static doinline void passreg FloatTo(Col4 (&fielda)[2][FIELDN], Col4 (&fieldb)[2][FIELDN]) ccr_restricted
 {
   /* not both yet */
   assert(!eb || !sb);
@@ -292,7 +340,37 @@ static doinline void FloatTo(Col4 (&fielda)[2][FIELDN], Col4 (&fieldb)[2][FIELDN
 }
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]) ccr_restricted
+static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN], int bitset) ccr_restricted
+{
+  /* not both yet */
+  assert(!eb || !sb);
+
+  // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
+  vQuantizer q = vQuantizer(
+    rb + eb + sb,
+    gb + eb + sb,
+    bb + eb + sb,
+    ab + eb + sb
+  );
+  
+  // pack into a single value
+          field[0][COLORA] = q.QuantizeToInt(colour[0]);
+          field[1][COLORA] = q.QuantizeToInt(colour[1]);
+          field[2][COLORA] = q.QuantizeToInt(colour[2]);
+          field[0][COLORA] = field[0][COLORA] >> (eb + sb);
+          field[1][COLORA] = field[1][COLORA] >> (eb + sb);
+          field[2][COLORA] = field[2][COLORA] >> (eb + sb);
+
+  if (eb) field[0][UNIQUE] = (Col4(bitset) >> 0) & Col4(1);
+  if (eb) field[1][UNIQUE] = (Col4(bitset) >> 1) & Col4(1);
+  if (eb) field[2][UNIQUE] = (Col4(bitset) >> 2) & Col4(1);
+  if (sb) field[0][SHARED] = (Col4(bitset) >> 0) & Col4(1);
+  if (sb) field[1][SHARED] = (Col4(bitset) >> 1) & Col4(1);
+  if (sb) field[2][SHARED] = (Col4(bitset) >> 2) & Col4(1);
+}
+
+template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
+static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]) ccr_restricted
 {
   /* not both yet */
   assert(!eb || !sb);
@@ -388,7 +466,7 @@ static doinline void FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]) ccr_re
 }
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void FloatTo(Col4 (&fielda)[3][FIELDN], Col4 (&fieldb)[3][FIELDN]) ccr_restricted
+static doinline void passreg FloatTo(Col4 (&fielda)[3][FIELDN], Col4 (&fieldb)[3][FIELDN]) ccr_restricted
 {
   /* not both yet */
   assert(!eb || !sb);
@@ -412,7 +490,7 @@ static doinline void FloatTo(Col4 (&fielda)[3][FIELDN], Col4 (&fieldb)[3][FIELDN
 /* -----------------------------------------------------------------------------
  */
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void UnpackFrom(Col4 (&field)[1][FIELDN]) ccr_restricted {
+static doinline void passreg UnpackFrom(Col4 (&field)[1][FIELDN]) ccr_restricted {
   /* not both yet */
   assert(!eb || !sb);
 
@@ -461,7 +539,7 @@ static doinline void UnpackFrom(Col4 (&field)[1][FIELDN]) ccr_restricted {
 }
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void UnpackFrom(Col4 (&field)[2][FIELDN]) ccr_restricted {
+static doinline void passreg UnpackFrom(Col4 (&field)[2][FIELDN]) ccr_restricted {
   /* not both yet */
   assert(!eb || !sb);
 
@@ -516,7 +594,7 @@ static doinline void UnpackFrom(Col4 (&field)[2][FIELDN]) ccr_restricted {
 }
 
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
-static doinline void UnpackFrom(Col4 (&field)[3][FIELDN]) ccr_restricted {
+static doinline void passreg UnpackFrom(Col4 (&field)[3][FIELDN]) ccr_restricted {
   /* not both yet */
   assert(!eb || !sb);
 
@@ -578,7 +656,7 @@ static doinline void UnpackFrom(Col4 (&field)[3][FIELDN]) ccr_restricted {
 
 /* -----------------------------------------------------------------------------
  */
-static doinline void Codebook3(u8 (&codes)[4*4], bool bw) ccr_restricted
+static doinline void passreg Codebook3(u8 (&codes)[4*4], bool bw) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 3; ++i) {
@@ -600,7 +678,7 @@ static doinline void Codebook3(u8 (&codes)[4*4], bool bw) ccr_restricted
   codes[12 + 3] = bw ? 0 : 255;
 }
 
-static doinline void Codebook4(u8 (&codes)[4*4]) ccr_restricted
+static doinline void passreg Codebook4(u8 (&codes)[4*4]) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 3; ++i) {
@@ -618,7 +696,7 @@ static doinline void Codebook4(u8 (&codes)[4*4]) ccr_restricted
   codes[12 + 3] = 255;
 }
 
-static int CodebookP(u8 *codes, int bits) ccr_restricted
+static int passreg CodebookP(u8 *codes, int bits) ccr_restricted
 {
   // generate the midpoints
   for (int m = 0; m < 4; ++m) {
@@ -641,7 +719,7 @@ static int CodebookP(u8 *codes, int bits) ccr_restricted
 
 /* -----------------------------------------------------------------------------
  */
-static doinline void Codebook3(Vec3 (&codes)[3], Vec3::Arg start, Vec3::Arg end) ccr_restricted
+static doinline void passreg Codebook3(Vec3 (&codes)[3], Vec3::Arg start, Vec3::Arg end) ccr_restricted
 {
   codes[0] = start;
   codes[1] = end;
@@ -649,7 +727,7 @@ static doinline void Codebook3(Vec3 (&codes)[3], Vec3::Arg start, Vec3::Arg end)
 //codes[3] = 0;
 }
 
-static doinline void Codebook4(Vec3 (&codes)[4], Vec3::Arg start, Vec3::Arg end) ccr_restricted
+static doinline void passreg Codebook4(Vec3 (&codes)[4], Vec3::Arg start, Vec3::Arg end) ccr_restricted
 {
   codes[0] = start;
   codes[1] = end;
@@ -657,13 +735,14 @@ static doinline void Codebook4(Vec3 (&codes)[4], Vec3::Arg start, Vec3::Arg end)
   codes[3] = (1.0f / 3.0f) * start + (2.0f / 3.0f) * end;
 }
 
-static int CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg end) ccr_restricted
+static int passreg CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg end) ccr_restricted
 {
   const int j = (1 << bits) - 1;
 
   codes[0] = start;
   codes[j] = end;
-
+  
+  // the quantizer is not equi-distant, but it is symmetric
   for (int i = 1; i < j; i++) {
     Vec4 s = weights_V4[bits][j - i] * start;
     Vec4 e = weights_V4[bits][i + 0] * end;
@@ -676,13 +755,14 @@ static int CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg end) ccr_
 
 /* -----------------------------------------------------------------------------
  */
-static int CodebookP(Col4 *codes, int bits, Col4::Arg start, Col4::Arg end) ccr_restricted
+static int passreg CodebookP(Col4 *codes, int bits, Col4::Arg start, Col4::Arg end) ccr_restricted
 {
   const int j = (1 << bits) - 1;
 
   codes[0] = start;
   codes[j] = end;
 
+  // the quantizer is not equi-distant, but it is symmetric
   for (int i = 1; i < j; i++) {
     Col4 s = (weights_C4[bits][j - i]) * start;
     Col4 e = (weights_C4[bits][i + 0]) * end;
@@ -694,13 +774,14 @@ static int CodebookP(Col4 *codes, int bits, Col4::Arg start, Col4::Arg end) ccr_
 }
 
 template<const int bits>
-static int CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_restricted
+static int passreg CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_restricted
 {
   const int j = (1 << bits) - 1;
 
   PackBytes(start, codes[0]);
   PackBytes(end  , codes[j]);
 
+  // the quantizer is not equi-distant, but it is symmetric
   for (int i = 1; i < j; i++) {
     Col4 s = (weights_C4[bits][j - i]) * start;
     Col4 e = (weights_C4[bits][i + 0]) * end;

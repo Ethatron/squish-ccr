@@ -147,6 +147,7 @@ typedef unsigned short u16;
 	perceived quality.
 */
 void Compress( u8 const* rgba, void* block, int flags );
+void Compress( u16 const* rgb, void* block, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -188,6 +189,7 @@ void Compress( u8 const* rgba, void* block, int flags );
 	perceived quality.
 */
 void CompressMasked( u8 const* rgba, int mask, void* block, int flags );
+void CompressMasked( u16 const* rgb, int mask, void* block, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -207,6 +209,7 @@ void CompressMasked( u8 const* rgba, int mask, void* block, int flags );
 	are ignored.
 */
 void Decompress( u8* rgba, void const* block, int flags );
+void Decompress( u16* rgb, void const* block, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -264,6 +267,7 @@ int GetStorageRequirements( int width, int height, int flags );
 	squish::GetStorageRequirements.
 */
 void CompressImage( u8 const* rgba, int width, int height, void* blocks, int flags );
+void CompressImage( u16 const* rgb, int width, int height, void* blocks, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -287,6 +291,7 @@ void CompressImage( u8 const* rgba, int width, int height, void* blocks, int fla
 	Internally this function calls squish::Decompress for each block.
 */
 void DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags );
+void DecompressImage( u16* rgb, int width, int height, void const* blocks, int flags );
 #endif
 
 /* *****************************************************************************
@@ -384,7 +389,7 @@ void CompressColorBtc5(tile_barrier barrier, const int thread,
 		       pixel16 xy, int mask, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
-void CompressMixedBtc (tile_barrier barrier, const int thread,
+void CompressPaletteBtc (tile_barrier barrier, const int thread,
 		       pixel16 rgba, ColourSet_CCRr colours, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;

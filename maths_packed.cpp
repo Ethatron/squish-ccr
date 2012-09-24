@@ -31,7 +31,7 @@ namespace squish {
   tile_static Sym3x3 covariance[8];
 #endif
 
-Sym3x3 ComputeWeightedCovariance(tile_barrier barrier, const int thread, int n, point16 points, weight16 weights) amp_restricted
+Sym3x3 ComputeWeightedCovariance3(tile_barrier barrier, const int thread, int n, point16 points, weight16 weights) amp_restricted
 {
   // compute the centroid (AMP: reduction, O(count) vs. O(ln(16)) = O(4),
   //                            unused coeffs have been set to zero and

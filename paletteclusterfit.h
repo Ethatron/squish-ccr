@@ -29,23 +29,26 @@
 #define SQUISH_PALETTECLUSTERFIT_H
 
 #include <squish.h>
-#include "singlepalettefit.h"
+
 #include "maths.h"
 #include "simd.h"
+
 #include "palettefit.h"
+#include "singlepalettefit.h"
+#include "palettechannelfit.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
-class PaletteClusterFit : public SinglePaletteFit
+class PaletteClusterFit : public SinglePaletteFit, public PaletteChannelFit
 {
 public:
-  PaletteClusterFit(PaletteSet const* palettes, int flags, int swap);
-
-private:
+  PaletteClusterFit(PaletteSet const* palettes, int flags, int swap = -1, int shared = -1);
+  
   virtual void Compress(void* block, int mode);
 
+private:
 #define CLUSTERINDICES	3
   // separate components, 4/8 colors, 4/8 alphas
   void CompressS23(void* block, int mode);
@@ -54,8 +57,12 @@ private:
   void CompressC4(void* block, int mode);
 
   bool ConstructOrdering(Vec4 const& axis, int iteration, int set);
-  Vec4 ClusterSearch4(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q);
-  Vec4 ClusterSearch8(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q);
+
+  Vec4 ClusterSearch4Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
+  Vec4 ClusterSearch8Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
+
+  Vec4 ClusterSearch4(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
+  Vec4 ClusterSearch8(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
 
   enum {
     kMinIterations = 1,
@@ -65,6 +72,7 @@ private:
   int  m_iterationCount;
   Vec4 m_principle[4];
   Vec4 m_xsum_wsum[4];
+  Vec4 m_xxsum_wwsum[4];
   Vec4 m_points_weights[4][16];
   a16 u8 m_order[4][16 * kMaxIterations];
 };

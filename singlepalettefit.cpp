@@ -59,13 +59,39 @@ struct SinglePaletteLookup8
 
 #include "singlepalettelookup.inl"
 
-SinglePaletteFit::SinglePaletteFit(PaletteSet const* palette, int flags, int swap)
-  : PaletteFit(palette, flags, swap)
+SinglePaletteFit::SinglePaletteFit(PaletteSet const* palette, int flags, int swap, int shared)
+  : PaletteFit(palette, flags, swap, shared)
 {
 }
 
-Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int ib, u8 cmask)
+Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask)
 {
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  // merge start and end shared bits
+  sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
+  
+#define lookup_5u1_4_sb_    lookup_5u1_4[sb]
+#define lookup_7u1_4_sb_    lookup_7u1_4[sb]
+#define lookup_4u1_8_sb_    lookup_4u1_8[sb]
+#define lookup_6s1_8_sb_    lookup_6s1_8[sb&1]
+#define lookup_7u1_16_sb_   lookup_7u1_16[sb]
+
+#define lookup_5u1_4_ck_    (GetSharedBits() ? lookup_5u1_4_sb_ : lookup_6_4)
+#define lookup_4u1_8_ck_    (GetSharedBits() ? lookup_4u1_8_sb_ : lookup_5_8)
+#else
+    // silence the compiler
+    bool hb = !!sb; hb = false;
+
+#define lookup_5u1_4_sb_    lookup_6_4
+#define lookup_7u1_4_sb_    lookup_8_4
+#define lookup_4u1_8_sb_    lookup_5_8
+#define lookup_6s1_8_sb_    lookup_7_8
+#define lookup_7u1_16_sb_   lookup_8_16
+
+#define lookup_5u1_4_ck_    lookup_6_4
+#define lookup_4u1_8_ck_    lookup_5_8
+#endif
+
   assume(ib >= 2 && ib <= 4);
   switch (ib) {
     case 2: {
@@ -74,20 +100,18 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
       assume(cb >= 5 && cb <= 8);
       switch (cb) {
-	case 5:  cl = lookup_5_4; break;
-	case 6:  cl = lookup_6_4; break;
-	case 7:  cl = lookup_7_4; break;
-	case 8:  cl = lookup_8_4; break;
-	default: cl = lookup_8_4; break;
+	case  5: cl = lookup_5_4; break;	//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 },
+	case  6: cl = lookup_5u1_4_sb_; break;	//{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 },
+	case  7: cl = lookup_7_4; break;	//{ 1, 0, 2, 0,  7, 8, 0,  0,  2, 2 },
+	case  8: cl = lookup_7u1_4_sb_; break;	//{ 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
+	default: abort(); break;
       }
 
-      assume(ab >= 5 && ab <= 8);
+      assume(ab == 0 || ab == 6 || ab == 8);
       switch (ab) {
-	case 5:  al = lookup_5_4; break;
-	case 6:  al = lookup_6_4; break;
-	case 7:  al = lookup_7_4; break;
-	case 8:  al = lookup_8_4; break;
-	default: al = lookup_8_4; break;
+	case  6: al = lookup_5u1_4_ck_;	break;	//{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 }, / { 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
+	case  8: al = lookup_8_4; break;	//{ 1, 0, 2, 0,  7, 8, 0,  0,  2, 2 },
+	default: al = NULL; break;		//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 }, / { 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
       }
 
       SinglePaletteLookup2 const* const lookups[] =
@@ -99,20 +123,17 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       SinglePaletteLookup4 const* cl;
       SinglePaletteLookup4 const* al;
 
-      assume(cb >= 5 && cb <= 7);
+      assume(cb == 5 || cb == 7);
       switch (cb) {
-	case 5:  cl = lookup_5_8; break;
-	case 6:  cl = lookup_6_8; break;
-	case 7:  cl = lookup_7_8; break;
-	default: cl = lookup_7_8; break;
+	case  5: cl = lookup_4u1_8_ck_;	break;	//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
+	case  7: cl = lookup_6s1_8_sb_; break;	//{ 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
+	default: abort(); break;
       }
 
-      assume(ab >= 5 && ab <= 7);
+      assume(ab == 0 || ab == 6);
       switch (ab) {
-	case 5:  al = lookup_5_8; break;
-	case 6:  al = lookup_6_8; break;
-	case 7:  al = lookup_7_8; break;
-	default: al = lookup_7_8; break;
+	case  6: al = lookup_6_8; break;	//{ 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
+	default: al = NULL; break;		//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
       }
 
       SinglePaletteLookup4 const* const lookups[] =
@@ -124,16 +145,16 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       SinglePaletteLookup8 const* cl;
       SinglePaletteLookup8 const* al;
 
-      assume(cb >= 8 && cb <= 8);
+      assume(cb == 8);
       switch (cb) {
-	case 8:  cl = lookup_8_16; break;
-	default: cl = lookup_8_16; break;
+	case  8: cl = lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
+	default: abort(); break;
       }
-
-      assume(ab >= 8 && ab <= 8);
+      
+      assume(ab == 8);
       switch (ab) {
-	case 8:  al = lookup_8_16; break;
-	default: al = lookup_8_16; break;
+	case  8: al = lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
+	default: abort(); break;
       }
 
       SinglePaletteLookup8 const* const lookups[] =
@@ -157,7 +178,9 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
 
-  // TODO: vectorize
+  /// TODO: vectorize
+  // values are directly out of the codebook and
+  // natural numbers / 255, no need to round
   m_entry[set][0] = (u8)FloatToInt(255.0f * values->X(), 255);
   m_entry[set][1] = (u8)FloatToInt(255.0f * values->Y(), 255);
   m_entry[set][2] = (u8)FloatToInt(255.0f * values->Z(), 255);
@@ -224,6 +247,8 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   const float *eLUT = ComputeGammaLUT(false);
 
   /// TODO: vectorize
+  // values are directly out of the codebook and
+  // natural numbers / 255, no need to round
   m_entry[set][0] = (u8)FloatToInt(255.0f * values->X(), 255);
   m_entry[set][1] = (u8)FloatToInt(255.0f * values->Y(), 255);
   m_entry[set][2] = (u8)FloatToInt(255.0f * values->Z(), 255);
@@ -290,6 +315,8 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   const float *eLUT = ComputeGammaLUT(false);
 
   /// TODO: vectorize
+  // values are directly out of the codebook and
+  // natural numbers / 255, no need to round
   m_entry[set][0] = (u8)FloatToInt(255.0f * values->X(), 255);
   m_entry[set][1] = (u8)FloatToInt(255.0f * values->Y(), 255);
   m_entry[set][2] = (u8)FloatToInt(255.0f * values->Z(), 255);

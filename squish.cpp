@@ -25,10 +25,12 @@
    -------------------------------------------------------------------------- */
 
 #include <squish.h>
+#include <assert.h>
 #include <memory.h>
 
 #include "colourset.h"
 #include "paletteset.h"
+//#include "hdrset.h"
 
 #include "maths.h"
 
@@ -40,15 +42,20 @@
 #include "paletteclusterfit.h"
 #include "paletteblock.h"
 
+//#include "hdrrangefit.h"
+//#include "hdrclusterfit.h"
+#include "hdrblock.h"
+
 #include "alpha.h"
 #include "singlecolourfit.h"
+#include "singlepalettefit.h"
 
 namespace squish {
 
 /* *****************************************************************************
  */
 #if	!defined(USE_PRE)
-static int FixFlags( int flags )
+static int FixFlags(int flags)
 {
   // grab the flag bits
   int method = flags & (kBtc1 | kBtc2 | kBtc3 | kBtc4 | kBtc5 | kBtc6 | kBtc7);
@@ -101,7 +108,11 @@ void CompressColorBtc(u8 const* rgba, int mask, void* block, int flags)
   }
 }
 
-void CompressMixedBtc(u8 const* rgba, int mask, void* block, int flags)
+#if defined(TRACK_STATISTICS)
+struct statistics gstat = {0};
+#endif
+
+void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 {
   /* we start with 1 set so we get some statistics about the color-
    * palette, based on that we decide if we need to search into higher
@@ -125,7 +136,7 @@ void CompressMixedBtc(u8 const* rgba, int mask, void* block, int flags)
    */
 #if !defined(NDEBUG) && defined(DEBUG_SETTING)
 #define DEBUG_MODE	kVariableCodingMode1
-#define DEBUG_FIT	kColourClusterFit * 15
+#define DEBUG_FIT	kColourRangeFit   //kColourClusterFit * 15
 
   flags = (flags & (~kVariableCodingModes)) | (DEBUG_MODE);
   flags = (flags & (~kColourIterativeClusterFit)) | (DEBUG_FIT);
@@ -183,6 +194,8 @@ void CompressMixedBtc(u8 const* rgba, int mask, void* block, int flags)
   PaletteSet bestpal;
   int bestmde = -1;
   int bestswp = -1;
+  int bestbit = -1;
+  int besttyp = -1;
 
   Vec4 error(FLT_MAX);
 
@@ -195,6 +208,7 @@ void CompressMixedBtc(u8 const* rgba, int mask, void* block, int flags)
     int numr = PaletteFit::GetRotationBits (mnum);
     int nump = PaletteFit::GetPartitionBits(mnum);
     int numx = PaletteFit::GetSelectionBits(mnum);
+    int numb = PaletteFit::GetSharedBits   (mnum);
     int numi = PaletteFit::GetIndexBits    (mnum);
 
     // stop if set-limit reached
@@ -204,25 +218,40 @@ void CompressMixedBtc(u8 const* rgba, int mask, void* block, int flags)
     // lock on the perfect partition
     int sp = (lmtp == -1 ?               0 : lmtp),
 	ep = (lmtp == -1 ? (1 << nump) - 1 : lmtp);
+    // search through rotations
     int sr =                             0,
 	er =               (1 << numr) - 1;
+    // search through index-swaps
     int sx =                             0,
 	ex =               (1 << numx) - 1;
+    // search through shared bits
+#ifdef FEATURE_SHAREDBITS_TRIALS
+    int sb = (numb > 0   ?               0 : -1),
+	eb = (numb > 0   ?       numb      : -1);
+#else
+    int sb = (numb > 0   ?              -1 : -1),
+	eb = (numb > 0   ?              -1 : -1);
+#endif
 
 #if !defined(NDEBUG) && defined(DEBUG_SETTING)
 #define DEBUG_PARTITION	0
 #define DEBUG_ROTATION	0
 #define DEBUG_SELECTION	0
+#define DEBUG_SHAREDBIT	(numb > 0 ? 0 : -1)
 
-    sp = ep = DEBUG_PARTITION;
+//  sp = ep = DEBUG_PARTITION;
     sr = er = DEBUG_ROTATION;
     sx = ex = DEBUG_SELECTION;
+//  sb = eb = DEBUG_SHAREDBIT;
 #endif
 
     // signal if we do we have anything better this iteration of the search
     bool better = false;
-    // TODO: fix the cluster-fit for 1-channel cases, and for 3bit
-    bool cluster = ((flags & kColourRangeFit) == 0) && (((numi >> 0) & 0xFF) < 3) && (((numi >> 16) & 0xFF) < 3) && (mode != kVariableCodingMode8);
+    // check if we can do a cascade with the cluster-fit
+    bool cluster = ((flags & kColourRangeFit) == 0) && (((numi >> 0) & 0xFF) <= CLUSTERINDICES)
+                 && (mode != kVariableCodingMode8) && (((numi >> 16) & 0xFF) <= CLUSTERINDICES);
+
+    // TODO: partition & rotation are mutual exclusive
 
     // search for the best partition
     for (int p = sp; p <= ep; p++) {
@@ -231,28 +260,47 @@ void CompressMixedBtc(u8 const* rgba, int mask, void* block, int flags)
 	// create the minimal point set
 	PaletteSet palette(rgba, mask, flags | mode, p, r);
 
-	for (int x = sx; x <= ex; x++) {
-	  // do a range fit (which uses single palette fit if appropriate)
-	  PaletteRangeFit fit(&palette, flags | mode, x);
+#if defined(TRACK_STATISTICS)
+	for (int xu = 0; xu < nums; xu++) {
+	  int cnt = palette.GetCount(xu);
+	  gstat.num_counts[mnum][p][xu][cnt]++;
+	}
 
-	  fit.SetError(error);
-	  fit.PaletteFit::Compress(block);
-
-	  // we could code it lossless, no point in trying any further at all
-	  if (fit.Lossless())
-	    return;
-	  if (fit.IsBest()) {
-	    error = fit.GetError();
-
-#if !defined(NDEBUG) && defined(DEBUG_SETTING) && (defined(DEBUG_ENCODER) || defined(DEBUG_QUANTIZER))
-	    if (cluster || 1)
-#else
-	    if (cluster)
+	if (palette.GetCount() <= nums)
+	  gstat.has_countsets[nums]++;
 #endif
-	      bestmde = mode,
-	      bestpal = palette,
-	      bestswp = x,
-	      better = true;
+
+	// do a range fit (which uses single palette fit if appropriate)
+	PaletteRangeFit fit(&palette, flags | mode);
+
+	// TODO: swap & shared are mutual exclusive
+
+	// search for the best swap
+	for (int x = sx; x <= ex; x++) {
+	  fit.ChangeSwap(x);
+
+	  // search for the best shared bit
+	  for (int b = sb; b <= eb; b++) {
+	    fit.ChangeShared(b);
+
+	    // update with old best error (reset isbest)
+	    fit.SetError(error);
+	    fit.Compress(block, mnum);
+
+	    // we could code it lossless, no point in trying any further at all
+	    if (fit.Lossless())
+	      return;
+	    if (fit.IsBest()) {
+	      error = fit.GetError();
+
+	      if (cluster || 1)
+		bestmde = mode,
+		bestpal = palette,
+		bestswp = x,
+		bestbit = b,
+		besttyp = 0,
+		better  = true;
+	    }
 	  }
 	}
 
@@ -266,33 +314,65 @@ void CompressMixedBtc(u8 const* rgba, int mask, void* block, int flags)
     }
 
     // check the compression type and compress palette of the chosen partition even better
-    if (better) {
+    if (better && cluster) {
       // default to a cluster fit (could be iterative or not)
-      PaletteClusterFit fit(&bestpal, flags | mode, bestswp);
+      PaletteClusterFit fit(&bestpal, flags | mode, bestswp, bestbit);
 
       fit.SetError(error);
-      fit.PaletteFit::Compress(block);
+      fit.Compress(block, mnum);
 
-#if !defined(NDEBUG) && defined(DEBUG_QUANTIZER)
-      // take the cluster-fit
-      if (fit.IsBest())
-	fit.PaletteFit::Decompress((u8*)rgba, mnum);
+      // we could code it lossless, no point in trying any further at all
+      if (fit.Lossless())
+	return;
+      if (fit.IsBest()) {
+	error = fit.GetError();
 
-      // or re-create the range-fit
-      else {
-	PaletteRangeFit fit(&bestpal, flags | mode, bestswp);
-
-	fit.SetError(error);
-	fit.PaletteFit::Compress(block);
-	fit.PaletteFit::Decompress((u8*)rgba, mnum);
+	if (cluster || 1)
+	  besttyp = 1;
       }
+    }
+
+#if defined(TRACK_STATISTICS)
+    gstat.win_partition[mnum][bestpal.GetPartition()]++;
+    gstat.win_rotation [mnum][bestpal.GetRotation ()]++;
+    gstat.win_swap     [mnum][bestpal.GetRotation ()][bestswp]++;
+#endif
+  }
+
+#if defined(TRACK_STATISTICS)
+  gstat.win_mode[(bestmde >> 24) - 1]++;
+  gstat.win_cluster[(bestmde >> 24) - 1][besttyp]++;
 #endif
 
-#if !defined(NDEBUG) && defined(DEBUG_ENCODER)
-      DecompressPaletteBtc((u8*)rgba, block);
-#endif
-    }
+#if defined(VERIFY_QUANTIZER)
+  if (!besttyp) {
+    // do a range fit (which uses single palette fit if appropriate)
+    PaletteRangeFit fit(&bestpal, flags | bestmde, bestswp, bestbit);
+
+    fit.Compress(block, (bestmde >> 24) - 1);
+    fit.Decompress((u8*)rgba, (bestmde >> 24) - 1);
   }
+  else {
+    // default to a cluster fit (could be iterative or not)
+    PaletteClusterFit fit(&bestpal, flags | bestmde, bestswp, bestbit);
+
+    fit.Compress(block, (bestmde >> 24) - 1);
+    fit.Decompress((u8*)rgba, (bestmde >> 24) - 1);
+  }
+#endif
+
+#if defined(VERIFY_ENCODER)
+  DecompressPaletteBtc((u8*)rgba, block);
+#endif
+}
+
+void CompressDynamicBtc(u16 const* rgb, int mask, void* block, int flags)
+{
+  // ...
+  flags = flags;
+  block = block;
+  mask  = mask;
+  rgb   = rgb;
 }
 
 void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
@@ -332,12 +412,33 @@ void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
       CompressAlphaBtc3(rgba - 2, mask, plane2Block);
   }
   // BTC-type compression
-  else if (flags & (kBtc6 | kBtc7)) {
+  else if (flags & (kBtc7)) {
     // get the block locations
     void* mixedBlock = block;
 
     // compress color and alpha merged if necessary
-    CompressMixedBtc(rgba, mask, mixedBlock, flags);
+    CompressPaletteBtc(rgba, mask, mixedBlock, flags);
+  }
+  else if (flags & (kBtc6)) {
+    // while this is possible (up-cast), should we support it?
+  }
+}
+
+void CompressMasked(u16 const* rgb, int mask, void* block, int flags)
+{
+  // fix any bad flags
+  flags = FixFlags(flags);
+
+  // BTC-type compression
+  if (flags & (kBtc6)) {
+    // get the block locations
+    void* mixedBlock = block;
+
+    // compress color and alpha merged if necessary
+    CompressDynamicBtc(rgb, mask, mixedBlock, flags);
+  }
+  else {
+    // while this is possible (down-cast), should we support it?
   }
 }
 
@@ -345,6 +446,19 @@ void Compress(u8 const* rgba, void* block, int flags)
 {
   // compress with full mask
   CompressMasked(rgba, 0xFFFF, block, flags);
+}
+
+void Compress(u16 const* rgb, void* block, int flags)
+{
+  // compress with full mask
+  CompressMasked(rgb, 0xFFFF, block, flags);
+}
+
+void DecompressDynamicBtc(u16* rgb, void const* block)
+{
+  // ...
+  block = block;
+  rgb = rgb;
 }
 
 void Decompress(u8* rgba, void const* block, int flags)
@@ -384,12 +498,33 @@ void Decompress(u8* rgba, void const* block, int flags)
       DecompressAlphaBtc3(rgba - 2, plane2Block);
   }
   // BTC-type compression
-  else if (flags & (kBtc6 | kBtc7)) {
+  else if (flags & (kBtc7)) {
     // get the block locations
     void const* mixedBlock = block;
 
     // decompress color and alpha merged if necessary
     DecompressPaletteBtc(rgba, mixedBlock);
+  }
+  else if (flags & (kBtc6)) {
+    // while this is possible (down-cast), should we support it?
+  }
+}
+
+void Decompress(u16* rgb, void const* block, int flags)
+{
+  // fix any bad flags
+  flags = FixFlags(flags);
+
+  // BTC-type compression
+  if (flags & (kBtc6)) {
+    // get the block locations
+    void const* mixedBlock = block;
+
+    // decompress color and alpha merged if necessary
+    DecompressDynamicBtc(rgb, mixedBlock);
+  }
+  else if (flags & (kBtc7)) {
+    // while this is possible (down-cast), should we support it?
   }
 }
 
@@ -482,7 +617,7 @@ void DecompressImage(u8* rgba, int width, int height, void const* blocks, int fl
   else if (flags & (kBtc4 | kBtc5))
     bytesPerBlock = ((flags & kBtc4) != 0) ? 8 : 16;
   else if (flags & (kBtc6 | kBtc7))
-    bytesPerBlock = 16;
+    bytesPerBlock =                              16;
 
   // loop over blocks
   for (int y = 0; y < height; y += 4) {

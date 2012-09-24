@@ -43,37 +43,56 @@ public:
   static int GetIndexBits(int mode);
   static int GetRotationBits(int mode);
   static int GetSelectionBits(int mode);
+  static int GetSharedBits(int mode);
   static int GetPrecisionBits(int mode);
 
-public:
-  PaletteFit(PaletteSet const* palette, int flags, int swap);
+  // rotate shared bit definition: 0=0 (-), 1=3 (s), 2=2 (u), 3=1 (u)
+  // unique p-bit permutations: upper bit start bit set, lower bit stop bit set
+  // shared p-bit permutations: upper & lower bit start & stop bit set
+  // makes it easier to loop
+#define SBSTART	0
+#define SBEND	3
+#define SB	1
+#define SR(s)	(s < 0 ? s : s ^ (s << SBEND))
 
-  int GetSelection() const { return m_swapindex; }
-  
-  void ChangeFit(PaletteSet const* palette, int flags, int swap) { m_palette = palette; m_flags = flags; m_swapindex = swap; m_best = false; }
+public:
+  PaletteFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
+
+  // change parameters while iterating
+  void ChangeFit(PaletteSet const* palette, int flags, int swap, int shared) { m_palette = palette; m_flags = flags; m_swapindex = swap; m_sharedbits = SR(shared); m_best = false; }
   void ChangePalette(PaletteSet const* palette) { m_palette = palette; }
   void ChangeFlags(int flags) { m_flags = flags; }
   void ChangeSwap(int swap) { m_swapindex = swap; }
+  void ChangeShared(int shared) { m_sharedbits = SR(shared); }
 
-  void SetError(Vec4 &error) { m_besterror = error; }
+  // query some values
+  PaletteSet const* GetPalette() const { return m_palette; }
+  int GetFlags() const { return m_flags; }
+  int GetSwap() const { return m_swapindex; }
+  int GetSharedBits() const { return m_sharedbits + 1; }
+
+  // error management
+  void SetError(Vec4 &error) { m_besterror = error; m_best = false; }
   Vec4 GetError() { return m_besterror; }
 
   void Compress(void* block);
+  virtual void Compress(void* block, int mode) = 0;
+
 #if 1 //ndef NDEBUG
   void Decompress(u8 *rgba, int mode);
   void SumError(u8 (&closest)[4][16], int mode, Vec4 &error);
 #endif
-  
+
   bool Lossless() { return !CompareFirstGreaterThan(m_besterror, Vec4(0.0f)); }
   bool IsBest() { return m_best; }
 
 protected:
-  virtual void Compress(void* block, int mode) = 0;
-  
   PaletteSet const* m_palette;
-  int m_swapindex;
   int m_flags;
-  
+  int m_mode;
+  int m_swapindex;
+  int m_sharedbits;
+
   Vec4 m_start[4];
   Vec4 m_end[4];
   a16 u8 m_indices[2][16];

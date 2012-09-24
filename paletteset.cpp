@@ -224,6 +224,7 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
       if ((pmask & bit) == 0) {
 	if ((mask & bit) == 0)
 	  m_remap[s][i] = -1;
+
 	continue;
       }
 
@@ -256,11 +257,13 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 
 	// check for a match
 	int oldbit = 1 << j;
+	// cast to int reduces this line from 15% to 8%, fat hot-spot
 	bool match = ((pmask & oldbit) != 0)
+	  && (*((int *)rgbvalue) == *((int *)crgbvalue))/*
 	  && (rgbvalue[0] == crgbvalue[0])
 	  && (rgbvalue[1] == crgbvalue[1])
 	  && (rgbvalue[2] == crgbvalue[2])
-	  && (rgbvalue[3] == crgbvalue[3]);
+	  && (rgbvalue[3] == crgbvalue[3])*/;
 
 	if (match) {
 	  // get the index of the match

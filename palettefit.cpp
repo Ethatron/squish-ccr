@@ -86,14 +86,21 @@ int PaletteFit::GetSelectionBits(int mode) {
     PBcfg[mode].ISB;
 }
 
+int PaletteFit::GetSharedBits(int mode) {
+  return
+    (PBcfg[mode].NS >= 1 ? (PBcfg[mode].EPB << 3) + (PBcfg[mode].SPB << 0) : 0) +
+    (PBcfg[mode].NS >= 2 ? (PBcfg[mode].EPB << 4) + (PBcfg[mode].SPB << 1) : 0) +
+    (PBcfg[mode].NS >= 3 ? (PBcfg[mode].EPB << 5) + (PBcfg[mode].SPB << 2) : 0);
+}
+
 int PaletteFit::GetPrecisionBits(int mode) {
   return
     ((PBcfg[mode].CB + (PBcfg[mode].CB ? PBcfg[mode].EPB + PBcfg[mode].SPB : 0)) <<  0) |
     ((PBcfg[mode].AB + (PBcfg[mode].AB ? PBcfg[mode].EPB + PBcfg[mode].SPB : 0)) << 16);
 }
 
-PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap)
-  : m_palette(palette), m_swapindex(-1), m_flags(flags)
+PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int shared)
+  : m_palette(palette), m_swapindex(-1), m_flags(flags), m_sharedbits(-1)
 {
   int const ix = m_palette->GetRotation();
 
@@ -142,12 +149,13 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap)
   m_best = false;
 
   m_swapindex = swap;
+  m_sharedbits = SR(shared);
+  m_mode = ((m_flags & kVariableCodingModes) >> 24) - 1;
 }
 
 void PaletteFit::Compress(void* block)
 {
-  int varMode = ((m_flags & kVariableCodingModes) >> 24) - 1;
-  if (varMode < 0) {
+  if (m_mode < 0) {
     /*
     for (int m = 0; m < 7; m++) {
       if (m_palette->GetSets() == GetNumSets(m))
@@ -162,19 +170,17 @@ void PaletteFit::Compress(void* block)
 	if (m_palette->GetPartition() < 1) {
 	  // 1 partition
 	  if (!m_palette->GetRotation())
-	    Compress(block, 4);
+	    m_mode = 4, Compress(block);
 
 	  // 1 swap-bit
 	  if (m_swapindex == -1) {
-	    m_swapindex = 0;
-	    Compress(block, 5);
-	    m_swapindex = 1;
-	    Compress(block, 5);
+	    m_mode = 5, m_swapindex = 0, Compress(block);
+	    m_mode = 5, m_swapindex = 1, Compress(block);
 	    m_swapindex = -1;
 	  }
 
 	  // 0 swap-bit
-	  Compress(block, 6);
+	  m_mode = 6, Compress(block);
 	}
 	break;
       case 2:
@@ -183,12 +189,12 @@ void PaletteFit::Compress(void* block)
 
 	if (!m_palette->IsTransparent()) {
 	  // 64 partitions
-	  Compress(block, 1);
-	  Compress(block, 3);
+	  m_mode = 1, Compress(block);
+	  m_mode = 3, Compress(block);
 	}
 
 	// 64 partitions
-	Compress(block, 7);
+	m_mode = 7, Compress(block);
 	break;
       case 3:
 	if (m_palette->GetRotation())
@@ -198,15 +204,15 @@ void PaletteFit::Compress(void* block)
 
 	if (m_palette->GetPartition() < (1 << GetPartitionBits(0)))
 	  // mode 0 has only 16 partitions
-	  Compress(block, 0);
+	  m_mode = 0, Compress(block);
 
 	// 64 partitions
-	Compress(block, 2);
+	m_mode = 2, Compress(block);
 	break;
     }
   }
   else
-    Compress(block, varMode);
+    Compress(block, m_mode);
 }
 
 #if 1 //ndef NDEBUG
@@ -215,8 +221,9 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Vec4 &error) {
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
-  
-  vQuantizer q = vQuantizer(cb, cb, cb, ab);
+  int zb = GetSharedBits();
+
+  vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
 
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
@@ -229,6 +236,7 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Vec4 &error) {
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
+    int sb = (zb ? m_sharedbits >> s : 0);
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
     Vec4 metric = m_metric[s < isets ? 0 : 1];
@@ -237,10 +245,10 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Vec4 &error) {
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
     u8 const* freq = m_palette->GetFrequencies(s);
-    
+
     // snap floating-point-values to the integer-lattice
-    Vec4 start = q.SnapToLattice(m_start[s]);
-    Vec4 end   = q.SnapToLattice(m_end  [s]);
+    Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
+    Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
 
     // swap the code-book when the swap-index bit is set
     CodebookP(codes, kb, start, end);
@@ -257,8 +265,9 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
-  
-  vQuantizer q = vQuantizer(cb, cb, cb, ab);
+  int zb = GetSharedBits();
+
+  vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
 
   // snap floating-point-values to the integer-lattice and save
 #define gridp(b)  ((1 << b) - 1)
@@ -277,6 +286,7 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
+    int sb = (zb ? m_sharedbits >> s : 0);
     int mk = !asets ? 0xFFFFFFFF : (s < isets ? 0x00FFFFFF : 0xFF000000);
 
     // old original quantizer
@@ -284,26 +294,70 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
     Vec4 zend   = Truncate(MultiplyAdd(grid, m_end  [s].Clamp(), half)) * gridrcp;
 
     Col4 xstart = FloatToInt<true>(zstart * 255.0f);
-    Col4 xend   = FloatToInt<true>(zend * 255.0f);
-    
+    Col4 xend   = FloatToInt<true>(zend   * 255.0f);
+
     // new exact lattice quantizer
     Vec4 fstart = q.SnapToLattice(m_start[s]);
     Vec4 fend   = q.SnapToLattice(m_end  [s]);
-    
+
     Col4 jstart = q.QuantizeToInt(m_start[s]);
     Col4 jend   = q.QuantizeToInt(m_end  [s]);
-    
+
     Col4 estart = jstart * Col4(1 << (8 - cb), 1 << (8 - cb), 1 << (8 - cb), 1 << (8 - ab));
     Col4 eend   = jend   * Col4(1 << (8 - cb), 1 << (8 - cb), 1 << (8 - cb), 1 << (8 - ab));
-    
+
          estart = estart * Col4((1 << 8) + (1 << (8 - cb)), (1 << 8) + (1 << (8 - cb)), (1 << 8) + (1 << (8 - cb)), (1 << 8) + (1 << (8 - ab)));
          eend   = eend   * Col4((1 << 8) + (1 << (8 - cb)), (1 << 8) + (1 << (8 - cb)), (1 << 8) + (1 << (8 - cb)), (1 << 8) + (1 << (8 - ab)));
-    
+
          estart = estart >> 8;
          eend   = eend   >> 8;
-    
+
     Col4 istart = FloatToInt<true>(fstart * 255.0f);
     Col4 iend   = FloatToInt<true>(fend * 255.0f);
+
+  switch (m_palette->GetRotation()) {
+    case 0:
+    if ((istart.A() != 0xFF) || (iend.A() != 0xFF)) {
+    Vec4 fstart = q.SnapToLattice(m_start[s]);
+    Vec4 fend   = q.SnapToLattice(m_end  [s]);
+    }
+      break;
+    case 1:
+    if ((istart.R() != 0xFF) || (iend.R() != 0xFF)) {
+    Vec4 fstart = q.SnapToLattice(m_start[s]);
+    Vec4 fend   = q.SnapToLattice(m_end  [s]);
+    }
+      break;
+    case 2:
+    if ((istart.G() != 0xFF) || (iend.G() != 0xFF)) {
+    Vec4 fstart = q.SnapToLattice(m_start[s]);
+    Vec4 fend   = q.SnapToLattice(m_end  [s]);
+    }
+      break;
+    case 3:
+    if ((istart.B() != 0xFF) || (iend.B() != 0xFF)) {
+    Vec4 fstart = q.SnapToLattice(m_start[s]);
+    Vec4 fend   = q.SnapToLattice(m_end  [s]);
+    }
+      break;
+  }
+
+    // snap floating-point-values to the integer-lattice
+    fstart = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
+    fend   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
+
+    // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
+    if (!m_palette->IsTransparent()) {
+      switch (m_palette->GetRotation()) {
+	case 0: if (s < isets + asets) fstart.GetW() = fend.GetW() = 1.0f; break;
+	case 1: if (s <         isets) fstart.GetX() = fend.GetX() = 1.0f; break;
+	case 2: if (s <         isets) fstart.GetY() = fend.GetY() = 1.0f; break;
+	case 3: if (s <         isets) fstart.GetZ() = fend.GetZ() = 1.0f; break;
+      }
+    }
+
+    istart = FloatToInt<true>(fstart * 255.0f);
+    iend   = FloatToInt<true>(fend   * 255.0f);
 
     int ccs;
     switch (kb) {

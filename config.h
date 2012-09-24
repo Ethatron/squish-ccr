@@ -27,14 +27,57 @@
 #ifndef SQUISH_CONFIG_H
 #define SQUISH_CONFIG_H
 
-// code only a specific mode-setting
-#define	DEBUG_SETTING
-// throw the quantized rgba values back into the input-image
-#define	DEBUG_QUANTIZER
+/* push start/end values away from the midpoint if the codebook contains
+ * less unique entries than possible indices
+ * to fill four indices at least one axis need to have an interval of 4/255th
+ */
+#undef	FEATURE_ELIMINATE_FLATBOOKS
+
+/* brute force search for the shared bits with the lowest error
+ *
+ * 1) don't care about the start/end point skew
+ * 2) if start is lower and goes down, make stop go up and vice versa (heuristic)
+ * 3) check all start/stop up/down combinations (*256 tries), incomplete implementation!
+ *
+ * normally this is not worth it in the current state
+ */
+#undef	FEATURE_SHAREDBITS_TRIALS
+
+/* .............................................................................
+ */
+
+// adjustments working in "Debug" or "Release" builds:
+// throw the quantized rgba values back into the input.image
+#define	VERIFY_QUANTIZER
 // throw the decoded rgba values back into the input-image
-#undef	DEBUG_ENCODER
+#undef	VERIFY_ENCODER
+
+// print out lots of information about the algorithm behaviour
+#define	TRACK_STATISTICS
+
+// adjustments working only in "Debug" builds:
+// code only a specific mode-setting
+#undef	DEBUG_SETTING
 // print out lots of information about the search
 #undef	DEBUG_DETAILS
+
+#if defined(TRACK_STATISTICS)
+namespace squish {
+  extern struct statistics {
+    int num_counts[8][64][4][16];
+    int win_partition[8][64];
+    int win_rotation[8][4];
+    int win_swap[8][2][2];
+    int win_cluster[8][2];
+    int win_mode[8];
+    int has_countsets[4];
+    int has_noweightsets[8][4][2];
+  } gstat;
+}
+#endif
+
+/* -----------------------------------------------------------------------------
+ */
 
 // Set to 1 when building squish to use Altivec instructions.
 #ifndef SQUISH_USE_ALTIVEC
@@ -245,9 +288,11 @@ using namespace ::Concurrency;
 #ifdef __GNUC__
 #define assume
 #define doinline
+#define	passreg		__fastcall
 #else
 #define assume		__assume
 #define doinline	__forceinline
+#define	passreg		__fastcall
 #endif
 
 #endif // ndef SQUISH_CONFIG_H

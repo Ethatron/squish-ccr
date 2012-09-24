@@ -42,6 +42,9 @@ class PaletteSet
 public:
   static void GetMasks(int flags, int partition, int (&masks)[4]);
 
+  // maximum number of different sets, aligned, the real limit is 3
+#define	PS_MAX	4
+
 public:
   // constructor for regular operation
   PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation);
@@ -59,13 +62,15 @@ public:
   bool IsSeperateAlpha() const { return /*m_transparent &&*/ m_seperatealpha; }
   Vec4 const* GetPoints(int idx) const { return m_points[idx]; }
   float const* GetWeights(int idx) const { return m_weights[idx]; }
-  u8 const* GetFrequencies(int idx) const { return m_frequencies[idx]; }
   int GetCount(int idx) const { return m_count[idx]; }
   int GetCount() const {
     return             m_count[0]      +
     /*(m_numsets > 0 ? m_count[0] : 0)*/ (m_seperatealpha ? m_count[m_numsets + 0] : 0) +
       (m_numsets > 1 ? m_count[1] : 0) /*(m_seperatealpha ? m_count[m_numsets + 1] : 0)*/ +
       (m_numsets > 2 ? m_count[2] : 0) /*(m_seperatealpha ? m_count[m_numsets + 2] : 0)*/; }
+  u8 const* GetFrequencies(int idx) const { return m_frequencies[idx]; }
+  u8 GetMaxFrequency(int idx) const {
+    u8 mx = 1; for (int i = 0; i < m_count[idx]; ++i) mx = std::max(mx, m_frequencies[idx][i]); return mx; }
 
   // map from the set to indices and back to colours
   void RemapIndices(u8 const* source, u8* target, int set) const;

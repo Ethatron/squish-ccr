@@ -35,8 +35,9 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(USE_PRE)
-PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap)
-  : SinglePaletteFit(palette, flags, swap)
+PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap, int shared)
+  : SinglePaletteFit(palette, flags, swap, shared)
+  ,       PaletteFit(palette, flags, swap, shared)
 {
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
@@ -51,10 +52,10 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap)
     // we don't do this for sparse sets
     if (count != 1) {
       // get the covariance matrix
-      Sym3x3 covariance = ComputeWeightedCovariance(count, values, weights);
+      Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
 
       // compute the principle component
-      Vec4 principle = Vec4(ComputePrincipleComponent(covariance), 0.0f);
+      Vec4 principle; ComputePrincipleComponent(covariance, principle);
 
       // get the min and max range as the codebook endpoints
       Vec4 start(0.0f);
@@ -121,6 +122,14 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap)
       m_end  [a] = end;
     }
   }
+
+#ifdef	FEATURE_ELIMINATE_FLATBOOKS
+  // backup original values, we don't now the precision yet
+  for (int x = 0; x < (isets + asets); x++) {
+    m_start_candidate[x] = m_start[x];
+    m_end_candidate[x] = m_end[x];
+  }
+#endif
 }
 
 void PaletteRangeFit::Compress(void* block, int mode)
@@ -129,9 +138,10 @@ void PaletteRangeFit::Compress(void* block, int mode)
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
+  int zb = GetSharedBits();
 
-  vQuantizer q = vQuantizer(cb, cb, cb, ab);
-
+  vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
+  
   // match each point to the closest code
   Vec4 error = Vec4(0.0f);
   a16 u8 closest[4][16];
@@ -139,7 +149,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-
+  
   // create a codebook
   Vec4 codes[1 << 4];
 
@@ -147,6 +157,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
+    int sb = (zb ? m_sharedbits >> s : 0);
 
     // cache some values
     int const count = m_palette->GetCount(s);
@@ -163,18 +174,97 @@ void PaletteRangeFit::Compress(void* block, int mode)
       u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
 
       // find the closest code
-      Vec4 dist = ComputeEndPoints(s, metric, q, cb, ab, kb, mask);
+      Vec4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
 
       // accumulate the error
-      error += dist * 16.0f;
+      error += dist * freq[0];
     }
     else {
+#ifdef	FEATURE_ELIMINATE_FLATBOOKS
+      // read original values and modify them
+      m_start[s] = m_start_candidate[s];
+      m_end[s] = m_end_candidate[s];
+
+      Vec4 mad = MaximumAbsoluteDifference(m_start[s], m_end[s]);
+      Vec4 rng = Vec4((1 << kb) / 255.0f);
+      if (CompareFirstLessThan(mad, rng)) {
+	Vec4 stretch = rng * Reciprocal(mad);
+	Vec4 middle = (m_start[s] + m_end[s]) * 0.5f;
+
+	m_start[s] = middle + ((m_start[s] - middle) * stretch);
+	m_end  [s] = middle + ((m_end  [s] - middle) * stretch);
+      }
+#endif
+
+#if	!defined(FEATURE_SHAREDBITS_TRIALS) || (FEATURE_SHAREDBITS_TRIALS < 2)
       // snap floating-point-values to the integer-lattice
-      Vec4 start = q.SnapToLattice(m_start[s]);
-      Vec4 end   = q.SnapToLattice(m_end  [s]);
+      Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
+      Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
+      
+      // swap the code-book when the swap-index bit is set
+      int ccs = CodebookP(codes, kb, start, end);
+      
+      for (int i = 0; i < count; ++i) {
+	// find the closest code
+	Vec4 dist = Vec4(FLT_MAX);
+	int idx = 0;
+
+	for (int j = 0; j < ccs; ++j) {
+	  Vec4 d = LengthSquared(metric * (values[i] - codes[j]));
+	  if (CompareFirstLessThan(d, dist)) {
+	    dist = d;
+	    idx = j;
+	  }
+	}
+
+	// save the index
+	closest[s][i] = (u8)idx;
+
+	// accumulate the error
+	error += dist * freq[i];
+      }
+#elif	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS == 2)
+#elif	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS == 3)
+      // if we have a down-forced bit we need to check 2 versions, the +2bt as well
+      // if we have a up-forced bit we need to check 2 versions, the -2bt as well
+      // this goes for all component permutations (r+-2,g+-2,...)
+      Vec4 gerror = Vec4(FLT_MAX);
+      int bestom = 0;
+      Vec4 start;
+      Vec4 end;
+      
+      // try all sharedbits-opposing bit-combinations (64/256)
+      // try all of the components separately (rrggbbaa)
+      for (int om = 0x00; om <= (ab ? 0xFF : 0x3F); om++) {
+	// snap floating-point-values to the integer-lattice
+	start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART, om >> 0);
+	end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND  , om >> 1);
+      
+	// swap the code-book when the swap-index bit is set
+	int ccs = CodebookP(codes, kb, start, end);
+	  
+	Vec4 lerror = Vec4(0.0f);
+	for (int i = 0; i < count; ++i) {
+	  Vec4 dist = Vec4(FLT_MAX);
+	  for (int j = 0; j < ccs; ++j)
+	    dist = Min(dist, LengthSquared(metric * (values[i] - codes[j])));
+
+	  // accumulate the error
+	  lerror += dist * freq[i];
+	}
+	  
+	if (CompareFirstLessThan(lerror, gerror)) {
+	  gerror = lerror;
+	  bestom = om;
+	}
+      }
+      
+      // snap floating-point-values to the integer-lattice with up/down skew
+      start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART, bestom >> 0);
+      end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND  , bestom >> 1);
 
       // swap the code-book when the swap-index bit is set
       int ccs = CodebookP(codes, kb, start, end);
@@ -198,11 +288,12 @@ void PaletteRangeFit::Compress(void* block, int mode)
 	// accumulate the error
 	error += dist * freq[i];
       }
+#endif
     }
 
 #ifdef NDEBUG
     // kill early if this scheme looses
-    if (CompareFirstGreaterThan(error, m_besterror))
+    if (CompareFirstLessThan(m_besterror, error))
       return;
 #endif // NDEBUG
   }
@@ -210,20 +301,23 @@ void PaletteRangeFit::Compress(void* block, int mode)
   // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
   if (!m_palette->IsTransparent()) {
     switch (m_palette->GetRotation()) {
-      case 0: for (int a = 0; a < (isets + asets); a++) m_start[a].GetW() = m_end[a].GetW() = 1.0f; break;
-      case 1: for (int a = 0; a < (isets + asets); a++) m_start[a].GetX() = m_end[a].GetX() = 1.0f; break;
-      case 2: for (int a = 0; a < (isets + asets); a++) m_start[a].GetY() = m_end[a].GetY() = 1.0f; break;
-      case 3: for (int a = 0; a < (isets + asets); a++) m_start[a].GetZ() = m_end[a].GetZ() = 1.0f; break;
+      case 0: for (int a = 0; a < isets + asets; a++) m_start[a].GetW() = m_end[a].GetW() = 1.0f; break;
+      case 1: for (int a = 0; a <         isets; a++) m_start[a].GetX() = m_end[a].GetX() = 1.0f; break;
+      case 2: for (int a = 0; a <         isets; a++) m_start[a].GetY() = m_end[a].GetY() = 1.0f; break;
+      case 3: for (int a = 0; a <         isets; a++) m_start[a].GetZ() = m_end[a].GetZ() = 1.0f; break;
     }
   }
 
 #ifndef NDEBUG
   // kill late if this scheme looses
   Vec4 verify_error = Vec4(0.0f); SumError(closest, mode, verify_error);
+  Vec4 one_error = Vec4(1.0f / (1 << cb)); one_error *= one_error;
   // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
-  if (CompareFirstGreaterThan(verify_error, error + Vec4(0.00005f)))
+  if (CompareFirstGreaterThan(verify_error, error + one_error)) {
+    Vec4 verify_error2 = Vec4(0.0f); SumError(closest, mode, verify_error2);
     abort();
-  if (CompareFirstGreaterThan(error, m_besterror))
+  }
+  if (CompareFirstLessThan(m_besterror, error))
     return;
 #endif
 
@@ -244,7 +338,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   else
     fprintf(stderr, ", i:  %1d ", ib);
 
-  if (CompareFirstGreaterThan(error, m_besterror)) {
+  if (CompareFirstLessThan(m_besterror, error)) {
     fprintf(stderr, ", e: %.8f (> %.8f)\n", error.X(), m_besterror.X());
     return;
   }
@@ -274,23 +368,15 @@ void PaletteRangeFit::Compress(void* block, int mode)
   int partition = m_palette->GetPartition();
   int rot = m_palette->GetRotation(), sel = m_swapindex;
   switch (mode) {
-    case 0: WritePaletteBlock3_m1(partition, (V4thr)m_start, (V4thr)m_end, (Ione)m_indices, block); break;
-    case 1: WritePaletteBlock3_m2(partition, (V4two)m_start, (V4two)m_end, (Ione)m_indices, block); break;
-    case 2: WritePaletteBlock3_m3(partition, (V4thr)m_start, (V4thr)m_end, (Ione)m_indices, block); break;
-    case 3: WritePaletteBlock3_m4(partition, (V4two)m_start, (V4two)m_end, (Ione)m_indices, block); break;
-    case 4: WritePaletteBlock4_m5(rot, sel , (V4one)m_start, (V4one)m_end, (Itwo)m_indices, block); break;
-    case 5: WritePaletteBlock4_m6(rot,       (V4one)m_start, (V4one)m_end, (Itwo)m_indices, block); break;
-    case 6: WritePaletteBlock4_m7(partition, (V4one)m_start, (V4one)m_end, (Ione)m_indices, block); break;
-    case 7: WritePaletteBlock4_m8(partition, (V4two)m_start, (V4two)m_end, (Ione)m_indices, block); break;
+    case 0: WritePaletteBlock3_m1(partition, (V4thr)m_start, (V4thr)m_end, m_sharedbits, (Ione)m_indices, block); break;
+    case 1: WritePaletteBlock3_m2(partition, (V4two)m_start, (V4two)m_end, m_sharedbits, (Ione)m_indices, block); break;
+    case 2: WritePaletteBlock3_m3(partition, (V4thr)m_start, (V4thr)m_end, m_sharedbits, (Ione)m_indices, block); break;
+    case 3: WritePaletteBlock3_m4(partition, (V4two)m_start, (V4two)m_end, m_sharedbits, (Ione)m_indices, block); break;
+    case 4: WritePaletteBlock4_m5(rot, sel , (V4one)m_start, (V4one)m_end, m_sharedbits, (Itwo)m_indices, block); break;
+    case 5: WritePaletteBlock4_m6(rot,       (V4one)m_start, (V4one)m_end, m_sharedbits, (Itwo)m_indices, block); break;
+    case 6: WritePaletteBlock4_m7(partition, (V4one)m_start, (V4one)m_end, m_sharedbits, (Ione)m_indices, block); break;
+    case 7: WritePaletteBlock4_m8(partition, (V4two)m_start, (V4two)m_end, m_sharedbits, (Ione)m_indices, block); break;
   }
-
-#if !defined(NDEBUG) && defined(DEBUG_QUANTIZER)
-  // m4/m5 may have swap alpha, get the change back
-  for (int a = isets; a < (isets + asets); a++) {
-    m_start[a] = TransferW(m_start[a], m_start[a - isets]);
-    m_end  [a] = TransferW(m_end  [a], m_end  [a - isets]);
-  }
-#endif
 
   // save the error
   m_besterror = error;

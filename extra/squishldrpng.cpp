@@ -326,7 +326,7 @@ PngImage::PngImage( std::string const& fileName )
 	m_height = height;
 	m_colour = ( ( colourType & PNG_COLOR_MASK_COLOR ) != 0 );
 	m_alpha = ( ( colourType & PNG_COLOR_MASK_ALPHA ) != 0 );
-	m_stride = ( m_colour ? 3 : 1 ) + ( m_alpha ? 1 : 0 );
+	m_stride = ( m_colour ? 3 : 1 ) + ( m_alpha ? 1 : 0 ) * sizeof( u8 );
 
 	// get the image rows
 #if (PNG_LIBPNG_VER_MINOR >= 3)
@@ -410,7 +410,7 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 			// compress this block
 			Compress( sourceRgba, targetBlock, flags );
 			
-#if !defined(NDEBUG) && (defined(DEBUG_QUANTIZER) || defined(DEBUG_ENCODER))
+#if (defined(VERIFY_QUANTIZER) || defined(VERIFY_ENCODER))
 			// write the data into the target rows
 			for( int py = 0, i = 0; py < 4; ++py )
 			{
@@ -430,7 +430,7 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 				}
 			}
 #endif
-			if (flags & kBtc7) {
+			if ( (flags & kBtc7) && paint ) {
 			      // draw the mode
 			      if ( paint == 2 ) {
 				      unsigned long btcvalue = *((int *)targetBlock);
@@ -480,7 +480,7 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 	// write the data
 	fwrite( targetData.Get(), 1, targetDataSize, targetFile.Get() );
 	
-#if !defined(NDEBUG) && (defined(DEBUG_QUANTIZER) || defined(DEBUG_ENCODER))
+#if (defined(VERIFY_QUANTIZER) || defined(VERIFY_ENCODER))
 	{
 
 	  // create the target PNG
@@ -489,12 +489,12 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 	  // set up the image
 	  png_set_IHDR(
 		  targetPng.GetPng(), targetPng.GetInfo(), width, height,
-		  8, colour && alpha ? PNG_COLOR_TYPE_RGBA : (colour ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_GRAY_ALPHA), PNG_INTERLACE_NONE,
+		  8*sizeof(u8), colour && alpha ? PNG_COLOR_TYPE_RGBA : (colour ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_GRAY_ALPHA), PNG_INTERLACE_NONE,
 		  PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
 	  );
 
 	  // open the target file
-	  File targetFile( fopen( "debug.png", "wb" ) );
+	  File targetFile( fopen( "verify.png", "wb" ) );
 	  if( !targetFile.IsValid() )
 	  {
 		  std::ostringstream oss;
@@ -574,21 +574,23 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 				}
 			}
 
-			// draw the mode
-			if ( paint == 2 ) {
-				unsigned long btcvalue = *((int *)sourceBlock);
-				unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+			if ( (flags & kBtc7) && paint ) {
+				// draw the mode
+				if ( paint == 2 ) {
+					unsigned long btcvalue = *((int *)sourceBlock);
+					unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
 
-				fprintf(stderr, "%1d", btcmode);
-			}
-			// draw the pattern
-			else if ( paint == 1 ) {
-				char *patchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzµß";
-				unsigned long btcvalue = *((int *)sourceBlock);
-				unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
-				unsigned long btcpat = (btcmode == 5 || btcmode == 6 || btcmode == 7 ? 0 : (btcmode == 1 ? (1 << 4) - 1 : (1 << 6) - 1));
+					fprintf(stderr, "%1d", btcmode);
+				}
+				// draw the pattern
+				else if ( paint == 1 ) {
+					char *patchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzµß";
+					unsigned long btcvalue = *((int *)sourceBlock);
+					unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+					unsigned long btcpat = (btcmode == 5 || btcmode == 6 || btcmode == 7 ? 0 : (btcmode == 1 ? (1 << 4) - 1 : (1 << 6) - 1));
 
-				fprintf(stderr, "%c", patchar[(btcvalue >> btcmode) & btcpat]);
+					fprintf(stderr, "%c", patchar[(btcvalue >> btcmode) & btcpat]);
+				}
 			}
 
 			// advance
@@ -596,7 +598,7 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 		}
 
 		// draw the mode
-		if ( paint ) {
+		if ( (flags & kBtc7) && paint ) {
 			fprintf(stderr, "\n");
 		}
 	}
@@ -612,7 +614,7 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 	// set up the image
 	png_set_IHDR(
 		targetPng.GetPng(), targetPng.GetInfo(), width, height,
-		8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+		8*sizeof(u8), PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
 	);
 
@@ -757,7 +759,7 @@ int main( int argc, char* argv[] )
 		{
 			std::cout
 				<< "SYNTAX" << std::endl
-				<< "\tsquishpng [-cde135] <source> <target>" << std::endl
+				<< "\tsquishldrpng [-cde123457] <source> <target>" << std::endl
 				<< "OPTIONS" << std::endl
 				<< "\t-c\tCompress source png to target raw btc (default)" << std::endl
 				<< "\t-123\tSpecifies whether to use DXT1/BC1, DXT3/BC2 or DXT5/BC3 compression" << std::endl

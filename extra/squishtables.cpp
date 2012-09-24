@@ -327,6 +327,7 @@ int main(int argc, char **argv) {
 #endif
 
 #if 0
+  // getting some sRGB/gamma-tables
   float basefpartition = 0.0031308f;
   float baseipartition = 0.004045f;
   float basefslope = 12.92f / 1.0f;
@@ -372,6 +373,8 @@ int main(int argc, char **argv) {
   printf("};\n");
 #endif
 
+#if 0
+  // checking out the quantizer
   for (int b = 6; b <= 6; b++) {
     float grid    = 1.0f * ((1 << b) - 1);
     float gridrcp = 1.0f / ((1 << b) - 1);
@@ -407,4 +410,46 @@ int main(int argc, char **argv) {
       printf("%3d %3d %3d %.8f %3d -> %3d\n", i, j, k, n, o, o - k);
     }
   }
+#endif
+
+#if 1
+  // checking out the odd-test for fp
+  float check = 1.0f;
+  while (check < 256.0f) {
+    // bit-flip approach
+    //  when we have the integer value at 1 << (b+1) check
+    //  if the number is even or odd
+    //   clear bit: N - (odd + 0)
+    //   fill  bit: N + (1 - odd)
+    // we have to find a fast function for fp which tells us
+    // if the number is odd after truncation
+    //  after truncation means all the mantissa is free of
+    //  fp-bits and only full of number-bits
+    //  if the mantissa is zero it's a 2^x number
+    //   (mantissa <<= (exp - 128)) & 1
+    //   (mantissa <<= ((fp >> 23) & 0x7F)) & (1 << 22)
+    //   ((mantissa <<= (1 + ((fp >> 23) & 0x7F)))) * 0x7F) & 0x3F800000
+    //   ((mantissa <<= (1 + ((fp >> 23) & 0x7F)))) * 0x27F) for any != 1
+    //   ((mantissa <<= (1 + (fp >> 23))) * 0x27F) for positive > 1
+    //   ((mantissa <<= (1 + ((fp + 2) >> 23))) * 0x27F) for positive (is shifted to 3 doesn't matter for oddness)
+    //  works for all except 1
+    //  alternating between 0 and 1 is by xoring => (fp ^ 0x3F800000)
+    //  other approach
+    //   multiply by ???
+    //    max(256, 255 * 256), test if <> 256
+    //    max(256, 127 * 256), test if <> 256
+    float adj = check + 2.0f;
+    unsigned long ifp = *((unsigned long int *)&adj);
+
+    unsigned long pow2 = (ifp >> 23) /*& 0x7F*/ /*shift modulo?*/;
+    unsigned long mant = (ifp << pow2) & 0x00400000;
+    unsigned long conv = (mant * 0xFE);
+
+    float odd = *((float *)&conv);
+
+    printf("%3g -> 0x%08x %3d 0x%08x 0x%08x -> %3g\n", adj, ifp, pow2, mant, conv, odd);
+
+    check += 1.0f;
+  }
+#endif
 }

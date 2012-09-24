@@ -10,9 +10,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishamppng", "squishamppn
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishamptest", "squishamptest\squishamptest.vcxproj", "{68B90574-0090-480B-B85A-8BBFC1FB8547}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishdxcpng", "squishdxcpng\squishdxcpng.vcxproj", "{65180B23-7855-4CB4-B83B-6A70E70031F9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishhdrpng", "squishhdrpng\squishhdrpng.vcxproj", "{65180B23-7855-4CB4-B83B-6A70E70031F9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishdxctest", "squishdxctest\squishdxctest.vcxproj", "{8C48A8DC-01FB-41D2-8DCD-2BB97D354763}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishhdrtest", "squishhdrtest\squishhdrtest.vcxproj", "{8C48A8DC-01FB-41D2-8DCD-2BB97D354763}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishgen", "squishgen\squishgen.vcxproj", "{2C7D3BC8-1B0C-44E7-922F-81E1C2E2DDC7}"
 EndProject

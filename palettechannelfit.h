@@ -1,6 +1,7 @@
 /* -----------------------------------------------------------------------------
 
 	Copyright (c) 2006 Simon Brown                          si@sjbrown.co.uk
+        Copyright (c) 2006 Ignacio Castano                   icastano@nvidia.com
 	Copyright (c) 2012 Niels Fröhling              niels@paradice-insight.us
 
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -24,66 +25,73 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_PALETTERANGEFIT_H
-#define SQUISH_PALETTERANGEFIT_H
+#ifndef SQUISH_PALETTECHANNELFIT_H
+#define SQUISH_PALETTECHANNELFIT_H
 
 #include <squish.h>
-#include "singlepalettefit.h"
-#include "maths.h"
+#include <limits.h>
+
+#include "palettefit.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
 class PaletteSet;
-class PaletteRangeFit : public SinglePaletteFit
+class PaletteChannelFit : public virtual PaletteFit
 {
 public:
-  PaletteRangeFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
-  
-  virtual void Compress(void* block, int mode);
+  PaletteChannelFit(PaletteSet const* colours, int flags, int swap = -1, int shared = 0);
 
 private:
-#ifdef	FEATURE_ELIMINATE_FLATBOOKS
   Vec4 m_start_candidate[4];
   Vec4 m_end_candidate[4];
-#endif
+
+protected:
+  Vec4 ComputeCodebook(int set, Vec4 const &metric, vQuantizer &q, int sb, int ib, u8 (&closest)[16]);
 };
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
-struct PaletteRangeFit_CCR : inherit_hlsl SinglePaletteFit_CCR
+struct PaletteChannelFit_CCR : inherit_hlsl PaletteFit_CCR
 {
 public_hlsl
   void AssignSet (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, const int metric, const int fit) amp_restricted;
+                  PaletteSet_CCRr m_palette, const int metric, const int fit) amp_restricted;
   void Compress  (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block, const bool trans,
-                  IndexBlockLUT yArr) amp_restricted;
+                  PaletteSet_CCRr m_palette, out code64 block, const bool trans,
+		  IndexBlockLUT yArr, PaletteChannelLUT lArr) amp_restricted;
 
 protected_hlsl
   void Compress3 (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
+                  PaletteSet_CCRr m_palette, out code64 block,
+		  IndexBlockLUT yArr, PaletteChannelLUT lArr) amp_restricted;
   void Compress4 (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
+                  PaletteSet_CCRr m_palette, out code64 block,
+		  IndexBlockLUT yArr, PaletteChannelLUT lArr) amp_restricted;
   void Compress34(tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
+                  PaletteSet_CCRr m_palette, out code64 block,
+		  IndexBlockLUT yArr, PaletteChannelLUT lArr) amp_restricted;
+
+  void ComputeEndPoints(tile_barrier barrier, const int thread, const int is4,
+		        PaletteChannelLUT lArr) amp_restricted;
+  int  ComputeEndPoints(tile_barrier barrier, const int thread,
+		        PaletteChannelLUT lArr) amp_restricted;
 
 #if	!defined(USE_COMPUTE)
 private_hlsl
-  float4 m_metric;
+  int3 m_entry;
+  ccr8 m_index;
 #endif
 };
 
 #if	defined(USE_COMPUTE)
-  tile_static float4 m_metric;
+  tile_static int3 m_entry;
+  tile_static ccr8 m_index;
 #endif
 #endif
 
-} // squish
+} // namespace squish
 
-#endif // ndef SQUISH_PALETTERANGEFIT_H
+#endif // ndef SQUISH_PALETTECHANNELFIT_H

@@ -39,15 +39,25 @@ namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
-  void WritePaletteBlock3_m1(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u8 (&indices)[1][16], void* block);
-  void WritePaletteBlock3_m2(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (&indices)[1][16], void* block);
-  void WritePaletteBlock3_m3(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u8 (&indices)[1][16], void* block);
-  void WritePaletteBlock3_m4(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (&indices)[1][16], void* block);
+  void WritePaletteBlock3_m1(int partition, Vec4 const (&start)[3], Vec4 const (&end)[3], int sharedbits, u8 const (&indices)[1][16], void* block);
+  void WritePaletteBlock3_m2(int partition, Vec4 const (&start)[2], Vec4 const (&end)[2], int sharedbits, u8 const (&indices)[1][16], void* block);
+  void WritePaletteBlock3_m3(int partition, Vec4 const (&start)[3], Vec4 const (&end)[3], int sharedbits, u8 const (&indices)[1][16], void* block);
+  void WritePaletteBlock3_m4(int partition, Vec4 const (&start)[2], Vec4 const (&end)[2], int sharedbits, u8 const (&indices)[1][16], void* block);
 
-  void WritePaletteBlock4_m5(int r, int ix, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[2][16], void* block);
-  void WritePaletteBlock4_m6(int rotation , Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[2][16], void* block);
-  void WritePaletteBlock4_m7(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[1][16], void* block);
-  void WritePaletteBlock4_m8(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (&indices)[1][16], void* block);
+  void WritePaletteBlock4_m5(int r, int ix, Vec4 const (&start)[1], Vec4 const (&end)[1], int sharedbits, u8 const (&indices)[2][16], void* block);
+  void WritePaletteBlock4_m6(int rotation , Vec4 const (&start)[1], Vec4 const (&end)[1], int sharedbits, u8 const (&indices)[2][16], void* block);
+  void WritePaletteBlock4_m7(int partition, Vec4 const (&start)[1], Vec4 const (&end)[1], int sharedbits, u8 const (&indices)[1][16], void* block);
+  void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&end)[2], int sharedbits, u8 const (&indices)[1][16], void* block);
+
+  void ReadPaletteBlock3_m1(u8* rgba, void const* block);
+  void ReadPaletteBlock3_m2(u8* rgba, void const* block);
+  void ReadPaletteBlock3_m3(u8* rgba, void const* block);
+  void ReadPaletteBlock3_m4(u8* rgba, void const* block);
+
+  void ReadPaletteBlock4_m5(u8* rgba, void const* block);
+  void ReadPaletteBlock4_m6(u8* rgba, void const* block);
+  void ReadPaletteBlock4_m7(u8* rgba, void const* block);
+  void ReadPaletteBlock4_m8(u8* rgba, void const* block);
 
   void DecompressPaletteBtc(u8* rgba, void const* block);
 #endif

@@ -62,13 +62,13 @@ ColourClusterFit::ColourClusterFit( ColourSet const* colours, int flags )
   Vec3 const* values = m_colours->GetPoints();
 
   // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance( count, values, m_colours->GetWeights() );
+  Sym3x3 covariance = ComputeWeightedCovariance3(count, values, m_colours->GetWeights());
 
   // compute the principle component
-  m_principle = ComputePrincipleComponent( covariance );
+  ComputePrincipleComponent(covariance, m_principle);
 }
 
-bool ColourClusterFit::ConstructOrdering( Vec3 const& axis, int iteration )
+bool ColourClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
 {
   // cache some values
   int const count = m_colours->GetCount();
@@ -424,7 +424,7 @@ void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet
   weight16 weights = m_colours.GetWeights();
 
   // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance(barrier, thread, count, values, weights);
+  Sym3x3 covariance = ComputeWeightedCovariance3(barrier, thread, count, values, weights);
 
   // compute the principle component
   float3 principle = ComputePrincipleComponent(barrier, thread, covariance);

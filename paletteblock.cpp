@@ -217,9 +217,9 @@ static const int shorterindex[64][/*6*/5] = {
 /* -----------------------------------------------------------------------------
  */
 template<const int sets, const int ibits, const int begin>
-static void WritePaletteBlock(int partition, u8 const (&indices)[1][16], Col4 &blkl, Col4 &blkh)
+static void passreg WritePaletteBlock(int partition, Col4 (&idx)[1], Col4 &blkl, Col4 &blkh)
 {
-  Col4 iidx; LoadAligned(iidx, indices[0]);
+  Col4 iidx = idx[0];
   Col4 iblk;
 
   /* none of the cases straddles the lo to hi border, all go into hi
@@ -320,13 +320,13 @@ static void WritePaletteBlock(int partition, u8 const (&indices)[1][16], Col4 &b
 }
 
 template<const int sets, const int ibits, const int abits, const int begin>
-static void WritePaletteBlock(int partition, u8 const (&indices)[2][16], Col4 &blkl, Col4 &blkh)
+static void passreg WritePaletteBlock(int partition, Col4 (&idx)[2], Col4 &blkl, Col4 &blkh)
 {
 #define	fbits	(ibits < abits ? ibits : abits)	// index-block of smaller number of index-bits leads (first)
 #define	sbits	(ibits > abits ? ibits : abits)	// index-block of larger number of index-bits follows (second)
   Col4 fblk, sblk;
-  Col4 iidx; LoadAligned(iidx, indices[0]);
-  Col4 aidx; LoadAligned(aidx, indices[1]);
+  Col4 iidx = idx[0];
+  Col4 aidx = idx[1];
   Col4 iblk;
   Col4 ablk;
 
@@ -428,8 +428,14 @@ static void WritePaletteBlock(int partition, u8 const (&indices)[2][16], Col4 &b
 #define	ahimsk	((1 << abits) - 1)
 #define	ahixor	Col4((ahimsk << 24) | (ahimsk << 16) | (ahimsk << 8) | (ahimsk << 0))
 
+template<const int set>
+static void passreg ExchangeBits(int &sharedbits) {
+  int switched = ((sharedbits & 1) << 3) | ((sharedbits >> 3) & 1);
+  sharedbits = sharedbits & (~((1 << 3) | (1 << 0))) | switched;
+}
+
 template<const int ibits>
-static void RemapPaletteBlock(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u8 (&indices)[1][16])
+static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[3], Vec4 (&end)[3], int &sharedbits, Col4 (&idxs)[1], u8 const (&indices)[1][16])
 {
 #if 0
   int masks[4], xors[4] = {0,0,0,0};
@@ -456,24 +462,25 @@ static void RemapPaletteBlock(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u
   }
 #else
   Col4 xors = Col4(0);
-  Col4 idxs; LoadAligned(idxs, indices[0]);
+  
+  LoadAligned(idxs[0], indices[0]);
 
   /* same for all set 1s */
   if (indices[0][                        0 ] & ihibit) {
-    start[0].SwapXYZW(end[0]); xors  = Col4(blockxor[partition][2]); }
+    start[0].SwapXYZW(end[0]); ExchangeBits<0>(sharedbits); xors  = Col4(blockxor[partition][2]); }
   /* set 2 */
   if (indices[0][shorterindex[partition][1]] & ihibit) {
-    start[1].SwapXYZW(end[1]); xors |= Col4(blockxor[partition][3]); }
+    start[1].SwapXYZW(end[1]); ExchangeBits<1>(sharedbits); xors |= Col4(blockxor[partition][3]); }
   /* set 3 */
   if (indices[0][shorterindex[partition][2]] & ihibit) {
-    start[2].SwapXYZW(end[2]); xors |= Col4(blockxor[partition][4]); }
+    start[2].SwapXYZW(end[2]); ExchangeBits<2>(sharedbits); xors |= Col4(blockxor[partition][4]); }
 
-  StoreAligned(idxs ^ (xors & ihixor), indices[0]);
+  idxs[0] ^= (xors & ihixor);
 #endif
 }
 
 template<const int ibits>
-static void RemapPaletteBlock(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (&indices)[1][16])
+static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[2], Vec4 (&end)[2], int &sharedbits, Col4 (&idxs)[1], u8 const (&indices)[1][16])
 {
 #if 0
   int masks[4], xors[4] = {0,0,0,0};
@@ -496,21 +503,22 @@ static void RemapPaletteBlock(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u
   }
 #else
   Col4 xors = Col4(0);
-  Col4 idxs; LoadAligned(idxs, indices[0]);
+  
+  LoadAligned(idxs[0], indices[0]);
 
   /* same for all set 1s */
   if (indices[0][                        0 ] & ihibit) {
-    start[0].SwapXYZW(end[0]); xors  = Col4(blockxor[partition][0]); }
+    start[0].SwapXYZW(end[0]); ExchangeBits<0>(sharedbits); xors  = Col4(blockxor[partition][0]); }
   /* set 2 */
   if (indices[0][shorterindex[partition][0]] & ihibit) {
-    start[1].SwapXYZW(end[1]); xors |= Col4(blockxor[partition][1]); }
-
-  StoreAligned(idxs ^ (xors & ihixor), indices[0]);
+    start[1].SwapXYZW(end[1]); ExchangeBits<1>(sharedbits); xors |= Col4(blockxor[partition][1]); }
+  
+  idxs[0] ^= (xors & ihixor);
 #endif
 }
 
 template<const int ibits, const int abits>
-static void RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[2][16])
+static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&end)[1], int &sharedbits, Col4 (&idxs)[2], u8 const (&indices)[2][16])
 {
 #if 0
   int masks[4], xors[4] = {0,0,0,0};
@@ -535,23 +543,24 @@ static void RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u
 #else
   Col4 ixors = Col4(0);
   Col4 axors = Col4(0);
-  Col4 iidxs; LoadAligned(iidxs, indices[0]);
-  Col4 aidxs; LoadAligned(aidxs, indices[1]);
+  
+  LoadAligned(idxs[0], indices[0]);
+  LoadAligned(idxs[1], indices[1]);
 
   /* same for all set 1s */
   if (indices[0][                        0 ] & ihibit) {
-    start[0].SwapXYZ (end[0]); ixors  = Col4(0xFFFFFFFF); }
+    start[0].SwapXYZ (end[0]); ExchangeBits<0>(sharedbits); ixors  = Col4(0xFFFFFFFF); }
   /* same for all set 1s */
   if (indices[1][                        0 ] & ahibit) {
-    start[0].SwapW   (end[0]); axors  = Col4(0xFFFFFFFF); }
-
-  StoreAligned(iidxs ^ (ixors & ihixor), indices[0]);
-  StoreAligned(aidxs ^ (axors & ahixor), indices[1]);
+    start[0].SwapW   (end[0]); ExchangeBits<0>(sharedbits); axors  = Col4(0xFFFFFFFF); }
+  
+  idxs[0] ^= (ixors & ihixor);
+  idxs[1] ^= (axors & ahixor);
 #endif
 }
 
 template<const int ibits>
-static void RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[1][16])
+static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&end)[1], int &sharedbits, Col4 (&idxs)[1], u8 const (&indices)[1][16])
 {
 #if 0
   int masks[4], xors[4] = {0,0,0,0};
@@ -571,13 +580,14 @@ static void RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u
   }
 #else
   Col4 xors = Col4(0);
-  Col4 idxs; LoadAligned(idxs, indices[0]);
+  
+  LoadAligned(idxs[0], indices[0]);
 
   /* same for all set 1s */
   if (indices[0][                        0 ] & ihibit) {
-    start[0].SwapXYZW(end[0]); xors  = Col4(0xFFFFFFFF); }
-
-  StoreAligned(idxs ^ (xors & ihixor), indices[0]);
+    start[0].SwapXYZW(end[0]); ExchangeBits<0>(sharedbits); xors  = Col4(0xFFFFFFFF); }
+  
+  idxs[0] ^= (xors & ihixor);
 #endif
 }
 
@@ -623,19 +633,30 @@ static void RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u
 #define	U	UNIQUE
 #define	S	SHARED
 
-void WritePaletteBlock3_m1(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u8 (&indices)[1][16], void* block)
+#define SBSTART	0
+#define SBEND	3
+
+void WritePaletteBlock3_m1(int partition, Vec4 const (&start)[3], Vec4 const (&end)[3], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
+  Vec4 s[3] = {start[0], start[1], start[2]};
+  Vec4 e[3] = {end  [0], end  [1], end  [2]};
   Col4 a[3][FIELDN];
   Col4 b[3][FIELDN];
   Col4 blkl, blkh;
+  Col4 idxs[1];
 
   // remap the indices
-  RemapPaletteBlock<3>(partition, start, end, indices);
+  RemapPaletteBlock<3>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<4,4,4,0,1,0>(start, a);
-  FloatTo<4,4,4,0,1,0>(end  , b);
-  FloatTo<4,4,4,0,1,0>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<4,4,4,0,1,0>(s, a, sharedbits >> SBSTART);
+  FloatTo<4,4,4,0,1,0>(e, b, sharedbits >> SBEND);
+#else
+  FloatTo<4,4,4,0,1,0>(s, a);
+  FloatTo<4,4,4,0,1,0>(e, b);
+  FloatTo<4,4,4,0,1,0>(a, b);		// rounded shared bits
+#endif
 
   // 4 bits set 1/2/3 red/green/blue start/stop
   a[0][C] |= (b[0][C] <<=  4);
@@ -680,25 +701,33 @@ void WritePaletteBlock3_m1(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u8 (
   blkh = CopyBits< 1, 82 - 64>(blkh,                b[2][U] );	// 1 bits set 3 unique stop
 
   // 128 - 83 -> 45 index bits + 3 bit from 3 set start/end order -> 16 * 3bit
-  WritePaletteBlock<3, 3, 83>(partition, indices, blkl, blkh);
+  WritePaletteBlock<3, 3, 83>(partition, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
 }
 
-void WritePaletteBlock3_m2(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (&indices)[1][16], void* block)
+void WritePaletteBlock3_m2(int partition, Vec4 const (&start)[2], Vec4 const (&end)[2], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
+  Vec4 s[2] = {start[0], start[1]};
+  Vec4 e[2] = {end  [0], end  [1]};
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
   Col4 blkl, blkh;
-
+  Col4 idxs[1];
+  
   // remap the indices
-  RemapPaletteBlock<3>(partition, start, end, indices);
+  RemapPaletteBlock<3>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<6,6,6,0,0,1>(start, a);
-  FloatTo<6,6,6,0,0,1>(end  , b);
-  FloatTo<6,6,6,0,0,1>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<6,6,6,0,0,1>(s, a, sharedbits >> SBSTART);
+  FloatTo<6,6,6,0,0,1>(e, b, sharedbits >> SBSTART);
+#else
+  FloatTo<6,6,6,0,0,1>(s, a);
+  FloatTo<6,6,6,0,0,1>(e, b);
+  FloatTo<6,6,6,0,0,1>(a, b);		// rounded shared bits
+#endif
 
   // 6 bits set 1/2 red/green/blue start/stop
   a[0][C] |= (b[0][C] <<=  6);
@@ -737,25 +766,33 @@ void WritePaletteBlock3_m2(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (
   blkh = CopyBits< 1, 81 - 64>(blkh,                a[1][S] );	// 1 bits set 2 shared start/stop
 
   // 128 - 82 -> 46 index bits + 2 bit from 2 set start/end order -> 16 * 3bit
-  WritePaletteBlock<2, 3, 82>(partition, indices, blkl, blkh);
+  WritePaletteBlock<2, 3, 82>(partition, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
 }
 
-void WritePaletteBlock3_m3(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u8 (&indices)[1][16], void* block)
+void WritePaletteBlock3_m3(int partition, Vec4 const (&start)[3], Vec4 const (&end)[3], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
+  Vec4 s[3] = {start[0], start[1], start[2]};
+  Vec4 e[3] = {end  [0], end  [1], end  [2]};
   Col4 a[3][FIELDN];
   Col4 b[3][FIELDN];
   Col4 blkl, blkh;
-
+  Col4 idxs[1];
+  
   // remap the indices
-  RemapPaletteBlock<2>(partition, start, end, indices);
+  RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<5,5,5,0,0,0>(start, a);
-  FloatTo<5,5,5,0,0,0>(end  , b);
-  FloatTo<5,5,5,0,0,0>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<5,5,5,0,0,0>(s, a, 0);
+  FloatTo<5,5,5,0,0,0>(e, b, 0);
+#else
+  FloatTo<5,5,5,0,0,0>(s, a);
+  FloatTo<5,5,5,0,0,0>(e, b);
+  FloatTo<5,5,5,0,0,0>(a, b);		// rounded shared bits
+#endif
 
   // 5 bits set 1/2/3 red/green/blue start/stop
   a[0][C] |= (b[0][C] <<=  5);
@@ -792,25 +829,33 @@ void WritePaletteBlock3_m3(int partition, Vec4 (&start)[3], Vec4 (&end)[3], u8 (
   blkh = CopyBits<30, 69 - 64>(blkh, ShiftRight<64>(a[0][C]));	// 30 bits set 1-3 blue start/stop
 
   // 128 - 99 -> 29 index bits + 3 bit from 3 set start/end order -> 16 * 2bit
-  WritePaletteBlock<3, 2, 99>(partition, indices, blkl, blkh);
+  WritePaletteBlock<3, 2, 99>(partition, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
 }
 
-void WritePaletteBlock3_m4(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (&indices)[1][16], void* block)
+void WritePaletteBlock3_m4(int partition, Vec4 const (&start)[2], Vec4 const (&end)[2], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
+  Vec4 s[2] = {start[0], start[1]};
+  Vec4 e[2] = {end  [0], end  [1]};
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
   Col4 blkl, blkh;
-
+  Col4 idxs[1];
+  
   // remap the indices
-  RemapPaletteBlock<2>(partition, start, end, indices);
+  RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<7,7,7,0,1,0>(start, a);
-  FloatTo<7,7,7,0,1,0>(end  , b);
-  FloatTo<7,7,7,0,1,0>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<7,7,7,0,1,0>(s, a, sharedbits >> SBSTART);
+  FloatTo<7,7,7,0,1,0>(e, b, sharedbits >> SBEND);
+#else
+  FloatTo<7,7,7,0,1,0>(s, a);
+  FloatTo<7,7,7,0,1,0>(e, b);
+  FloatTo<7,7,7,0,1,0>(a, b);		// rounded shared bits
+#endif
 
   // 7 bits set 1/2 red/green/blue start/stop
   a[0][C] |= (b[0][C] <<=  7);
@@ -851,28 +896,36 @@ void WritePaletteBlock3_m4(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (
   blkh = CopyBits< 1, 97 - 64>(blkh,                b[1][U] );	// 1 bits set 2 unique stop
 
   // 128 - 98 -> 30 index bits + 2 bit from 2 set start/end order -> 16 * 2bit
-  WritePaletteBlock<2, 2, 98>(partition, indices, blkl, blkh);
+  WritePaletteBlock<2, 2, 98>(partition, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
 }
 
-void WritePaletteBlock4_m5(int r, int ix, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[2][16], void* block)
+void WritePaletteBlock4_m5(int r, int ix, Vec4 const (&start)[1], Vec4 const (&end)[1], int sharedbits, u8 const (&indices)[2][16], void* block)
 {
+  Vec4 s[1] = {start[0]};
+  Vec4 e[1] = {end  [0]};
   Col4 a[1][FIELDN];
   Col4 b[1][FIELDN];
   Col4 blkl, blkh;
-
+  Col4 idxs[2];
+  
   // remap the indices
   if (!ix)
-    RemapPaletteBlock<2,3>(0, start, end, indices);
+    RemapPaletteBlock<2,3>(0, s, e, sharedbits, idxs, indices);
   else
-    RemapPaletteBlock<3,2>(0, start, end, indices);
+    RemapPaletteBlock<3,2>(0, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<5,5,5,6,0,0>(start, a);
-  FloatTo<5,5,5,6,0,0>(end  , b);
-  FloatTo<5,5,5,6,0,0>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<5,5,5,6,0,0>(s, a, 0);
+  FloatTo<5,5,5,6,0,0>(e, b, 0);
+#else
+  FloatTo<5,5,5,6,0,0>(s, a);
+  FloatTo<5,5,5,6,0,0>(e, b);
+  FloatTo<5,5,5,6,0,0>(a, b);		// rounded shared bits
+#endif
 
   // 5 bits set 1 red/green/blue start/stop
   // 6 bits set 1 alpha start/stop
@@ -912,27 +965,35 @@ void WritePaletteBlock4_m5(int r, int ix, Vec4 (&start)[1], Vec4 (&end)[1], u8 (
 
   // 128 - 50 -> 78 index bits -> 31 + 47 index bits + 2 bit from 2 set start/end order -> 16 * 2bit + 16 * 3bit
   if (!ix)
-    WritePaletteBlock<1, 2,3, 50>(0, indices, blkl, blkh);
+    WritePaletteBlock<1, 2,3, 50>(0, idxs, blkl, blkh);
   else
-    WritePaletteBlock<1, 3,2, 50>(0, indices, blkl, blkh);
+    WritePaletteBlock<1, 3,2, 50>(0, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
 }
 
-void WritePaletteBlock4_m6(int rotation, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[2][16], void* block)
+void WritePaletteBlock4_m6(int rotation, Vec4 const (&start)[1], Vec4 const (&end)[1], int sharedbits, u8 const (&indices)[2][16], void* block)
 {
+  Vec4 s[1] = {start[0]};
+  Vec4 e[1] = {end  [0]};
   Col4 a[1][FIELDN];
   Col4 b[1][FIELDN];
   Col4 blkl, blkh;
-
+  Col4 idxs[2];
+  
   // remap the indices
-  RemapPaletteBlock<2,2>(0, start, end, indices);
+  RemapPaletteBlock<2,2>(0, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<7,7,7,8,0,0>(start, a);
-  FloatTo<7,7,7,8,0,0>(end  , b);
-  FloatTo<7,7,7,8,0,0>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<7,7,7,8,0,0>(s, a, 0);
+  FloatTo<7,7,7,8,0,0>(e, b, 0);
+#else
+  FloatTo<7,7,7,8,0,0>(s, a);
+  FloatTo<7,7,7,8,0,0>(e, b);
+  FloatTo<7,7,7,8,0,0>(a, b);		// rounded shared bits
+#endif
 
   // 7 bits set 1 red/green/blue start/stop
   // 8 bits set 1 alpha start/stop
@@ -970,25 +1031,33 @@ void WritePaletteBlock4_m6(int rotation, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&
   blkh = MaskBits< 2, 64 - 64>(      ShiftRight<110>(a[0][C]));	//  2 bits set 1 alpha start/stop
 
   // 128 - 66 -> 62 index bits -> 31 + 31 index bits + 2 bit from 2 set start/end order -> 16 * 2bit + 16 * 3bit
-  WritePaletteBlock<1, 2,2, 66>(0, indices, blkl, blkh);
+  WritePaletteBlock<1, 2,2, 66>(0, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
 }
 
-void WritePaletteBlock4_m7(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u8 (&indices)[1][16], void* block)
+void WritePaletteBlock4_m7(int partition, Vec4 const (&start)[1], Vec4 const (&end)[1], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
+  Vec4 s[1] = {start[0]};
+  Vec4 e[1] = {end  [0]};
   Col4 a[1][FIELDN];
   Col4 b[1][FIELDN];
   Col4 blkl, blkh;
-
+  Col4 idxs[1];
+  
   // remap the indices
-  RemapPaletteBlock<4>(partition, start, end, indices);
+  RemapPaletteBlock<4>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<7,7,7,7,1,0>(start, a);
-  FloatTo<7,7,7,7,1,0>(end  , b);
-  FloatTo<7,7,7,7,1,0>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<7,7,7,7,1,0>(s, a, sharedbits >> SBSTART);
+  FloatTo<7,7,7,7,1,0>(e, b, sharedbits >> SBEND);
+#else
+  FloatTo<7,7,7,7,1,0>(s, a);
+  FloatTo<7,7,7,7,1,0>(e, b);
+  FloatTo<7,7,7,7,1,0>(a, b);		// rounded shared bits
+#endif
 
   // 7 bits set 1 red/green/blue/alpha start/stop
   a[0][C] |= (b[0][C] <<= 7);
@@ -1025,25 +1094,33 @@ void WritePaletteBlock4_m7(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u8 (
   blkh = MaskBits< 1, 64 - 64>(                     b[0][U] );	// 1 bits set 1 unique stop
 
   // 128 - 65 -> 63 index bits + 1 bit from 1 set start/end order -> 16 * 4bit
-  WritePaletteBlock<1, 4, 65>(partition, indices, blkl, blkh);
+  WritePaletteBlock<1, 4, 65>(partition, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
 }
 
-void WritePaletteBlock4_m8(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (&indices)[1][16], void* block)
+void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&end)[2], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
+  Vec4 s[2] = {start[0]};
+  Vec4 e[2] = {end  [0]};
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
   Col4 blkl, blkh;
-
+  Col4 idxs[1];
+  
   // remap the indices
-  RemapPaletteBlock<2>(partition, start, end, indices);
+  RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-  FloatTo<5,5,5,5,1,0>(start, a);
-  FloatTo<5,5,5,5,1,0>(end  , b);
-  FloatTo<5,5,5,5,1,0>(a    , b);
+#ifdef FEATURE_SHAREDBITS_TRIALS
+  FloatTo<5,5,5,5,1,0>(s, a, sharedbits >> SBSTART);
+  FloatTo<5,5,5,5,1,0>(e, b, sharedbits >> SBEND);
+#else
+  FloatTo<5,5,5,5,1,0>(s, a);
+  FloatTo<5,5,5,5,1,0>(e, b);
+  FloatTo<5,5,5,5,1,0>(a, b);		// rounded shared bits
+#endif
 
   // 5 bits set 1/2 red/green/blue/alpha start/stop
   a[0][C] |= (b[0][C] <<=  5);
@@ -1086,7 +1163,7 @@ void WritePaletteBlock4_m8(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u8 (
   blkh = CopyBits< 1, 97 - 64>(blkh,                b[1][U] );	// 1 bits set 2 unique stop
 
   // 128 - 98 -> 30 index bits + 2 bit from 2 set start/end order -> 16 * 2bit
-  WritePaletteBlock<2, 2, 98>(partition, indices, blkl, blkh);
+  WritePaletteBlock<2, 2, 98>(partition, idxs, blkl, blkh);
 
   /* write out */
   StoreUnaligned(blkl, blkh, block);
@@ -1164,7 +1241,7 @@ static const u8 whichsetinpartition[64][/*3*/2][16] = {
 /* -----------------------------------------------------------------------------
  */
 template<const int sets, const int ibits, const int begin>
-static void ReadPaletteBlock(int partition, int *codes, Col4 &blkl, Col4 &blkh, int *out)
+void ReadPaletteBlock(int partition, int *codes, Col4 &blkl, Col4 &blkh, int *out)
 {
   Col4 iblk;
 
@@ -1365,7 +1442,7 @@ static void ReadPaletteBlock(int partition, int *codes, Col4 &blkl, Col4 &blkh, 
 }
 
 template<const int sets, const int ibits, const int abits, const int begin>
-static void ReadPaletteBlock(int partition, int *icodes, int *acodes, Col4 &blkl, Col4 &blkh, int *out)
+void ReadPaletteBlock(int partition, int *icodes, int *acodes, Col4 &blkl, Col4 &blkh, int *out)
 {
 #define	fbits	(ibits < abits ? ibits : abits)	// index-block of smaller number of index-bits leads (first)
 #define	sbits	(ibits > abits ? ibits : abits)	// index-block of larger number of index-bits follows (second)
@@ -1531,7 +1608,7 @@ static void ReadPaletteBlock(int partition, int *icodes, int *acodes, Col4 &blkl
 
 /* -----------------------------------------------------------------------------
  */
-static void ReadPaletteBlock3_m1(u8* rgba, void const* block) {
+void ReadPaletteBlock3_m1(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[3][FIELDN];
   Col4 b[3][FIELDN];
@@ -1622,7 +1699,7 @@ static void ReadPaletteBlock3_m1(u8* rgba, void const* block) {
   ReadPaletteBlock<3, 3, 83>(partition, (int *)codes, blkl, blkh, (int *)rgba);
 }
 
-static void ReadPaletteBlock3_m2(u8* rgba, void const* block) {
+void ReadPaletteBlock3_m2(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
@@ -1694,7 +1771,7 @@ static void ReadPaletteBlock3_m2(u8* rgba, void const* block) {
   ReadPaletteBlock<2, 3, 82>(partition, (int *)codes, blkl, blkh, (int *)rgba);
 }
 
-static void ReadPaletteBlock3_m3(u8* rgba, void const* block) {
+void ReadPaletteBlock3_m3(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[3][FIELDN];
   Col4 b[3][FIELDN];
@@ -1761,7 +1838,7 @@ static void ReadPaletteBlock3_m3(u8* rgba, void const* block) {
   ReadPaletteBlock<3, 2, 99>(partition, (int *)codes, blkl, blkh, (int *)rgba);
 }
 
-static void ReadPaletteBlock3_m4(u8* rgba, void const* block) {
+void ReadPaletteBlock3_m4(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
@@ -1835,7 +1912,7 @@ static void ReadPaletteBlock3_m4(u8* rgba, void const* block) {
   ReadPaletteBlock<2, 2, 98>(partition, (int *)codes, blkl, blkh, (int *)rgba);
 }
 
-static void ReadPaletteBlock4_m5(u8* rgba, void const* block) {
+void ReadPaletteBlock4_m5(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
@@ -1978,7 +2055,7 @@ static void ReadPaletteBlock4_m5(u8* rgba, void const* block) {
     ReadPaletteBlock<1, 3,2, 50>(0, (int *)codes[0], (int *)codes[1], blkl, blkh, (int *)rgba);
 }
 
-static void ReadPaletteBlock4_m6(u8* rgba, void const* block) {
+void ReadPaletteBlock4_m6(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
@@ -2117,7 +2194,7 @@ static void ReadPaletteBlock4_m6(u8* rgba, void const* block) {
   ReadPaletteBlock<1, 2,2, 66>(0, (int *)codes[0], (int *)codes[1], blkl, blkh, (int *)rgba);
 }
 
-static void ReadPaletteBlock4_m7(u8* rgba, void const* block) {
+void ReadPaletteBlock4_m7(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[1][FIELDN];
   Col4 b[1][FIELDN];
@@ -2171,7 +2248,7 @@ static void ReadPaletteBlock4_m7(u8* rgba, void const* block) {
   ReadPaletteBlock<1, 4, 65>(partition, (int *)codes, blkl, blkh, (int *)rgba);
 }
 
-static void ReadPaletteBlock4_m8(u8* rgba, void const* block) {
+void ReadPaletteBlock4_m8(u8* rgba, void const* block) {
   // get the packed values
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];

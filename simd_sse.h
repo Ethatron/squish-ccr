@@ -710,7 +710,11 @@ public:
 	explicit Vec4( int s ) : m_v( _mm_set1_ps( (float) s ) ) {}
 
 	Vec4( float x, float y, float z, float w ) : m_v( _mm_setr_ps( x, y, z, w ) ) {}
+	Vec4( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec4( Vec3 v, float w ) : m_v( _mm_setr_ps( v.x, v.y, v.z, w ) ) {}
+	Vec4( Vec4 x, Vec4 y, Vec4 z, Vec4 w ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_unpacklo_ps( z.m_v, w.m_v ) ) ) {}
+	Vec4( Vec4 x, Vec4 y, Vec4 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_unpacklo_ps( z.m_v,  _mm_set1_ps( 0.0f ) ) ) ) {}
+	Vec4( Vec4 x, Vec4 y ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_set1_ps( 0.0f ) ) ) {}
 
 	Vec3 GetVec3() const
 	{
@@ -802,6 +806,11 @@ public:
 	friend Vec4 operator&( Vec4::Arg left, Vec4::Arg right  )
 	{
 		return Vec4( _mm_and_ps( left.m_v, right.m_v ) );
+	}
+	
+	friend Vec4 operator%( Vec4::Arg left, Vec4::Arg right  )
+	{
+		return Vec4( _mm_andnot_ps( left.m_v, right.m_v ) );
 	}
 
 	friend Vec4 operator+( Vec4::Arg left, Vec4::Arg right  )
@@ -922,6 +931,16 @@ public:
 		return Vec4( resc );
 #endif
 	}
+	
+	friend Vec4 HorizontalMax( Arg a )
+	{
+		__m128 res = a.m_v;
+
+		res = _mm_max_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SWAP64() ) );
+		res = _mm_max_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SWAP32() ) );
+
+		return Vec4( res );
+	}
 
 	friend Vec4 Reciprocal( Vec4::Arg v )
 	{
@@ -931,6 +950,24 @@ public:
 		// one round of Newton-Rhaphson refinement
 		__m128 diff = _mm_sub_ps( _mm_set1_ps( 1.0f ), _mm_mul_ps( estimate, v.m_v ) );
 		return Vec4( _mm_add_ps( _mm_mul_ps( diff, estimate ), estimate ) );
+	}
+	
+	friend Vec4 ReciprocalSqrt( Vec4::Arg v )
+	{
+		// get the reciprocal estimate
+		__m128 estimate = _mm_rsqrt_ps( v.m_v );
+		
+		// one round of Newton-Rhaphson refinement
+		__m128 diff = _mm_sub_ps( _mm_set1_ps( 3.0f ), _mm_mul_ps( estimate, _mm_mul_ps( estimate, v.m_v ) ) );
+		return Vec4( _mm_mul_ps( _mm_mul_ps( diff, _mm_set1_ps( 0.5f ) ), estimate ) );
+	}
+	
+	friend Vec4 Normalize( Arg left )
+	{
+		Vec4 sum = HorizontalAdd( Vec4( _mm_mul_ps( left.m_v, left.m_v ) ) );
+		Vec4 rsq = ReciprocalSqrt(sum);
+
+		return left * rsq;
 	}
 
 	friend Vec4 Dot( Arg left, Arg right )
@@ -997,6 +1034,20 @@ public:
 		return Vec4( _mm_cvtepi32_ps( _mm_cvttps_epi32( v.m_v ) ) );
 #endif
 	}
+	
+	friend Vec4 SummedAbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
+	{
+		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
+		diff = _mm_and_ps( diff, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) );
+		return HorizontalAdd( Vec4( diff ) );
+	}
+	
+	friend Vec4 MaximumAbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
+	{
+		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
+		diff = _mm_and_ps( diff, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) );
+		return HorizontalMax( Vec4( diff ) );
+	}
 
 	friend bool CompareAnyLessThan( Vec4::Arg left, Vec4::Arg right )
 	{
@@ -1015,6 +1066,11 @@ public:
 		return _mm_comigt_ss( left.m_v, right.m_v );
 	}
 
+	Vec4 IsOne( ) const
+	{
+		return Vec4( _mm_cmpeq_ps( m_v, _mm_set1_ps( 1.0f ) ) );
+	}
+	
 	Vec4 IsNotOne( ) const
 	{
 		return Vec4( _mm_cmpneq_ps( m_v, _mm_set1_ps( 1.0f ) ) );
@@ -1030,6 +1086,11 @@ public:
 		       u = _mm_shuffle_ps( left.m_v, u, SQUISH_SSE_SHUF( 0, 1, 0, 2 ) );
 
 		return Vec4( u );
+	}
+	
+	friend Vec4 TransferZW( Vec4::Arg left, Vec4::Arg right )
+	{
+		return Vec4( _mm_shuffle_ps( left.m_v, right.m_v, SQUISH_SSE_SHUF( 0, 1, 2, 3 ) ) );
 	}
 
 	friend Vec4 KillW( Vec4::Arg left )

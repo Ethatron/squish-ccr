@@ -41,14 +41,15 @@ namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
-class PaletteSet;
 struct SinglePaletteLookup2;
 struct SinglePaletteLookup4;
 struct SinglePaletteLookup8;
-class SinglePaletteFit : public PaletteFit
+
+class PaletteSet;
+class SinglePaletteFit : public virtual PaletteFit
 {
 public:
-  SinglePaletteFit(PaletteSet const* colours, int flags, int swap);
+  SinglePaletteFit(PaletteSet const* colours, int flags, int swap = -1, int shared = 0);
 
 private:
   Vec4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup2 const* const* lookups, u8 cmask);
@@ -60,7 +61,7 @@ private:
   Vec4 m_error;
 
 protected:
-  Vec4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int ib, u8 cmask);
+  Vec4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask);
   u8 GetIndex() { return m_index; }
 };
 #endif

@@ -60,10 +60,10 @@ ColourRangeFit::ColourRangeFit( ColourSet const* colours, int flags )
   float const* weights = m_colours->GetWeights();
 
   // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance( count, values, weights );
+  Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
 
   // compute the principle component
-  Vec3 principle = ComputePrincipleComponent( covariance );
+  Vec3 principle; ComputePrincipleComponent(covariance, principle);
 
   // get the min and max range as the codebook endpoints
   Vec3 start( 0.0f );
@@ -235,7 +235,7 @@ void ColourRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Colou
   weight16 weights = m_colours.GetWeights();
 
   // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance(barrier, thread, count, values, weights);
+  Sym3x3 covariance = ComputeWeightedCovariance3(barrier, thread, count, values, weights);
 
   // compute the principle component
   float3 principle = ComputePrincipleComponent(barrier, thread, covariance);
