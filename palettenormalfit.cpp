@@ -188,9 +188,10 @@ void PaletteNormalFit::Compress(void* block, int mode)
 	int idx = 0;
 
 	for (int j = 0; j < ccs; ++j) {
+	  // measure angle-deviation
 	  Vec4 cnormal = Normalize(codes[j]);
 	  Vec4 vnormal = Normalize(values[j]);
-	  Vec4 angle = Dot(values[i], codes[j]);
+	  Vec4 angle = Vec4(1.0f) - Dot(values[i], codes[j]);
 
 	  Vec4 d = angle * angle;
 	  if (CompareFirstLessThan(d, dist)) {
