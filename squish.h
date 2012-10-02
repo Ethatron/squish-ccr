@@ -43,11 +43,11 @@ namespace squish {
 #if	!defined(USE_COMPUTE)
 enum
 {
-	//! Use DXT1/BC1/BC1 compression.
+	//! Use DXT1/BC1 compression.
 	kBtc1 = ( 1 << 0 ),
-	//! Use DXT3/BC2/BC2 compression.
+	//! Use DXT3/BC2 compression.
 	kBtc2 = ( 1 << 1 ),
-	//! Use DXT5/BC3/BC3 compression.
+	//! Use DXT5/BC3 compression.
 	kBtc3 = ( 1 << 2 ),
 	//! Use ATI1/BC4 compression.
 	kBtc4 = ( 1 << 3 ),
@@ -59,24 +59,26 @@ enum
 	kBtc7 = ( 1 << 6 ),
 
 	//! Use a uniform metric for colour error.
-	kColourMetricUniform = ( 1 << 8 ),
+	kColourMetricUniform = ( 1 << 7 ),
 	//! Use a perceptual metric for colour error (the default).
-	kColourMetricPerceptual = ( 1 << 9 ),
+	kColourMetricPerceptual = ( 1 << 8 ),
 	//! Use a unit metric for colour error.
-	kColourMetricUnit = ( 1 << 10 ),
+	kColourMetricUnit = ( 1 << 9 ),
 
 	//! Weight the colour by alpha during cluster fit (disabled by default).
-	kWeightColourByAlpha = ( 1 << 11 ),
+	kWeightColourByAlpha = ( 1 << 10 ),
 	//! Don't code alpha, set alpha to 255 after weighting (disabled by default).
-	kExcludeAlphaFromPalette = ( 1 << 12 ),
+	kExcludeAlphaFromPalette = ( 1 << 11 ),
 
 	//! Transform input values/points from sRGB to linear RGB (disabled by default).
-	kSrgbIn = ( 1 << 13 ),
+	kSrgbIn = ( 1 << 12 ),
 	//! Transform output points/values from linear RGB to sRGB (disabled by default).
-	kSrgbOut = ( 1 << 14 ),
+	kSrgbOut = ( 1 << 13 ),
 
 	//! Use a fast but low quality colour compressor.
-	kColourRangeFit	= ( 1 << 15 ),
+	kColourRangeFit	= ( 1 << 14 ),
+	//! Use a slow but high quality alpha/gray compressor.
+	kAlphaIterativeFit = ( 1 << 15 ),
 	//! Use a slow but high quality colour compressor (the default).
 	kColourClusterFit = ( 1 << 16 ),
 	//! Use a very slow but very high quality colour compressor.
@@ -88,7 +90,7 @@ enum
 	kColourIterativeClusterFit8 = (  8 << 16 ),
 	kColourIterativeClusterFits = ( 15 << 16 ),
 
-	//! Use to code a specific BC6/7 mode, coded as "1 + mode-number" (disabled by default).
+	//! Use to code a specific BC6/7 mode, coded as "1 + mode-number" (not specified by default).
 	kVariableCodingMode1  = (  1 << 24 ),
 	kVariableCodingMode2  = (  2 << 24 ),
 	kVariableCodingMode3  = (  3 << 24 ),
@@ -389,7 +391,7 @@ void CompressColorBtc5(tile_barrier barrier, const int thread,
 		       pixel16 xy, int mask, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
-void CompressPaletteBtc (tile_barrier barrier, const int thread,
+void CompressPaletteBtc(tile_barrier barrier, const int thread,
 		       pixel16 rgba, ColourSet_CCRr colours, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
