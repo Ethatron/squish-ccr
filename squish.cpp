@@ -59,7 +59,7 @@ static int FixFlags(int flags)
 {
   // grab the flag bits
   int method = flags & (kBtc1 | kBtc2 | kBtc3 | kBtc4 | kBtc5 | kBtc6 | kBtc7);
-  int fit    = flags & (kColourRangeFit | kColourIterativeClusterFits);
+  int fit    = flags & (kColourRangeFit | kAlphaIterativeFit | kColourIterativeClusterFits);
   int metric = flags & (kColourMetricUniform | kColourMetricPerceptual | kColourMetricUnit);
   int extra  = flags & (kWeightColourByAlpha);
   int mode   = flags & (kVariableCodingModes);
@@ -395,7 +395,7 @@ void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
     if ((flags & kBtc2) != 0)
       CompressAlphaBtc2(rgba, mask, alphaBlock);
     else if ((flags & kBtc3) != 0)
-      CompressAlphaBtc3(rgba, mask, alphaBlock);
+      CompressAlphaBtc3(rgba, mask, alphaBlock, flags);
   }
   // ATI-type compression
   else if (flags & (kBtc4 | kBtc5)) {
@@ -406,10 +406,10 @@ void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
       plane2Block = reinterpret_cast<u8*>(block) + 8;
 
     // compress r into plane 1
-    CompressAlphaBtc3(rgba - 3, mask, plane1Block);
+    CompressAlphaBtc3(rgba - 3, mask, plane1Block, flags);
     // compress g into plane 2 if necessary
     if ((flags & (kBtc5)) != 0)
-      CompressAlphaBtc3(rgba - 2, mask, plane2Block);
+      CompressAlphaBtc3(rgba - 2, mask, plane2Block, flags);
   }
   // BTC-type compression
   else if (flags & (kBtc7)) {

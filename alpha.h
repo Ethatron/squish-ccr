@@ -34,11 +34,11 @@ namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(USE_PRE)
-  void CompressAlphaBtc2( u8 const* rgba, int mask, void* block );
-  void CompressAlphaBtc3( u8 const* rgba, int mask, void* block );
+  void CompressAlphaBtc2(u8 const* rgba, int mask, void* block);
+  void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags);
 
-  void DecompressAlphaBtc2( u8* rgba, void const* block );
-  void DecompressAlphaBtc3( u8* rgba, void const* block );
+  void DecompressAlphaBtc2(u8* rgba, void const* block);
+  void DecompressAlphaBtc3(u8* rgba, void const* block);
 #endif
 
 // -----------------------------------------------------------------------------
