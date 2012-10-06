@@ -35,7 +35,7 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(USE_PRE)
-struct SourceBlock
+struct SP_SourceBlock
 {
   u8 start;
   u8 end;
@@ -44,17 +44,17 @@ struct SourceBlock
 
 struct SinglePaletteLookup2
 {
-  SourceBlock sources[2];
+  SP_SourceBlock sources[2];
 };
 
 struct SinglePaletteLookup4
 {
-  SourceBlock sources[4];
+  SP_SourceBlock sources[4];
 };
 
 struct SinglePaletteLookup8
 {
-  SourceBlock sources[8];
+  SP_SourceBlock sources[8];
 };
 
 #include "singlepalettelookup.inl"
@@ -70,26 +70,26 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   // merge start and end shared bits
   sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
   
-#define lookup_5u1_4_sb_    lookup_5u1_4[sb]
-#define lookup_7u1_4_sb_    lookup_7u1_4[sb]
-#define lookup_4u1_8_sb_    lookup_4u1_8[sb]
-#define lookup_6s1_8_sb_    lookup_6s1_8[sb&1]
-#define lookup_7u1_16_sb_   lookup_7u1_16[sb]
+#define sp_lookup_5u1_4_sb_    sp_lookup_5u1_4[sb]
+#define sp_lookup_7u1_4_sb_    sp_lookup_7u1_4[sb]
+#define sp_lookup_4u1_8_sb_    sp_lookup_4u1_8[sb]
+#define sp_lookup_6s1_8_sb_    sp_lookup_6s1_8[sb&1]
+#define sp_lookup_7u1_16_sb_   sp_lookup_7u1_16[sb]
 
-#define lookup_5u1_4_ck_    (GetSharedBits() ? lookup_5u1_4_sb_ : lookup_6_4)
-#define lookup_4u1_8_ck_    (GetSharedBits() ? lookup_4u1_8_sb_ : lookup_5_8)
+#define sp_lookup_5u1_4_ck_    (GetSharedBits() ? sp_lookup_5u1_4_sb_ : sp_lookup_6_4)
+#define sp_lookup_4u1_8_ck_    (GetSharedBits() ? sp_lookup_4u1_8_sb_ : sp_lookup_5_8)
 #else
     // silence the compiler
     bool hb = !!sb; hb = false;
 
-#define lookup_5u1_4_sb_    lookup_6_4
-#define lookup_7u1_4_sb_    lookup_8_4
-#define lookup_4u1_8_sb_    lookup_5_8
-#define lookup_6s1_8_sb_    lookup_7_8
-#define lookup_7u1_16_sb_   lookup_8_16
+#define sp_lookup_5u1_4_sb_    sp_lookup_6_4
+#define sp_lookup_7u1_4_sb_    sp_lookup_8_4
+#define sp_lookup_4u1_8_sb_    sp_lookup_5_8
+#define sp_lookup_6s1_8_sb_    sp_lookup_7_8
+#define sp_lookup_7u1_16_sb_   sp_lookup_8_16
 
-#define lookup_5u1_4_ck_    lookup_6_4
-#define lookup_4u1_8_ck_    lookup_5_8
+#define sp_lookup_5u1_4_ck_    sp_lookup_6_4
+#define sp_lookup_4u1_8_ck_    sp_lookup_5_8
 #endif
 
   assume(ib >= 2 && ib <= 4);
@@ -100,18 +100,18 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
       assume(cb >= 5 && cb <= 8);
       switch (cb) {
-	case  5: cl = lookup_5_4; break;	//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 },
-	case  6: cl = lookup_5u1_4_sb_; break;	//{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 },
-	case  7: cl = lookup_7_4; break;	//{ 1, 0, 2, 0,  7, 8, 0,  0,  2, 2 },
-	case  8: cl = lookup_7u1_4_sb_; break;	//{ 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
+	case  5: cl = sp_lookup_5_4; break;		//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 },
+	case  6: cl = sp_lookup_5u1_4_sb_; break;	//{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 },
+	case  7: cl = sp_lookup_7_4; break;		//{ 1, 0, 2, 0,  7, 8, 0,  0,  2, 2 },
+	case  8: cl = sp_lookup_7u1_4_sb_; break;	//{ 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
 	default: abort(); break;
       }
 
       assume(ab == 0 || ab == 6 || ab == 8);
       switch (ab) {
-	case  6: al = lookup_5u1_4_ck_;	break;	//{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 }, / { 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
-	case  8: al = lookup_8_4; break;	//{ 1, 0, 2, 0,  7, 8, 0,  0,  2, 2 },
-	default: al = NULL; break;		//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 }, / { 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
+	case  6: al = sp_lookup_5u1_4_ck_; break;	//{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 }, / { 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
+	case  8: al = sp_lookup_8_4; break;		//{ 1, 0, 2, 0,  7, 8, 0,  0,  2, 2 },
+	default: al = NULL; break;			//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 }, / { 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
       }
 
       SinglePaletteLookup2 const* const lookups[] =
@@ -125,15 +125,15 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
       assume(cb == 5 || cb == 7);
       switch (cb) {
-	case  5: cl = lookup_4u1_8_ck_;	break;	//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
-	case  7: cl = lookup_6s1_8_sb_; break;	//{ 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
+	case  5: cl = sp_lookup_4u1_8_ck_; break;	//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
+	case  7: cl = sp_lookup_6s1_8_sb_; break;	//{ 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
 	default: abort(); break;
       }
 
       assume(ab == 0 || ab == 6);
       switch (ab) {
-	case  6: al = lookup_6_8; break;	//{ 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
-	default: al = NULL; break;		//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
+	case  6: al = sp_lookup_6_8; break;		//{ 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
+	default: al = NULL; break;			//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
       }
 
       SinglePaletteLookup4 const* const lookups[] =
@@ -147,13 +147,13 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
       assume(cb == 8);
       switch (cb) {
-	case  8: cl = lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
+	case  8: cl = sp_lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
 	default: abort(); break;
       }
       
       assume(ab == 8);
       switch (ab) {
-	case  8: al = lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
+	case  8: al = sp_lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
 	default: abort(); break;
       }
 
@@ -188,7 +188,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
   for (int index = 0; index < 2; ++index) {
     // check the error for this codebook index
-    SourceBlock const* sources[4] = {NULL};
+    SP_SourceBlock const* sources[4] = {NULL};
     Vec4 error(0.0f);
 
     for (int channel = 0; channel < 4; ++channel) {
@@ -256,7 +256,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
   for (int index = 0; index < 4; ++index) {
     // check the error for this codebook index
-    SourceBlock const* sources[4] = {NULL};
+    SP_SourceBlock const* sources[4] = {NULL};
     Vec4 error(0.0f);
 
     for (int channel = 0; channel < 4; ++channel) {
@@ -324,7 +324,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
   for (int index = 0; index < 8; ++index) {
     // check the error for this codebook index
-    SourceBlock const* sources[4] = {NULL};
+    SP_SourceBlock const* sources[4] = {NULL};
     Vec4 error(0.0f);
 
     for (int channel = 0; channel < 4; ++channel) {

@@ -319,12 +319,11 @@ void ColourClusterFit::Compress4( void* block )
 	  Vec4 e4 = MultiplyAdd( two, e3, e1 );
 
 	  // apply the metric to the error term
-	  Vec4 e5 = e4*m_metric;
+	  Vec4 e5 = e4 * m_metric;
 	  Vec4 error = e5.SplatX() + e5.SplatY() + e5.SplatZ();
 
 	  // keep the solution if it wins
-	  if( CompareAnyLessThan( error, besterror ) )
-	  {
+	  if (CompareAnyLessThan(error, besterror)) {
 	    beststart = a;
 	    bestend = b;
 	    besterror = error;
@@ -335,15 +334,13 @@ void ColourClusterFit::Compress4( void* block )
 	  }
 
 	  // advance
-	  if( k == count )
-	    break;
+	  if (k == count) break;
 	  part2 += m_points_weights[k];
 	  ++k;
 	}
 
 	// advance
-	if( j == count )
-	  break;
+	if (j == count) break;
 	part1 += m_points_weights[j];
 	++j;
       }
@@ -353,40 +350,39 @@ void ColourClusterFit::Compress4( void* block )
     }
 
     // stop if we didn't improve in this iteration
-    if( bestiteration != iterationIndex )
+    if (bestiteration != iterationIndex)
       break;
 
     // advance if possible
     ++iterationIndex;
-    if( iterationIndex == m_iterationCount )
+    if (iterationIndex == m_iterationCount)
       break;
 
     // stop if a new iteration is an ordering that has already been tried
-    Vec3 axis = ( bestend - beststart ).GetVec3();
-    if( !ConstructOrdering( axis, iterationIndex ) )
+    Vec3 axis = (bestend - beststart).GetVec3();
+    if (!ConstructOrdering(axis, iterationIndex))
       break;
   }
 
   // save the block if necessary
-  if( CompareAnyLessThan( besterror, m_besterror ) )
-  {
+  if (CompareAnyLessThan(besterror, m_besterror)) {
     // remap the indices
-    u8 const* order = ( u8* )m_order + 16*bestiteration;
+    u8 const* order = (u8*)m_order + 16 * bestiteration;
 
     u8 unordered[16];
-    for( int m = 0; m < besti; ++m )
+    for (int m =     0; m < besti; ++m)
       unordered[order[m]] = 0;
-    for( int m = besti; m < bestj; ++m )
+    for (int m = besti; m < bestj; ++m)
       unordered[order[m]] = 2;
-    for( int m = bestj; m < bestk; ++m )
+    for (int m = bestj; m < bestk; ++m)
       unordered[order[m]] = 3;
-    for( int m = bestk; m < count; ++m )
+    for (int m = bestk; m < count; ++m)
       unordered[order[m]] = 1;
 
     m_colours->RemapIndices( unordered, bestindices );
 
     // save the block
-    WriteColourBlock4( beststart.GetVec3(), bestend.GetVec3(), bestindices, block );
+    WriteColourBlock4(beststart.GetVec3(), bestend.GetVec3(), bestindices, block);
 
     // save the error
     m_besterror = besterror;

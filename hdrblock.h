@@ -43,16 +43,16 @@ namespace squish {
   void WriteDynamicBlock3_m2(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
   void WriteDynamicBlock3_m3(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
   void WriteDynamicBlock3_m4(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_m5(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_m6(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_m7(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_m8(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_m9(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_mA(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_mB(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_mC(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_mD(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock4_mE(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_m5(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_m6(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_m7(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_m8(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_m9(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_mA(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_mB(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_mC(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_mD(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
+  void WriteDynamicBlock3_mE(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
 
   void DecompressDynamicBtc(u16* rgba, void const* block);
 #endif

@@ -584,7 +584,7 @@ static void GenerateDataRtg( std::string const& name, int bits, int sharedbits, 
 	}
 
 	codes[colours-1] = b;
-	
+
 	// count unique indices
 	int unique = colours;
 	for (int c1 = 0; c1 < colours; ++c1) {
@@ -596,7 +596,7 @@ static void GenerateDataRtg( std::string const& name, int bits, int sharedbits, 
 	  }
 	}
 
-	/* we can parameterize a random distribution of points 
+	/* we can parameterize a random distribution of points
 	 * into three parameters:
 	 *
 	 * - range: start/end
@@ -647,11 +647,11 @@ static void GenerateDataRtg( std::string const& name, int bits, int sharedbits, 
 	    int sp = std::max(spread - 2, 0);
 	    // offer
 	    int id = std::abs(idxs[0] - idxs[1]);
-	    
+
 	    // less offered than requirement
 	    if (id < sp)
 	      delta = sp - id;
-	    
+
 	    // penalize in the priorization
 	    cset.addCase(sb, delta, unique, valueS, valueE, s, e, error[0], error[1]);
 	  }
@@ -778,8 +778,8 @@ int main()
 
   if (1) {
     // RTG types
-    GenerateDataRtg( "lookup_5g_4",    5, 0,  4 );
-    //	GenerateDataRtg( "lookup_6g_4",    6, 0,  4 );
-    //	GenerateDataRtg( "lookup_7g_4",    6, 0,  4 );
+//  GenerateDataRtg( "lookup_5g_4",    5, 0,  4 );
+//  GenerateDataRtg( "lookup_6g_4",    6, 0,  4 );
+//  GenerateDataRtg( "lookup_7g_4",    6, 0,  4 );
   }
 }

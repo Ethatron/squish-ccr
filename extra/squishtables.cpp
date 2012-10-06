@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <math.h>
+#include <set>
+#include <map>
 
 // Associated to partition -1, 16 * 0 bit
 static const unsigned int partitionmasks_1[1] =
@@ -412,7 +414,7 @@ int main(int argc, char **argv) {
   }
 #endif
 
-#if 1
+#if 0
   // checking out the odd-test for fp
   float check = 1.0f;
   while (check < 256.0f) {
@@ -451,5 +453,158 @@ int main(int argc, char **argv) {
 
     check += 1.0f;
   }
+#endif
+
+#if 0
+  // how much different codebooks has alpha5-mode?
+  std::set<unsigned long long> trial5;
+  std::map<unsigned long long, std::set<unsigned short> > match5;
+
+  for (int s = 1; s <= 254; s++) {
+    for (int e = s; e <= 254; e++) {
+      int m1 = (((5 - 1) * s + 1 * e) / 5);
+      int m2 = (((5 - 2) * s + 2 * e) / 5);
+      int m3 = (((5 - 3) * s + 3 * e) / 5);
+      int m4 = (((5 - 4) * s + 4 * e) / 5);
+
+      unsigned long long cb;
+      unsigned long long cba =
+        (m4 << 24) | (m3 << 16) | (m2 << 8) | (m1 << 0);
+      unsigned long long cbb =
+        (m1 << 24) | (m2 << 16) | (m3 << 8) | (m4 << 0);
+
+      if ((254 - e) < (s - 1))
+      	continue;
+      else
+      	cb = cba;
+
+      trial5.insert(cb);
+      match5[cb].insert((s << 0) | (e << 8));
+    }
+  }
+
+  int lookat = 0;
+
+  for (int s = 1; s <= 254; s++) {
+    for (int e = s; e <= 254; e++) {
+
+    }
+  }
+
+  // well, that are a 19532 distinct ones!
+  printf("alpha5: %d codebooks\n", trial5.size());
+
+  // how much different codebooks has alpha7-mode?
+  std::set<unsigned long long> trial7;
+  std::map<unsigned long long, std::set<unsigned short> > match7;
+
+  for (int s = 0; s <= 255; s++) {
+    for (int e = s; e <= 255; e++) {
+      int m1 = (((7 - 1) * s + 1 * e) / 7);
+      int m2 = (((7 - 2) * s + 2 * e) / 7);
+      int m3 = (((7 - 3) * s + 3 * e) / 7);
+      int m4 = (((7 - 4) * s + 4 * e) / 7);
+      int m5 = (((7 - 5) * s + 5 * e) / 7);
+      int m6 = (((7 - 6) * s + 6 * e) / 7);
+      unsigned long long cb1 =
+        (m4 << 24) | (m3 << 16) | (m2 << 8) | (m1 << 0);
+      unsigned long long cb2 =
+        (m5 <<  8) | (m6 <<  0);
+      unsigned long long cb =
+        (cb2 << 32) | (cb1 <<  0);
+
+      trial7.insert(cb);
+      match7[cb].insert((s << 0) | (e << 8));
+    }
+  }
+
+  // well, that are a 23569 distinct ones!
+  printf("alpha7: %d codebooks\n", trial7.size());
+#endif
+
+#if 1
+  int vmin = 0xFF, vmax = 0x00;
+  int vals[16];
+  for (int v = 0; v < 16; v++) {
+    vals[v] = std::rand() & 0xFF;
+    if (vmin > vals[v])
+      vmin = vals[v];
+    if (vmax < vals[v])
+      vmax = vals[v];
+  }
+
+  // binary search, tangent-fitting
+  int s = vmin;
+  int e = vmax;
+  int p = 1;
+  int l = 0;
+  int b = 0;
+  int oe = 0;
+  int os = 0;
+  while ((l = (e - s) >> p) != 0) {
+    int ms = std::max(s + os - l, 0x00);
+    int ps = std::min(s + os + l, 0xFF);
+    int me = std::max(e - oe - l, 0x00);
+    int pe = std::min(e - oe + l, 0xFF);
+
+    int error0 = 0;
+    int error1 = 0;
+    int error2 = 0;
+    int error3 = 0;
+    int error4 = 0;
+    for (int v = 0; v < 16; v++) {
+      // find the closest code
+      int dist0 = 0xFFFF;
+      int dist1 = 0xFFFF;
+      int dist2 = 0xFFFF;
+      int dist3 = 0xFFFF;
+      int dist4 = 0xFFFF;
+
+      // for all possible codebook-entries
+      for (int f = 0; f < 8; f++) {
+        int cb0 = (((7 - f) *  s + f *  e) / 7);
+        int cb1 = (((7 - f) *  s + f * me) / 7);
+        int cb2 = (((7 - f) *  s + f * pe) / 7);
+        int cb3 = (((7 - f) * ms + f *  e) / 7);
+        int cb4 = (((7 - f) * ps + f *  e) / 7);
+
+        int d0 = std::abs(vals[v] - cb0); d0 *= d0;
+        int d1 = std::abs(vals[v] - cb1); d1 *= d1;
+        int d2 = std::abs(vals[v] - cb2); d2 *= d2;
+        int d3 = std::abs(vals[v] - cb3); d3 *= d3;
+        int d4 = std::abs(vals[v] - cb4); d4 *= d4;
+
+        if (dist0 > d0) dist0 = d0;
+        if (dist1 > d1) dist1 = d1;
+        if (dist2 > d2) dist2 = d2;
+        if (dist3 > d3) dist3 = d3;
+        if (dist4 > d4) dist4 = d4;
+      }
+
+      // accumulate the error
+      error0 += dist0;
+      error1 += dist1;
+      error2 += dist2;
+      error3 += dist3;
+      error4 += dist4;
+    }
+
+    int merr = 0xFFFFFF;
+    if (merr > error0) merr = error0;
+    if (merr > error1) merr = error1;
+    if (merr > error4) merr = error4;
+    if (merr > error2) merr = error2;
+    if (merr > error3) merr = error3;
+
+    if (merr == error0) b = 0, p++;	// half range
+    if (merr == error1) b = 1, oe += l;	// range up
+    if (merr == error4) b = 2, os += l;	// range dn
+    if (merr == error2) b = 3, oe -= l;	// range up
+    if (merr == error3) b = 4, os -= l;	// range dn
+  }
+
+  // final match
+  s += os;
+  e -= oe;
 #endif
 }

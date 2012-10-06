@@ -37,6 +37,9 @@
 #include "maths.h"
 #include "simd.h"
 
+#undef max
+#undef min
+
 namespace squish {
 
 /* *****************************************************************************
@@ -67,6 +70,35 @@ Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weight
     covariance[3] += a.Y() * b.Y();
     covariance[4] += a.Y() * b.Z();
     covariance[5] += a.Z() * b.Z();
+  }
+
+  // return it
+  return covariance;
+}
+
+Sym2x2 ComputeWeightedCovariance2(int n, Vec4 const* points, float const* weights)
+{
+  // compute the centroid
+  float total = 0.0f;
+  Vec4 centroid(0.0f);
+
+  for (int i = 0; i < n; ++i) {
+    total    += weights[i];
+    centroid += weights[i] * points[i];
+  }
+
+  centroid /= total;
+
+  // accumulate the covariance smatrix
+  Sym2x2 covariance(0.0f);
+  for( int i = 0; i < n; ++i )
+  {
+    Vec4 a = points[i] - centroid;
+    Vec4 b = weights[i] * a;
+
+    covariance[0] += a.X() * b.X();
+    covariance[1] += a.X() * b.Y();
+    covariance[2] += a.Y() * b.Y();
   }
 
   // return it
@@ -306,6 +338,11 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out)
     else
       GetMultiplicity1Evector( smatrix, out, l2 );
   }
+}
+
+void ComputePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out)
+{
+  abort();
 }
 
 void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)

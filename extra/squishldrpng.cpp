@@ -703,6 +703,7 @@ int main( int argc, char* argv[] )
 		int method = kBtc7;
 		int metric = kColourMetricPerceptual;
 		int fit = kColourClusterFit;
+		int alpha = kAlphaIterativeFit;
 		int extra = 0;
 		int paint = 0;
 		bool help = false;
@@ -730,6 +731,8 @@ int main( int argc, char* argv[] )
 					case '5': method = kBtc5; break;
 					case '7': method = kBtc7; break;
 					case 'u': metric = kColourMetricUniform; break;
+					case 'n': metric = kColourMetricUnit; break;
+					case 'a': alpha = kAlphaIterativeFit; break;
 					case 'r': fit = kColourRangeFit; break;
 					case 'i': fit = kColourIterativeClusterFit; break;
 					case 'x': fit = kColourClusterFit * 15; break;
@@ -766,10 +769,12 @@ int main( int argc, char* argv[] )
 				<< "\t-45\tSpecifies whether to use ATI/BC4, ATI2/BC5 compression" << std::endl
 				<< "\t-7\tSpecifies whether to use BC7 (default) compression" << std::endl
 				<< "\t-u\tUse a uniform colour metric during colour compression" << std::endl
+				<< "\t-a\tUse the slow alpha/gray iterative compressor" << std::endl
 				<< "\t-r\tUse the fast but inferior range-based colour compressor" << std::endl
 				<< "\t-i\tUse the very slow but slightly better iterative colour compressor" << std::endl
 				<< "\t-x\tUse the extreme slow but slightly better iterative colour compressor" << std::endl
 				<< "\t-w\tWeight colour values by alpha in the cluster colour compressor" << std::endl
+				<< "\t-n\tUse normal map algorithms" << std::endl
 				<< "\t-d\tDecompress source raw btc to target png" << std::endl
 				<< "\t-e\tDiff source and target png" << std::endl
 				<< "\t-p\tpaint the patterns used to stderr" << std::endl
@@ -793,7 +798,7 @@ int main( int argc, char* argv[] )
 		switch( mode )
 		{
 		case kCompress:
-			Compress( sourceFileName, targetFileName, paint, method | metric | fit | extra );
+			Compress( sourceFileName, targetFileName, paint, method | metric | fit | alpha | extra );
 			break;
 
 		case kDecompress:

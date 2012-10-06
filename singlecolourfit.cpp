@@ -35,7 +35,7 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(USE_PRE)
-struct SourceBlock
+struct SC_SourceBlock
 {
   u8 start;
   u8 end;
@@ -44,7 +44,7 @@ struct SourceBlock
 
 struct SingleColourLookup
 {
-  SourceBlock sources[2];
+  SC_SourceBlock sources[2];
 };
 
 #include "singlecolourlookup.inl"
@@ -68,9 +68,9 @@ void SingleColourFit::Compress3(void* block)
   // build the table of lookups
   SingleColourLookup const* const lookups[] =
   {
-    lookup_5_3,
-    lookup_6_3,
-    lookup_5_3
+    sc_lookup_5_3,
+    sc_lookup_6_3,
+    sc_lookup_5_3
   };
 
   // find the best end-points and index
@@ -96,9 +96,9 @@ void SingleColourFit::Compress4(void* block)
   // build the table of lookups
   SingleColourLookup const* const lookups[] =
   {
-    lookup_5_4,
-    lookup_6_4,
-    lookup_5_4
+    sc_lookup_5_4,
+    sc_lookup_6_4,
+    sc_lookup_5_4
   };
 
   // find the best end-points and index
@@ -126,7 +126,7 @@ void SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
 
   for (int index = 0; index < 2; ++index) {
     // check the error for this codebook index
-    SourceBlock const* sources[3];
+    SC_SourceBlock const* sources[3];
     int error = 0;
 
     for (int channel = 0; channel < 3; ++channel) {

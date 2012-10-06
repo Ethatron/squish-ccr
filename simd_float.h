@@ -115,10 +115,10 @@ public:
     return Col4 ( v, 0, 0, 0 );
   }
 
-  int R() const { r; }
-  int G() const { g; }
-  int B() const { b; }
-  int A() const { a; }
+  int R() const { return r; }
+  int G() const { return g; }
+  int B() const { return b; }
+  int A() const { return a; }
 
   Col4 SplatR() const { return Col4( r ); }
   Col4 SplatG() const { return Col4( g ); }
@@ -810,6 +810,46 @@ public:
       w( _w )
   {
   }
+  
+  Vec4( float _x, float _y, float _z )
+    : x( _x ),
+      y( _y ),
+      z( _z ),
+      w( 0.0f )
+  {
+  }
+  
+  Vec4( float _x, float _y )
+    : x( _x ),
+      y( _y ),
+      z( 0.0f ),
+      w( 0.0f )
+  {
+  }
+  
+  Vec4( Vec4 _x, Vec4 _y, Vec4 _z, Vec4 _w )
+    : x( _x.x ),
+      y( _y.x ),
+      z( _z.x ),
+      w( _w.x )
+  {
+  }
+  
+  Vec4( Vec4 _x, Vec4 _y, Vec4 _z )
+    : x( _x.x ),
+      y( _y.x ),
+      z( _z.x ),
+      w( 0.0f )
+  {
+  }
+  
+  Vec4( Vec4 _x, Vec4 _y )
+    : x( _x.x ),
+      y( _y.x ),
+      z( 0.0f ),
+      w( 0.0f )
+  {
+  }
 
   Vec4( Vec3 _v, float _w )
     : x( _v.x ),
@@ -1038,7 +1078,24 @@ public:
       1.0f / v.w
     );
   }
-
+  
+  friend Vec4 ReciprocalSqrt( Vec4::Arg v )
+  {
+    return Vec4(
+      1.0f / std::sqrt(v.x),
+      1.0f / std::sqrt(v.y),
+      1.0f / std::sqrt(v.z),
+      1.0f / std::sqrt(v.w)
+    );
+  }
+	
+  friend Vec4 HorizontalMax( Arg a )
+  {
+    return Vec4(
+      std::max<float>( std::max<float>( a.x, a.y ), std::max<float>( a.z, a.w ) )
+    );
+  }
+  
   friend Vec4 HorizontalAdd( Arg a )
   {
     return Vec4( a.x + a.y + a.z + a.w );
@@ -1047,6 +1104,14 @@ public:
   friend Vec4 HorizontalAdd( Arg a, Arg b )
   {
     return HorizontalAdd( a ) + HorizontalAdd( b );
+  }
+  
+  friend Vec4 Normalize( Arg left )
+  {
+    Vec4 sum = HorizontalAdd(left * left);
+    Vec4 rsq = ReciprocalSqrt(sum);
+
+    return left * rsq;
   }
 
   friend Vec4 Dot( Arg left, Arg right )
@@ -1149,6 +1214,11 @@ public:
     *((int *)&m.w) = (w != 1.0f ? ~0 : 0);
 
     return m;
+  }
+  
+  friend Vec4 TransferZW( Vec4::Arg left, Vec4::Arg right )
+  {
+    return Vec4( left.x, left.y, right.z, right.w );
   }
 
   friend Vec4 TransferW( Vec4::Arg left, Vec4::Arg right )
