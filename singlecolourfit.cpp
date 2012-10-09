@@ -74,10 +74,13 @@ void SingleColourFit::Compress3(void* block)
   };
 
   // find the best end-points and index
-  ComputeEndPoints(lookups);
+  int error = ComputeEndPoints(lookups);
 
   // build the block if we win
-  if (m_error < m_besterror) {
+  if (error < m_besterror) {
+    // save the error
+    m_besterror = error;
+
     // remap the indices
     u8 indices[16];
 
@@ -85,9 +88,6 @@ void SingleColourFit::Compress3(void* block)
 
     // save the block
     WriteColourBlock3(m_start, m_end, indices, block);
-
-    // save the error
-    m_besterror = m_error;
   }
 }
 
@@ -102,10 +102,13 @@ void SingleColourFit::Compress4(void* block)
   };
 
   // find the best end-points and index
-  ComputeEndPoints(lookups);
+  int error = ComputeEndPoints(lookups);
 
   // build the block if we win
-  if (m_error < m_besterror) {
+  if (error < m_besterror) {
+    // save the error
+    m_besterror = error;
+
     // remap the indices
     u8 indices[16];
 
@@ -113,16 +116,13 @@ void SingleColourFit::Compress4(void* block)
 
     // save the block
     WriteColourBlock4(m_start, m_end, indices, block);
-
-    // save the error
-    m_besterror = m_error;
   }
 }
 
-void SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
+int SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
 {
   // check each index combination (endpoint or intermediate)
-  m_error = INT_MAX;
+  int besterror = INT_MAX;
 
   for (int index = 0; index < 2; ++index) {
     // check the error for this codebook index
@@ -143,7 +143,10 @@ void SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
     }
 
     // keep it if the error is lower
-    if (error < m_error) {
+    if (error < besterror) {
+      // save the error
+      besterror = error;
+
       m_start = Vec3(
 	(float)sources[0]->start / 31.0f,
 	(float)sources[1]->start / 63.0f,
@@ -157,9 +160,14 @@ void SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
       );
 
       m_index = (u8)(2 * index);
-      m_error = error;
+
+      // early out
+      if (!besterror)
+	return besterror;
     }
   }
+
+  return besterror;
 }
 #endif
 

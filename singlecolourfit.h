@@ -45,20 +45,19 @@ struct SingleColourLookup;
 class SingleColourFit : public ColourFit
 {
 public:
-  SingleColourFit( ColourSet const* colours, int flags );
+  SingleColourFit(ColourSet const* colours, int flags);
 
 private:
-  virtual void Compress3( void* block );
-  virtual void Compress4( void* block );
+  virtual void Compress3(void* block);
+  virtual void Compress4(void* block);
 
-  void ComputeEndPoints( SingleColourLookup const* const* lookups );
+  int ComputeEndPoints(SingleColourLookup const* const* lookups);
 
-  u8 m_colour[3];
+  u8   m_colour[3];
   Vec3 m_start;
   Vec3 m_end;
-  u8 m_index;
-  int m_error;
-  int m_besterror;
+  u8   m_index;
+  int  m_besterror;
 };
 #endif
 
