@@ -40,7 +40,7 @@
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 class PaletteClusterFit : public SinglePaletteFit, public PaletteChannelFit
 {
 public:
@@ -79,7 +79,7 @@ private:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct ClusterFit_CCR : inherit_hlsl PaletteFit_CCR
 {
 public_hlsl
@@ -103,7 +103,7 @@ private_hlsl
 
 #define	kMaxIterations	8
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   int m_iterationCount;
   float4 m_principle;
   ccr8 m_order[kMaxIterations][16];
@@ -114,7 +114,7 @@ private_hlsl
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static int m_iterationCount;
   tile_static float4 m_principle;
   tile_static ccr8 m_order[kMaxIterations][16];

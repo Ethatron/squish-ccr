@@ -134,7 +134,7 @@ typedef unsigned __int64 unsigned__int64;
 /* *****************************************************************************
  * Turn explicit vectorization of in case AMP or DirectCompute is requested
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #undef	SQUISH_USE_ALTIVEC
 #undef	SQUISH_USE_SSE
 #undef	SQUISH_USE_SIMD
@@ -148,7 +148,7 @@ typedef unsigned __int64 unsigned__int64;
  * provide common-interface implementations for the debug-version of the AMP
  * implementation
  */
-#if	defined(USE_AMP) && defined(USE_AMP_DEBUG)
+#if	defined(SQUISH_USE_AMP) && defined(USE_AMP_DEBUG)
 #define	tile_static						// void attribute
 #define	tile_barrier	int					// dummy var
 #define	tile_static_memory_fence(x)				// void function
@@ -178,7 +178,7 @@ typedef unsigned __int64 unsigned__int64;
 /* -----------------------------------------------------------------------------
  * provide common-interface implementations for the AMP implementation
  */
-#elif	defined(USE_AMP)
+#elif	defined(SQUISH_USE_AMP)
 #include <amp.h>
 #include <amp_math.h>
 #include <amp_graphics.h>
@@ -218,7 +218,7 @@ using namespace ::Concurrency;
 /* -----------------------------------------------------------------------------
  * provide common-interface implementations for the DirectCompute implementation
  */
-#elif	defined(USE_COMPUTE)
+#elif	defined(SQUISH_USE_COMPUTE)
 #define	tile_static	groupshared
 #define	tile_barrier	int
 #define	tile_static_memory_fence(x)	GroupMemoryBarrier()
@@ -276,21 +276,21 @@ using namespace ::Concurrency;
 #define	protected_hlsl	protected:
 #define	private_hlsl	private:
 
-#if	!defined(USE_CPP)
+#if	!defined(SQUISH_USE_CPP)
 #pragma message( "You may need to select a configuration." )
 #pragma message( "These enable mutual exclusive implementations:" )
-#pragma message( " USE_CPP      - if you are happy with the regular C++ code and want to omit this message" )
-#pragma message( " USE_AMP      - if you want the AMP code" )
-#pragma message( " USE_AMP_DEBG - if you want the AMP code without using AMP" )
-#pragma message( " USE_COMPUTE  - if you want the DirectCompute code" )
+#pragma message( " SQUISH_USE_CPP      - if you are happy with the regular C++ code and want to omit this message" )
+#pragma message( " SQUISH_USE_AMP      - if you want the AMP code" )
+#pragma message( " SQUISH_USE_AMP_DEBG - if you want the AMP code without using AMP" )
+#pragma message( " SQUISH_USE_COMPUTE  - if you want the DirectCompute code" )
 #pragma message( "These disable implementations enabled by default:" )
-#pragma message( " USE_PRE      - if you don't want the regular C++ code" )
+#pragma message( " SQUISH_USE_PRE      - if you don't want the regular C++ code" )
 #endif
 #endif
 
 /* *****************************************************************************
 */
-#if	defined(USE_AMP)
+#if	defined(SQUISH_USE_AMP)
 #ifndef	DIM
 #pragma message( "Input-array dimensionality has been set to 4" )
 

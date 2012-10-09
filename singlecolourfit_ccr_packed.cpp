@@ -25,7 +25,7 @@
 
 namespace squish {
 
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 void SingleColourFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted
 {
   ColourFit_CCR::AssignSet(barrier, thread, m_colours, metric, fit);
@@ -110,7 +110,7 @@ void SingleColourFit_CCR::Compress34(tile_barrier barrier, const int thread, Col
   }
 }
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static ::SourceBlock_CCR sources[3 * 4];
   tile_static float3 lines[4][2];
   tile_static int /*error[4],*/ err[2];
@@ -125,7 +125,7 @@ void SingleColourFit_CCR::Compress34(tile_barrier barrier, const int thread, Col
 void SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread, const int is4,
 					   SingleColourLUT lArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static ::SourceBlock_CCR sources[3 * SIDES];
   tile_static float3 lines[SIDES][CVALS];
   tile_static int error[SIDES];
@@ -140,7 +140,7 @@ void SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int threa
     {
       // grab the lookup table and index for this channel
       // store a pointer to the source for this channel
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
       sources[(0 << CBITS) + index] = lArr[is4][m_colour.r][0 /*5*/].sources[index];
       sources[(1 << CBITS) + index] = lArr[is4][m_colour.g][1 /*6*/].sources[index];
       sources[(2 << CBITS) + index] = lArr[is4][m_colour.b][0 /*5*/].sources[index];
@@ -212,7 +212,7 @@ void SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int threa
 int SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread,
 					  SingleColourLUT lArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static ::SourceBlock_CCR sources[3 * CNUMS];
   tile_static float3 lines[CNUMS][CVALS];
   tile_static int error[CNUMS], err[CASES];
@@ -225,7 +225,7 @@ int SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread
 
     {
       // store a pointer to the source for this channel
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
       sources[(0 << CBITS) + sjoint] = lArr[which][m_colour.r][0 /*5*/].sources[index];
       sources[(1 << CBITS) + sjoint] = lArr[which][m_colour.g][1 /*6*/].sources[index];
       sources[(2 << CBITS) + sjoint] = lArr[which][m_colour.b][0 /*5*/].sources[index];

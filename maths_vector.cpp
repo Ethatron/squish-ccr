@@ -26,7 +26,7 @@
 
 namespace squish {
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static float4 centroid_t[8];
   tile_static Sym3x3 covariance[8];
 #endif
@@ -36,7 +36,7 @@ Sym3x3 ComputeWeightedCovariance3(tile_barrier barrier, const int thread, int n,
   // compute the centroid (AMP: reduction, O(count) vs. O(ln(16)) = O(4),
   //                            unused coeffs have been set to zero and
   //                            remain neutral in the covariance)
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static float4 centroid_t[8];
 #endif
 
@@ -60,7 +60,7 @@ Sym3x3 ComputeWeightedCovariance3(tile_barrier barrier, const int thread, int n,
   float3 _centroid = centroid_t[0].xyz / centroid_t[0].w;
 
   // accumulate the covariance smatrix
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static Sym3x3 covariance[8];
 #endif
 

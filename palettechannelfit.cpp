@@ -35,7 +35,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 PaletteChannelFit::PaletteChannelFit(PaletteSet const* palette, int flags, int swap, int shared)
   : PaletteFit(palette, flags, swap, shared)
 {
@@ -158,7 +158,7 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #endif
 
 } // namespace squish

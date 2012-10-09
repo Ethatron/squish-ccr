@@ -32,14 +32,14 @@
 #include "colourfit.h"
 
 // pull in structure definitions
-#if	defined(USE_AMP)
+#if	defined(SQUISH_USE_AMP)
 #include "singlecolourlookup_ccr.inl"
 #endif
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 class ColourSet;
 struct SingleColourLookup;
 class SingleColourFit : public ColourFit
@@ -62,7 +62,7 @@ private:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct SingleColourFit_CCR : inherit_hlsl ColourFit_CCR
 {
 public_hlsl
@@ -88,14 +88,14 @@ protected_hlsl
   int  ComputeEndPoints(tile_barrier barrier, const int thread,
 		        SingleColourLUT lArr) amp_restricted;
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 private_hlsl
   int3 m_colour;
   ccr8 m_index;
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static int3 m_colour;
   tile_static ccr8 m_index;
 #endif

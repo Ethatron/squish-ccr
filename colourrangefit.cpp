@@ -34,7 +34,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   : ColourFit(colours, flags)
 {
@@ -200,8 +200,8 @@ void ColourRangeFit::Compress4(void* block)
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
     tile_static float dist[16];
     tile_static int   mins[8];
     tile_static int   maxs[8];
@@ -211,7 +211,7 @@ void ColourRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Colou
 {
   ColourFit_CCR::AssignSet(barrier, thread, m_colours, metric, fit);
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -248,7 +248,7 @@ void ColourRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Colou
 
   if (count > 0) {
     // calculate min/max
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
     tile_static float dist[16];
     tile_static int   mins[8];
     tile_static int   maxs[8];
@@ -344,7 +344,7 @@ void ColourRangeFit_CCR::Compress(tile_barrier barrier, const int thread, Colour
 void ColourRangeFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
 			     IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -396,7 +396,7 @@ void ColourRangeFit_CCR::Compress3(tile_barrier barrier, const int thread, Colou
 void ColourRangeFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
 			     IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -447,7 +447,7 @@ void ColourRangeFit_CCR::Compress4(tile_barrier barrier, const int thread, Colou
   }
 }
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static float3 codes[8];
   tile_static ccr8 closest[16][CASES];
   tile_static float errors[16][CASES];
@@ -456,7 +456,7 @@ void ColourRangeFit_CCR::Compress4(tile_barrier barrier, const int thread, Colou
 void ColourRangeFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
 			      IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -466,7 +466,7 @@ void ColourRangeFit_CCR::Compress34(tile_barrier barrier, const int thread, Colo
   point16 values = m_colours.GetPoints();
 
   // match each point to the closest code
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static float3 codes[8];
   tile_static ccr8 closest[16][CASES];
   tile_static float errors[16][CASES];

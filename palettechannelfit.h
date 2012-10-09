@@ -36,7 +36,7 @@
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 class PaletteSet;
 class PaletteChannelFit : public virtual PaletteFit
 {
@@ -53,7 +53,7 @@ protected:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct PaletteChannelFit_CCR : inherit_hlsl PaletteFit_CCR
 {
 public_hlsl
@@ -79,14 +79,14 @@ protected_hlsl
   int  ComputeEndPoints(tile_barrier barrier, const int thread,
 		        PaletteChannelLUT lArr) amp_restricted;
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 private_hlsl
   int3 m_entry;
   ccr8 m_index;
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static int3 m_entry;
   tile_static ccr8 m_index;
 #endif

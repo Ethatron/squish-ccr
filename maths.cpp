@@ -44,7 +44,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weights)
 {
   // compute the centroid
@@ -626,8 +626,8 @@ const float *ComputeGammaLUT(bool sRGB) {
 
 } // namespace squish
 
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
-#if	!defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 // this one works on a vector<6>
 #include "maths_vector.cpp"
 #else

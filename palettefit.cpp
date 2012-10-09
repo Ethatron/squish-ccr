@@ -35,7 +35,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 /*  Mode NS PB RB ISB CB AB EPB SPB IB IB2	NS: Number of subsets in each partition
  *  ---- -- -- -- --- -- -- --- --- -- ---	PB: Partition bits
  *  0    3  4  0  0   4  0  1   0   3  0	RB: Rotation bits
@@ -393,7 +393,7 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 void PaletteFit_CCR::AssignSet(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, int metric, int fit) amp_restricted
 {
   // -1 remap goes to source[0][15]

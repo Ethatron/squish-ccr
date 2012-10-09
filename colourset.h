@@ -33,7 +33,7 @@
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 /*! @brief Represents a set of block colours
 */
 class ColourSet
@@ -72,7 +72,7 @@ private:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct ColourSet_CCR
 {
 public_hlsl
@@ -91,7 +91,7 @@ protected_hlsl
   void RemapIndices(tile_barrier barrier, const int thread,
 		    inout index16x2 source) amp_restricted;
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 private_hlsl
   int m_transparent;
   int     m_count;
@@ -102,7 +102,7 @@ private_hlsl
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static int m_transparent;
   tile_static int     m_count;
   tile_static float3 m_points[16];
@@ -111,7 +111,7 @@ private_hlsl
   tile_static ccr8  m_indices[16];
 #endif
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   typedef ColourSet_CCR &ColourSet_CCRr;
 #else
   typedef ColourSet_CCR  ColourSet_CCRr;

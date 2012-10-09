@@ -34,7 +34,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swap, int shared)
   : SinglePaletteFit(palette, flags, swap, shared)
   ,       PaletteFit(palette, flags, swap, shared)
@@ -263,7 +263,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #endif
 
 } // namespace squish

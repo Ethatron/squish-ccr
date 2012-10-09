@@ -31,14 +31,14 @@
 #include "maths.h"
 
 // pull in structure definitions
-#if	defined(USE_AMP)
+#if	defined(SQUISH_USE_AMP)
 #include "degeneracy_ccr.inl"
 #endif
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
   void WriteColourBlock3( Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block );
   void WriteColourBlock4( Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block );
 
@@ -46,7 +46,7 @@ namespace squish {
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
   void WriteColourBlock3(tile_barrier barrier, const int thread,
 			 lineC2 cline, inout index16 indices, out code64 block) amp_restricted;
   void WriteColourBlock4(tile_barrier barrier, const int thread,

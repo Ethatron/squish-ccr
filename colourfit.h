@@ -33,7 +33,7 @@
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 class ColourSet;
 class ColourFit
 {
@@ -52,7 +52,7 @@ protected:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct ColourFit_CCR
 {
 public_hlsl
@@ -80,14 +80,14 @@ protected_hlsl
 #define	CSTOP	1
 #define	CVALS	2
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 protected_hlsl
   float3 m_line[CVALS];
   ccr8 m_matches[2][16];
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static float3 m_line[CVALS];
   tile_static ccr8 m_matches[2][16];
 #endif

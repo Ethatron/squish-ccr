@@ -28,7 +28,7 @@
 #include "maths.h"
 #include "simd.h"
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 #include <cmath>
 #include <algorithm>
 #endif
@@ -39,7 +39,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 void CompressAlphaBtc2(u8 const* rgba, int mask, void* block)
 {
   u8* bytes = reinterpret_cast< u8* >(block);
@@ -319,8 +319,8 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
     }
 
     // final match
-    min5 = s + os;
-    max5 = e - oe;
+    min5 = std::max(s + os, 0x00);
+    max5 = std::min(e - oe, 0xFF);
 
     // binary search, tangent-fitting
     s = min7; oe = 0;
@@ -393,8 +393,8 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
     }
 
     // final match
-    min7 = s + os;
-    max7 = e - oe;
+    min7 = std::max(s + os, 0x00);
+    max7 = std::min(e - oe, 0xFF);
   }
   
   // fix the range to be the minimum in each case
@@ -483,7 +483,7 @@ void DecompressAlphaBtc3(u8* rgba, void const* block)
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 /* C++ AMP version */
 static void FixRange(out lineA2 aline, int steps) amp_restricted
 {
@@ -493,7 +493,7 @@ static void FixRange(out lineA2 aline, int steps) amp_restricted
     aline[ASTRT] = (  0 > (aline[ASTOP] - steps) ? (aline[ASTOP] - steps) :   0);
 }
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static int cerror;
 #endif
 
@@ -501,7 +501,7 @@ static void FixRange(out lineA2 aline, int steps) amp_restricted
 static int FitCodes(tile_barrier barrier, const int thread, pixel16 rgba, int mask, index8 codes, out index16 matched) amp_restricted
 {
   // fit each alpha value to the codebook (AMP: prefer vectorization over parallelism)
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static int cerror;
 #endif
 
@@ -594,7 +594,7 @@ static void WriteAlphaBlock5(tile_barrier barrier, const int thread, lineA2 alph
 
   // swap the indices
   wavefrnt_for(i, 16) {
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
     indices[i] = (sorted[ASTRT] == alpha[ASTOP] ? yArr[IBL_ALPHA5][indices[i]].mapped : indices[i]);
 #else
     indices[i] = (sorted[ASTRT] == alpha[ASTOP] ? yArr(IBL_ALPHA5, indices[i]).mapped : indices[i]);
@@ -620,7 +620,7 @@ static void WriteAlphaBlock7(tile_barrier barrier, const int thread, lineA2 alph
 
   // swap the indices
   wavefrnt_for(i, 16) {
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
     indices[i] = (sorted[ASTRT] == alpha[ASTRT] ? yArr[IBL_ALPHA7][indices[i]].mapped : indices[i]);
 #else
     indices[i] = (sorted[ASTRT] == alpha[ASTRT] ? yArr(IBL_ALPHA7, indices[i]).mapped : indices[i]);
@@ -638,7 +638,7 @@ static void WriteAlphaBlock7(tile_barrier barrier, const int thread, lineA2 alph
 #define CBITS	2	// number of bits
 #define CMASK	3	// mask
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static ccr8 acodes [ERRS][ 8];
   tile_static ccr8 matched[ERRS][16];
   tile_static int aline[ERRS][AVALS];
@@ -651,7 +651,7 @@ void CompressAlphaBtc3(tile_barrier barrier, const int thread, pixel16 rgba, int
 		       IndexBlockLUT yArr) amp_restricted
 {
   // get the range for 5-alpha and 7-alpha interpolation
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static ccr8 acodes [ERRS][ 8];
   tile_static ccr8 matched[ERRS][16];
   tile_static int aline[ERRS][AVALS];
@@ -771,7 +771,7 @@ void CompressAlphaBtc3(tile_barrier barrier, const int thread, pixel16 rgba, int
 #undef	CBITS
 #undef	CMASK
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static unsigned int frags[4];
 #endif
 
@@ -779,7 +779,7 @@ void CompressAlphaBtc3(tile_barrier barrier, const int thread, pixel16 rgba, int
 void CompressAlphaBtc2(tile_barrier barrier, const int thread, pixel16 rgba, int mask, code64 block,
 		         IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static unsigned int frags[4];
 #endif
 

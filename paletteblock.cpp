@@ -72,7 +72,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 #ifdef __GNUC__
   __attribute__ ((__aligned__ (16)))
 #else
@@ -2356,7 +2356,7 @@ void DecompressPaletteBtc(u8* rgba, void const* block)
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 static void WritePaletteBlock(tile_barrier barrier, const int thread, lineI2 palette, index16 indices, out code64 block) amp_restricted
 {
   // AMP: make "indices"-writes visible
@@ -2397,7 +2397,7 @@ void WritePaletteBlock3(tile_barrier barrier, const int thread, lineC2 cline, in
 
   // remap the indices
   wavefrnt_for(i, 16) {
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
     indices[i] = (sorted[CSTRT] == palette[CSTOP] ? indices[i] : yArr[IBL_COLOR3][indices[i]].mapped);
 #else
     indices[i] = (sorted[CSTRT] == palette[CSTOP] ? indices[i] : yArr(IBL_COLOR3, indices[i]).mapped);

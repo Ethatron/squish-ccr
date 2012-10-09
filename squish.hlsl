@@ -23,8 +23,8 @@
 
    -------------------------------------------------------------------------- */
 
-#define	USE_PRE		// means: we include all sources (a must for AMP & COMPUTE)
-#define	USE_COMPUTE	// we request the compute-compatible code
+#define	SQUISH_USE_PRE		// means: we include all sources (a must for AMP & COMPUTE)
+#define	SQUISH_USE_COMPUTE	// we request the compute-compatible code
 #include "squish.h"
 
 #define	ONLY_ARRAY

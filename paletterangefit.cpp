@@ -34,7 +34,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap, int shared)
   : SinglePaletteFit(palette, flags, swap, shared)
   ,       PaletteFit(palette, flags, swap, shared)
@@ -386,8 +386,8 @@ void PaletteRangeFit::Compress(void* block, int mode)
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
     tile_static float dist[16];
     tile_static int   mins[8];
     tile_static int   maxs[8];
@@ -397,7 +397,7 @@ void PaletteRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Pale
 {
   SinglePaletteFit_CCR::AssignSet(barrier, thread, m_palette, metric, fit);
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -434,7 +434,7 @@ void PaletteRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Pale
 
   if (count > 0) {
     // calculate min/max
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
     tile_static float dist[16];
     tile_static int   mins[8];
     tile_static int   maxs[8];
@@ -530,7 +530,7 @@ void PaletteRangeFit_CCR::Compress(tile_barrier barrier, const int thread, Palet
 void PaletteRangeFit_CCR::Compress3(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			     IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -582,7 +582,7 @@ void PaletteRangeFit_CCR::Compress3(tile_barrier barrier, const int thread, Pale
 void PaletteRangeFit_CCR::Compress4(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			     IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -633,7 +633,7 @@ void PaletteRangeFit_CCR::Compress4(tile_barrier barrier, const int thread, Pale
   }
 }
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static float3 codes[8];
   tile_static ccr8 closest[16][CASES];
   tile_static float errors[16][CASES];
@@ -642,7 +642,7 @@ void PaletteRangeFit_CCR::Compress4(tile_barrier barrier, const int thread, Pale
 void PaletteRangeFit_CCR::Compress34(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			      IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -652,7 +652,7 @@ void PaletteRangeFit_CCR::Compress34(tile_barrier barrier, const int thread, Pal
   point16 values = m_palette.GetPoints();
 
   // match each point to the closest code
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static float3 codes[8];
   tile_static ccr8 closest[16][CASES];
   tile_static float errors[16][CASES];

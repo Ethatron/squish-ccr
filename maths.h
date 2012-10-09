@@ -27,7 +27,7 @@
 #ifndef SQUISH_MATHS_H
 #define SQUISH_MATHS_H
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 #include <cmath>
 #include <algorithm>
 #include <float.h>
@@ -45,18 +45,18 @@
 
 namespace squish {
 
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #if	defined(USE_AMP_DEBUG)
 typedef	Vec3	float3;
 typedef	Col3	int3;
 #endif
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 namespace Concurrency {
 namespace vector_math {
 #endif
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   float3 minimum( float3 left, float3 right ) amp_restricted
   {
     return float3(
@@ -146,13 +146,13 @@ namespace vector_math {
     return dot(center, center);
   }
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 }
 }
 #endif
 #endif
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 class Sym2x2
 {
 public:
@@ -243,7 +243,7 @@ private:
 
 namespace squish {
 
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weights);
 Sym2x2 ComputeWeightedCovariance2(int n, Vec4 const* points, float const* weights);
 Sym3x3 ComputeWeightedCovariance3(int n, Vec4 const* points, float const* weights);
@@ -266,8 +266,8 @@ void   EstimatePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
 const float *ComputeGammaLUT(bool sRGB);
 #endif
 
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
-#if	!defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 typedef Sym3x3 &Sym3x3r;
 #else
 typedef float4 Sym3x3[2];

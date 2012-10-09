@@ -19,34 +19,34 @@ a16 float part1delta[16][1][4] = {
 };
 
 a16 float part1inits[16][16][4] = {
-{ /* begin iterations */
+{ /* 1 begin iterations */
   {0.25f, 0.25f, 0.25f}},
-{ /* begin iterations */
+{ /* 2 begin iterations */
   {0.25f, 1.25f, 0.25f},
   {1.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 3 begin iterations */
   {0.25f, 2.25f, 0.25f},
   {1.0f, 2.0f, 0.0f},
   {2.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 4 begin iterations */
   {0.25f, 3.25f, 0.25f},
   {1.0f, 3.0f, 0.0f},
   {2.0f, 2.0f, 0.0f},
   {3.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 5 begin iterations */
   {0.25f, 4.25f, 0.25f},
   {1.0f, 4.0f, 0.0f},
   {2.0f, 3.0f, 0.0f},
   {3.0f, 2.0f, 0.0f},
   {4.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 6 begin iterations */
   {0.25f, 5.25f, 0.25f},
   {1.0f, 5.0f, 0.0f},
   {2.0f, 4.0f, 0.0f},
   {3.0f, 3.0f, 0.0f},
   {4.0f, 2.0f, 0.0f},
   {5.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 7 begin iterations */
   {0.25f, 6.25f, 0.25f},
   {1.0f, 6.0f, 0.0f},
   {2.0f, 5.0f, 0.0f},
@@ -54,7 +54,7 @@ a16 float part1inits[16][16][4] = {
   {4.0f, 3.0f, 0.0f},
   {5.0f, 2.0f, 0.0f},
   {6.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 8 begin iterations */
   {0.25f, 7.25f, 0.25f},
   {1.0f, 7.0f, 0.0f},
   {2.0f, 6.0f, 0.0f},
@@ -63,7 +63,7 @@ a16 float part1inits[16][16][4] = {
   {5.0f, 3.0f, 0.0f},
   {6.0f, 2.0f, 0.0f},
   {7.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 9 begin iterations */
   {0.25f, 8.25f, 0.25f},
   {1.0f, 8.0f, 0.0f},
   {2.0f, 7.0f, 0.0f},
@@ -73,7 +73,7 @@ a16 float part1inits[16][16][4] = {
   {6.0f, 3.0f, 0.0f},
   {7.0f, 2.0f, 0.0f},
   {8.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 10 begin iterations */
   {0.25f, 9.25f, 0.25f},
   {1.0f, 9.0f, 0.0f},
   {2.0f, 8.0f, 0.0f},
@@ -84,7 +84,7 @@ a16 float part1inits[16][16][4] = {
   {7.0f, 3.0f, 0.0f},
   {8.0f, 2.0f, 0.0f},
   {9.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 11 begin iterations */
   {0.25f, 10.25f, 0.25f},
   {1.0f, 10.0f, 0.0f},
   {2.0f, 9.0f, 0.0f},
@@ -96,7 +96,7 @@ a16 float part1inits[16][16][4] = {
   {8.0f, 3.0f, 0.0f},
   {9.0f, 2.0f, 0.0f},
   {10.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 12 begin iterations */
   {0.25f, 11.25f, 0.25f},
   {1.0f, 11.0f, 0.0f},
   {2.0f, 10.0f, 0.0f},
@@ -109,7 +109,7 @@ a16 float part1inits[16][16][4] = {
   {9.0f, 3.0f, 0.0f},
   {10.0f, 2.0f, 0.0f},
   {11.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 13 begin iterations */
   {0.25f, 12.25f, 0.25f},
   {1.0f, 12.0f, 0.0f},
   {2.0f, 11.0f, 0.0f},
@@ -123,7 +123,7 @@ a16 float part1inits[16][16][4] = {
   {10.0f, 3.0f, 0.0f},
   {11.0f, 2.0f, 0.0f},
   {12.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 14 begin iterations */
   {0.25f, 13.25f, 0.25f},
   {1.0f, 13.0f, 0.0f},
   {2.0f, 12.0f, 0.0f},
@@ -138,7 +138,7 @@ a16 float part1inits[16][16][4] = {
   {11.0f, 3.0f, 0.0f},
   {12.0f, 2.0f, 0.0f},
   {13.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 15 begin iterations */
   {0.25f, 14.25f, 0.25f},
   {1.0f, 14.0f, 0.0f},
   {2.0f, 13.0f, 0.0f},
@@ -154,7 +154,7 @@ a16 float part1inits[16][16][4] = {
   {12.0f, 3.0f, 0.0f},
   {13.0f, 2.0f, 0.0f},
   {14.0f, 1.0f, 0.0f}},
-{ /* begin iterations */
+{ /* 16 begin iterations */
   {0.25f, 15.25f, 0.25f},
   {1.0f, 15.0f, 0.0f},
   {2.0f, 14.0f, 0.0f},

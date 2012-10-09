@@ -35,7 +35,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   : ColourFit(colours, flags)
 {
@@ -379,11 +379,6 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
   Vec4 const one = VEC4_CONST(1.0f);
   Vec4 const half_half2(0.5f, 0.5f, 0.5f, 0.25f);
 
-  // constants if weights == 1
-  Vec4 alphabeta_dltas  = *((Vec4 *)part1delta[count - 1][0]);
-  Vec4 *alphabeta_inits = (Vec4 *)part1inits[count - 1][0];
-  float *alphabeta_factors = (float *)part1factors[count - 1];
-
   // check all possible clusters and iterate on the total order
   Vec4 beststart = VEC4_CONST(0.0f);
   Vec4 bestend = VEC4_CONST(0.0f);
@@ -399,6 +394,11 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
   for (int iterationIndex = 0;;) {
     // cache some values
     Vec4 const xsum_wsum = m_xsum_wsum;
+    
+    // constants if weights == 1
+    Vec4 alphabeta_dltas  = *((Vec4 *)part1delta[count - 1][0]);
+    Vec4 *alphabeta_inits = (Vec4 *)part1inits[count - 1][0];
+    float *alphabeta_factors = (float *)part1factors[count - 1];
 
 #if 0
   Vec4 lasta = Vec4(0.0f);
@@ -802,7 +802,7 @@ void ColourClusterFit::Compress4(void* block)
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit ) amp_restricted
 {
   ColourFit_CCR::AssignSet(barrier, thread, m_colours, metric, fit);
@@ -843,7 +843,7 @@ void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet
 
 bool ClusterFit_CCR::ConstructOrdering(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, float3r axis, int iteration) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -921,7 +921,7 @@ void ClusterFit_CCR::Compress(tile_barrier barrier, const int thread, ColourSet_
 void ClusterFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
 			         IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -1051,7 +1051,7 @@ void ClusterFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet
 void ClusterFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
 			         IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 

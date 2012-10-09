@@ -33,7 +33,7 @@
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
   void CompressAlphaBtc2(u8 const* rgba, int mask, void* block);
   void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags);
 
@@ -42,7 +42,7 @@ namespace squish {
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
   void CompressAlphaBtc2(tile_barrier barrier, const int thread,
 			 pixel16 rgba, int mask, out code64 block,
 			 IndexBlockLUT yArr) amp_restricted;

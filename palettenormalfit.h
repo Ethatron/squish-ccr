@@ -34,7 +34,7 @@
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 class PaletteSet;
 class PaletteNormalFit : public SinglePaletteFit
 {
@@ -48,7 +48,7 @@ private:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct PaletteNormalFit_CCR : inherit_hlsl SinglePaletteFit_CCR
 {
 public_hlsl
@@ -69,13 +69,13 @@ protected_hlsl
                   PaletteSet_CCRr m_palettes, out code64 block,
                   IndexBlockLUT yArr) amp_restricted;
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 private_hlsl
   float4 m_metric;
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static float4 m_metric;
 #endif
 #endif

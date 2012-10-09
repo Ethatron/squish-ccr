@@ -35,7 +35,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int swap, int shared)
   :  SinglePaletteFit(palette, flags, swap, shared)
   , PaletteChannelFit(palette, flags, swap, shared)
@@ -1455,7 +1455,7 @@ void PaletteClusterFit::Compress(void* block, int mode) {
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, const int metric, const int fit ) amp_restricted
 {
   PaletteFit_CCR::AssignSet(barrier, thread, m_palette, metric, fit);
@@ -1496,7 +1496,7 @@ void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, PaletteSe
 
 bool ClusterFit_CCR::ConstructOrdering(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, float4r axis, int iteration) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -1574,7 +1574,7 @@ void ClusterFit_CCR::Compress(tile_barrier barrier, const int thread, PaletteSet
 void ClusterFit_CCR::Compress3(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			         IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -1704,7 +1704,7 @@ void ClusterFit_CCR::Compress3(tile_barrier barrier, const int thread, PaletteSe
 void ClusterFit_CCR::Compress4(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, out code64 block,
 			         IndexBlockLUT yArr) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 

@@ -34,7 +34,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 struct SC_SourceBlock
 {
   u8 start;

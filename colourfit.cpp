@@ -31,7 +31,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 ColourFit::ColourFit( ColourSet const* colours, int flags )
   : m_colours(colours), m_flags(flags)
 {
@@ -52,7 +52,7 @@ void ColourFit::Compress( void* block )
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 void ColourFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, int metric, int fit) amp_restricted
 {
   // -1 remap goes to source[0][15]

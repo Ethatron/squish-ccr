@@ -31,14 +31,14 @@
 #include "maths.h"
 
 // pull in structure definitions
-#if	defined(USE_AMP)
+#if	defined(SQUISH_USE_AMP)
 #include "degeneracy_ccr.inl"
 #endif
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
   void WriteDynamicBlock3_m1(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
   void WriteDynamicBlock3_m2(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
   void WriteDynamicBlock3_m3(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
@@ -58,7 +58,7 @@ namespace squish {
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
   void WriteDynamicBlock3(tile_barrier barrier, const int thread,
 			  lineC2 cline, inout index16 indices, out code64 block) amp_restricted;
   void WriteDynamicBlock4(tile_barrier barrier, const int thread,

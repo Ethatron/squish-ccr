@@ -1263,7 +1263,7 @@ private:
 	__m128i m_v;
 };
 
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 inline Col3 LengthSquared( Col3::Arg v )
 {
   return Dot( v, v );
@@ -2174,7 +2174,7 @@ namespace Vec4C {
 typedef	Vec3  Scr3;
 typedef	Vec4  Scr4;
 
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 inline Vec3 LengthSquared( Vec3::Arg v )
 {
   return Dot( v, v );

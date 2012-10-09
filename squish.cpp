@@ -54,7 +54,7 @@ namespace squish {
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 static int FixFlags(int flags)
 {
   // grab the flag bits
@@ -658,8 +658,8 @@ void DecompressImage(u8* rgba, int width, int height, void const* blocks, int fl
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
     tile_static SingleColourFit_CCR sfit;
     tile_static ColourRangeFit_CCR rfit;
     tile_static ClusterFit_CCR cfit;
@@ -676,7 +676,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
   // check the compression type and compress colour
   if (colours.GetCount() == 1) {
     // always do a single colour fit
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
     tile_static SingleColourFit_CCR sfit;
 #endif
 
@@ -685,7 +685,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
   }
   else if ((fit == SQUISH_FIT_RANGE) || (colours.GetCount() == 0)) {
     // do a range fit
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
     tile_static ColourRangeFit_CCR rfit;
 #endif
 
@@ -694,7 +694,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
   }
   else {
     // default to a cluster fit (could be iterative or not)
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
     tile_static ClusterFit_CCR cfit;
 #endif
 
@@ -703,7 +703,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
   }
 }
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static ColourSet_CCR colours;
 #endif
 
@@ -711,7 +711,7 @@ void CompressColorBtc1( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
 			IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static ColourSet_CCR colours;
 #endif
 
@@ -726,7 +726,7 @@ void CompressColorBtc2( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
 			IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static ColourSet_CCR colours;
 #endif
 
@@ -741,7 +741,7 @@ void CompressColorBtc3( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
 			IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   tile_static ColourSet_CCR colours;
 #endif
 

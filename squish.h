@@ -29,7 +29,7 @@
 
 #include "config.h"
 
-#if	defined(USE_COMPUTE) || defined(USE_AMP)
+#if	defined(SQUISH_USE_COMPUTE) || defined(SQUISH_USE_AMP)
 #include "singlecolourlookup_ccr.inl"
 #include "degeneracy_ccr.inl"
 #endif
@@ -40,7 +40,7 @@ namespace squish {
 // -----------------------------------------------------------------------------
 
 // Skip enum-type in HLSL
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 enum
 {
 	//! Use DXT1/BC1 compression.
@@ -111,7 +111,7 @@ enum
 
 // -----------------------------------------------------------------------------
 
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 //! Typedef a quantity that is a single unsigned byte.
 typedef unsigned char u8;
 //! Typedef a quantity that is a single unsigned short.
@@ -298,7 +298,7 @@ void DecompressImage( u16* rgb, int width, int height, void const* blocks, int f
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 //! Typedef a quantity that is a single unsigned byte.
 typedef unsigned int ccr8;
 
@@ -316,7 +316,7 @@ typedef unsigned int ccr8;
  * Provide types for the C++ and AMP version, these a only for passing function
  * arguments as references
  */
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 typedef const int (&pixel16)[16][DIM];
 typedef float3 (&lineC2)[CVALS];
 typedef int (&lineI2)[CVALS];
@@ -358,10 +358,10 @@ typedef float3 float3r;
 
 // -----------------------------------------------------------------------------
 
-#if	defined(USE_AMP)
+#if	defined(SQUISH_USE_AMP)
 struct ColourSet_CCR;
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 typedef ColourSet_CCR &ColourSet_CCRr;
 #else
 typedef ColourSet_CCR  ColourSet_CCRr;

@@ -64,7 +64,7 @@ void TestOneColour( int flags )
 	double avg = 0.0, min = DBL_MAX, max = -DBL_MAX;
 	int counter = 0;
 
-#if	defined(USE_AMP) && !defined(USE_AMP_DEBUG)
+#if	defined(SQUISH_USE_AMP) && !defined(USE_AMP_DEBUG)
 	Concurrency::array_view<const SingleColourLookup_CCR, 2> lArr(2, 256, (const SingleColourLookup_CCR *)::lookup_34_56_ccr);
 	Concurrency::array_view<const   IndexBlockLookup_CCR, 2> yArr(4, 8,   (const   IndexBlockLookup_CCR *)::lookup_c34a57_ccr);
 #endif
@@ -83,7 +83,7 @@ void TestOneColour( int flags )
 			for( int j = 0; j < 4; ++j )
 				input[i][j] = (255 << 24) | (value << 16) | (value << 8) | (value << 0);
 			
-#if	defined(USE_AMP) && !defined(USE_AMP_DEBUG)
+#if	defined(SQUISH_USE_AMP) && !defined(USE_AMP_DEBUG)
 			/* constant buffer array */
 			/* get a two-dimensional extend over the whole output (without re-cast to LONG),
 			 * then get a tile-extend over that one ()

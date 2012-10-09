@@ -80,7 +80,7 @@ static const unsigned int partitionmasks_3[64] =
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 void PaletteSet::GetMasks(int flags, int partition, int (&masks)[4]) {
   unsigned int partmask = 0;
   if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
@@ -410,7 +410,7 @@ void PaletteSet::UnmapIndices(u8 const* source, u8* destination, int set, int *c
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 void PaletteSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rgba, int mask, const bool alpha, const bool trans) amp_restricted
 {
   // check the compression mode for dxt1
@@ -495,7 +495,7 @@ void PaletteSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rg
   }
 
   // square root the weights
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   wavefrnt_for(wscan, 16) {
     // normalize coordinates to [0,1]
     m_points [wscan] /= 255.0f;
@@ -550,7 +550,7 @@ void PaletteSet_CCR::RemapIndices(tile_barrier barrier, const int thread, inout 
   // make writes to "source"/"m_remap" visible to all
   tile_static_memory_fence(barrier);
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   // remap to palette-indices
   wavefrnt_for(rmscan, 16) {
     m_indices[rmscan] = source[1][m_remap[rmscan]];

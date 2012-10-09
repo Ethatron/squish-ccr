@@ -33,14 +33,14 @@
 #include "palettefit.h"
 
 // pull in structure definitions
-#if	defined(USE_AMP)
+#if	defined(SQUISH_USE_AMP)
 #include "singlepalettelookup_ccr.inl"
 #endif
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 struct SinglePaletteLookup2;
 struct SinglePaletteLookup4;
 struct SinglePaletteLookup8;
@@ -66,7 +66,7 @@ protected:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct SinglePaletteFit_CCR : inherit_hlsl PaletteFit_CCR
 {
 public_hlsl
@@ -92,14 +92,14 @@ protected_hlsl
   int  ComputeEndPoints(tile_barrier barrier, const int thread,
 		        SinglePaletteLUT lArr) amp_restricted;
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 private_hlsl
   int3 m_entry;
   ccr8 m_index;
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static int3 m_entry;
   tile_static ccr8 m_index;
 #endif

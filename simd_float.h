@@ -31,7 +31,7 @@
 #pragma warning(disable: 4293)	// line 459
 #pragma warning(disable: 4505)	// line 954
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 #include <cmath>
 #include <algorithm>
 #endif
@@ -193,7 +193,7 @@ public:
   friend class Col4;
   friend class Vec3;
 
-#if	!defined(USE_AMP)
+#if	!defined(SQUISH_USE_AMP)
 private:
 #endif
   union { int x; int r; };
@@ -939,7 +939,7 @@ public:
     ((int *)destination)[3] = b.a;
   }
 
-#if	!defined(USE_AMP)
+#if	!defined(SQUISH_USE_AMP)
 private:
 #endif
   int r;
@@ -968,7 +968,7 @@ static float Abs(float v) {
   return std::abs(v);
 }
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 #define VEC4_CONST( X ) Vec4( X )
 
 class Vec3
@@ -1236,7 +1236,7 @@ public:
   friend class Col3;
   friend class Vec4;
 
-#if	!defined(USE_AMP) && !defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_AMP) && !defined(SQUISH_USE_COMPUTE)
 private:
 #endif
   union { float x; float r; };
@@ -1750,7 +1750,7 @@ public:
     std::swap(w, with.w);
   }
 
-#if	!defined(USE_AMP)
+#if	!defined(SQUISH_USE_AMP)
 private:
 #endif
   float x;
@@ -1759,7 +1759,7 @@ private:
   float w;
 };
 
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 inline Scr3 LengthSquared( Vec3::Arg v )
 {
   return Dot( v, v );
@@ -1780,7 +1780,7 @@ inline void LengthSquared( Vec4::Arg v , float *r )
   Dot( v, v, r );
 }
 #endif
-#endif // ndef USE_COMPUTE
+#endif // ndef SQUISH_USE_COMPUTE
 
 } // namespace squish
 

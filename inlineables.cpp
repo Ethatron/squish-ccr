@@ -43,7 +43,7 @@ extern const Col4 weights_C4[5][16];
 
 /* *****************************************************************************
  */
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 static doinline int passreg FloatToInt(float a, int limit) ccr_restricted
 {
   // use ANSI round-to-zero behaviour to get round-to-nearest
@@ -796,10 +796,10 @@ static int passreg CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_res
 
 /* *****************************************************************************
  */
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 static int3 FloatToInt(float3 a, int3 limit) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -812,7 +812,7 @@ static int3 FloatToInt(float3 a, int3 limit) amp_restricted
 
 static int4 FloatToInt(float4 a, int4 limit) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -825,7 +825,7 @@ static int4 FloatToInt(float4 a, int4 limit) amp_restricted
 
 static int2 QuantizeFloatToInt(float2 a, int2 limit) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -837,7 +837,7 @@ static int2 QuantizeFloatToInt(float2 a, int2 limit) amp_restricted
 
 static int3 QuantizeFloatToInt(float3 a, int3 limit) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 
@@ -849,7 +849,7 @@ static int3 QuantizeFloatToInt(float3 a, int3 limit) amp_restricted
 
 static int4 QuantizeFloatToInt(float4 a, int4 limit) amp_restricted
 {
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
 #endif
 

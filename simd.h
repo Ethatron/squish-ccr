@@ -39,18 +39,18 @@
 
 namespace squish {
 
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #if	defined(USE_AMP_DEBUG)
 typedef	Vec4	float4;
 typedef	Col4	int4;
 #endif
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 namespace Concurrency {
 namespace vector_math {
 #endif
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
   float4 minimum( float4 left, float4 right ) amp_restricted
   {
     return float4(
@@ -165,7 +165,7 @@ namespace vector_math {
     return left < right;
   }
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 }
 }
 #endif

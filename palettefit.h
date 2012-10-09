@@ -33,7 +33,7 @@
 namespace squish {
 
 // -----------------------------------------------------------------------------
-#if	!defined(USE_PRE)
+#if	!defined(SQUISH_USE_PRE)
 class PaletteSet;
 class PaletteFit
 {
@@ -104,7 +104,7 @@ protected:
 #endif
 
 // -----------------------------------------------------------------------------
-#if	defined(USE_AMP) || defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 struct PaletteFit_CCR
 {
 public_hlsl
@@ -132,14 +132,14 @@ protected_hlsl
 #define	CSTOP	1
 #define	CVALS	2
 
-#if	!defined(USE_COMPUTE)
+#if	!defined(SQUISH_USE_COMPUTE)
 protected_hlsl
   float4 m_line[CVALS];
   ccr8 m_matches[2][16];
 #endif
 };
 
-#if	defined(USE_COMPUTE)
+#if	defined(SQUISH_USE_COMPUTE)
   tile_static float4 m_line[CVALS];
   tile_static ccr8 m_matches[2][16];
 #endif
