@@ -64,7 +64,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
       Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
 
       // compute the principle component
-      ComputePrincipleComponent(covariance, m_principle[s]);
+      GetPrincipleComponent(covariance, m_principle[s]);
     }
   }
 
@@ -108,7 +108,7 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
   float const* weights = m_palette->GetWeights(set);
 
   m_xsum_wsum[set] = VEC4_CONST(0.0f);
-  m_xxsum_wwsum[set] = VEC4_CONST(0.0f);
+//m_xxsum_wwsum[set] = VEC4_CONST(0.0f);
   for (int i = 0; i < count; ++i) {
     int j = order[i];
 
@@ -118,13 +118,13 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
 
     m_points_weights[set][i] = x;
     m_xsum_wsum     [set]   += x;
-    m_xxsum_wwsum   [set]   += x * x;
+//  m_xxsum_wwsum   [set]   += x * x;
   }
 
   return true;
 }
 
-Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
+Scr4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
 {
   /*
   Vec4 const weight1(21.0f / 64.0f, 21.0f / 64.0f, 21.0f / 64.0f,  441.0f / 4096.0f);
@@ -134,8 +134,8 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
   Vec4 const weight1(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
   Vec4 const weight2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
   Vec4 const twonineths                        = VEC4_CONST(2.0f / 9.0f);
-  // onenineths = sqr(1.0 / distance) = sqr(1.0 / 3.0) = (1.0 / 9.0)
-  // twonineths = weight1 * weight2 = (2.0 / 9.0)
+  Vec4 const fivenineths                       = VEC4_CONST(5.0f / 9.0f);
+  Vec4 const convnineths                       = VEC4_CONST(2.5f / 1.0f);
 
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
@@ -150,7 +150,7 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
   ConstructOrdering(m_principle[set], 0, set);
 
   // check all possible clusters and iterate on the total order
-  Vec4 besterror = Vec4(FLT_MAX);
+  Scr4 besterror = Scr4(FLT_MAX);
 
   // loop over iterations (we avoid the case that all points in first or last cluster)
   for (int iterationIndex = 0;;) {
@@ -172,6 +172,7 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 
 	  // last cluster [k,count) is at the end
 	  Vec4 part3 = xsum_wsum - part2 - part1 - part0;
+//	  Vec4 partI = xsum_wsum - part2 - part1;
 
 	  // compute least squares terms directly
 	  Vec4 const alphax_sum = MultiplyAdd(part2, weight1, MultiplyAdd(part1, weight2, part0));
@@ -182,8 +183,17 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 
 	  Vec4 const alphabeta_sum = twonineths * (part1 + part2).SplatW();
 
+	  // equivalent
+//	  Vec4 const  betac_sum =                xsum_wsum                - alphax_sum;
+//	  Vec4 const beta2a_sum = (fivenineths * (part1 + part2) + partI) - alpha2_sum;
+//	  Vec4 const beta2b_sum = (convnineths *  alphabeta_sum  + partI) - alpha2_sum;
+
 	  //   alpha.x = p3 * 0/3  + p2 * 1/3  + p1 * 2/3  + p0 * 3/3
 	  //    beta.x = p3 * 3/3  + p2 * 2/3  + p1 * 1/3  + p0 * 0/3
+	  //   gamma.x = p3 * 3/3  + p2 * 3/3  + p1 * 3/3  + p0 * 3/3 = alpha.x + beta.x = xsum_wsum;
+	  //
+	  //   alpha.w = p3 * 0/3  + p2 * 1/9  + p1 * 4/9  + p0 * 9/9
+	  //    beta.w = p3 * 3/3  + p2 * 2/3  + p1 * 1/3  + p0 * 0/3
 	  //
 	  //   alpha.w =      0/3² +      1/3² +      2/3² +      ?.?²
 	  //    beta.w =      ?.?² +      2/3² +      1/3² +      0/3²
@@ -239,10 +249,10 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 	  // 8 muls, 4 adds
 
 	  // apply the metric to the error term
-	  Vec4 eS = HorizontalAdd(e4 * metric);
+	  Scr4 eS = Dot(e4, metric);
 
 	  // keep the solution if it wins (error can be negative ...)
-	  if (CompareFirstLessThan(eS, besterror)) {
+	  if (besterror > eS) {
 	    besterror = eS;
 
 	    beststart = a;
@@ -302,7 +312,7 @@ Vec4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 
 #include "paletteclusterfit.inl"
 
-Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
+Scr4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
 {
   /*
   Vec4 const weight1(21.0f / 64.0f, 21.0f / 64.0f, 21.0f / 64.0f,  441.0f / 4096.0f);
@@ -312,13 +322,6 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
   Vec4 const weight1(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
   Vec4 const weight2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
   Vec4 const twonineths                        = VEC4_CONST(2.0f / 9.0f);
-  // onenineths = sqr(1.0 / distance) = sqr(1.0 / 3.0) = (1.0 / 9.0)
-  // twonineths = weight1 * weight2 = (2.0 / 9.0)
-  
-  // constants if weights == 1
-  Vec4 alphabeta_dltas  = *((Vec4 *)part2delta[0]);
-  Vec4 *alphabeta_inits = (Vec4 *)part2inits[0];
-  float *alphabeta_factors = (float *)part2factors;
 
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
@@ -333,40 +336,40 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
   ConstructOrdering(m_principle[set], 0, set);
 
   // check all possible clusters and iterate on the total order
-  Vec4 besterror = Vec4(FLT_MAX);
+  Scr4 besterror = Scr4(FLT_MAX);
 
   // loop over iterations (we avoid the case that all points in first or last cluster)
   for (int iterationIndex = 0;;) {
     // cache some values
     Vec4 const xsum_wsum = m_xsum_wsum[set];
     
+    // constants if weights == 1
+    Vec4 alphabeta_dltas = *((Vec4 *)part2delta[0]);
+    Vec4 *alphabeta_inits = (Vec4 *)part2inits[0];
+    float *alphabeta_factors = (float *)part2factors;
+
 #if 0
   Vec4 lasta = Vec4(0.0f);
   Vec4 lastb = xsum_wsum;
   Vec4 lastc = Vec4(0.0f);
 #endif
-  
-//	  fprintf(stderr, "/* begin iterations */\n");
 
     // first cluster [0,i) is at the start
     Vec4 part0 = VEC4_CONST(0.0f);
     for (int i = 0; i < count; ++i) {
-      
-//	  fprintf(stderr, "/* begin part1 iterations */\n");
 
     // second cluster [i,j) is one third along
     Vec4 part1 = VEC4_CONST(0.0f);
     for (int j = i;;) {
-      
-//	  fprintf(stderr, "/* begin part2 iterations */\n");
 
     // third cluster [j,k) is two thirds along
     Vec4 part2 = (j == 0) ? m_points_weights[set][0] : VEC4_CONST(0.0f);
     Vec4 alphabeta_val = *alphabeta_inits++;
     int kmin = (j == 0) ? 1 : j;
     for (int k = kmin;;) {
+	  // TODO: the inner alphabeta_sum seems always to be the same sequence
 	  Vec4 alphabeta_factor = alphabeta_val * Vec4(*alphabeta_factors++);
-	  
+
 	  // compute least squares terms directly
 	  Vec4 const alphax_sum =   MultiplyAdd(part2, weight1, MultiplyAdd(part1, weight2, part0));
 	  Vec4 const  betax_sum = /*MultiplyAdd(part1, weight1, MultiplyAdd(part2, weight2, part3))*/ xsum_wsum - alphax_sum;
@@ -385,7 +388,7 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 	  // compute least squares terms directly
 	  Vec4 const _alphax_sum = MultiplyAdd(part2, weight1, MultiplyAdd(part1, weight2, part0));
 	  Vec4 const  _betax_sum = MultiplyAdd(part1, weight1, MultiplyAdd(part2, weight2, part3));
-	  Vec4 const  _betac_sum = xsum_wsum - _alphax_sum;
+//	  Vec4 const  _betac_sum = xsum_wsum - _alphax_sum;
 
 	  Vec4 const _alpha2_sum = _alphax_sum.SplatW();
 	  Vec4 const  _beta2_sum =  _betax_sum.SplatW();
@@ -394,6 +397,7 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 
 	  //   alpha.x = p3 * 0/3  + p2 * 1/3  + p1 * 2/3  + p0 * 3/3
 	  //    beta.x = p3 * 3/3  + p2 * 2/3  + p1 * 1/3  + p0 * 0/3
+	  //   gamma.x = p3 * 3/3  + p2 * 3/3  + p1 * 3/3  + p0 * 3/3 = alpha.x + beta.x = xsum_wsum;
 	  //
 	  //   alpha.w =      0/3² +      1/3² +      2/3² +      ?.?²
 	  //    beta.w =      ?.?² +      2/3² +      1/3² +      0/3²
@@ -403,7 +407,7 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 	  Vec4 _factor = Reciprocal(NegativeMultiplySubtract(_alphabeta_sum, _alphabeta_sum, _alpha2_sum * _beta2_sum));
 	  Vec4 _a = NegativeMultiplySubtract( _betax_sum, _alphabeta_sum, _alphax_sum *  _beta2_sum) * _factor;
 	  Vec4 _b = NegativeMultiplySubtract(_alphax_sum, _alphabeta_sum,  _betax_sum * _alpha2_sum) * _factor;
-	  
+
 #define	limit 1e-5
 	  assert(fabs(_alpha2_sum.W() - alpha2_sum.X()) < limit);
 	  assert(fabs(_beta2_sum.W() - beta2_sum.X()) < limit);
@@ -422,13 +426,13 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 	  assert(fabs(b.X() - _b.X()) < limit);
 	  assert(fabs(b.Y() - _b.Y()) < limit);
 	  assert(fabs(b.Z() - _b.Z()) < limit);
-	    
+
 #if 0
 	  fprintf(stderr, "{%.9ff},", _factor.W());
 	  if (k == kmin)
 	    fprintf(stderr, "{%.9f, %.9f, %.9f},\n", alpha2_sum.W(), beta2_sum.W(), alphabeta_sum.W());
 	  fprintf(stderr, "{%.9f/*%.9f*/,%.9f/*%.9f*/,%.9f,%.9f},\n",
-	    alpha2_sum.W(), lasta.W() - alpha2_sum.W(), 
+	    alpha2_sum.W(), lasta.W() - alpha2_sum.W(),
 	    beta2_sum.W(), lastb.W() - beta2_sum.W(),
 	    alphabeta_sum.W(), lastc.W() - alphabeta_sum.W(),
 	    factor.W());
@@ -438,7 +442,7 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 	  lastc = alphabeta_sum;
 #endif
 #endif
-	  
+
 	  // snap floating-point-values to the integer-lattice
 	  a = q.SnapToLattice(a, sb, 1 << SBSTART);
 	  b = q.SnapToLattice(b, sb, 1 << SBEND);
@@ -450,10 +454,10 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 	  Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	  // apply the metric to the error term
-	  Vec4 eS = HorizontalAdd(e4 * metric);
+	  Scr4 eS = Dot(e4, metric);
 
 	  // keep the solution if it wins (error can be negative ...)
-	  if (CompareFirstLessThan(eS, besterror)) {
+	  if (besterror > eS) {
 	    besterror = eS;
 
 	    beststart = a;
@@ -464,14 +468,12 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 	    bestj = j,
 	    bestk = k;
 	  }
-	  
+
       alphabeta_val += alphabeta_dltas;
 
       // advance
       if (k == count) break;
       part2 += m_points_weights[set][k]; ++k; }
-    
-//	    fprintf(stderr, "\n");
 
       // advance
       if (j == count) break;
@@ -496,8 +498,6 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
       break;
   }
 
-//	    fflush(stderr);
-
   // assign closest points
   u8 const* order = (u8*)m_order[set] + 16 * bestiteration;
 
@@ -517,7 +517,7 @@ Vec4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
   return besterror;
 }
 
-Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
+Scr4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
 {
   /*
   Vec4 const weight1( 9.0f / 64.0f,  9.0f / 64.0f,  9.0f / 64.0f,   81.0f / 4096.0f);
@@ -537,6 +537,12 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
   Vec4 const twonineths                        = VEC4_CONST( 6.0f / 49.0f);
   Vec4 const threenineths                      = VEC4_CONST(10.0f / 49.0f);
   Vec4 const fournineths                       = VEC4_CONST(12.0f / 49.0f);
+  Vec4 const twonineths_                       = VEC4_CONST(37.0f / 49.0f);
+  Vec4 const threenineths_                     = VEC4_CONST(29.0f / 49.0f);
+  Vec4 const fournineths_                      = VEC4_CONST(25.0f / 49.0f);
+  Vec4 const twoninethsc                       = VEC4_CONST((37.0f / 49.0f) / ( 6.0f / 49.0f));
+  Vec4 const threeninethsc                     = VEC4_CONST((29.0f / 49.0f) / (10.0f / 49.0f));
+  Vec4 const fourninethsc                      = VEC4_CONST((25.0f / 49.0f) / (12.0f / 49.0f));
   // onenineths   = sqr(1.0 / distance) = sqr(1.0 / 7.0) = (1.0 / 49.0)
   // twonineths   = weight1 * weight6 = (6.0 / 49.0)
   // threenineths = weight2 * weight5 = (10.0 / 49.0)
@@ -559,7 +565,7 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
   ConstructOrdering(m_principle[set], 0, set);
 
   // check all possible clusters and iterate on the total order
-  Vec4 besterror = Vec4(FLT_MAX);
+  Scr4 besterror = Scr4(FLT_MAX);
 
   // loop over iterations (we avoid the case that all points in first or last cluster)
   for (int iterationIndex = 0;;) {
@@ -698,6 +704,7 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
 
 	  //  alphax.t = p7 * 0/7  + p6 * 1/7  + p5 *  2/7  + p4 *  3/7  + p3 *  4/7  + p2 *  5/7  + p1 * 6/7  + p0 * 7/7
 	  //   betax.t = p7 * 7/7  + p6 * 6/7  + p5 *  5/7  + p4 *  4/7  + p3 *  3/7  + p2 *  2/7  + p1 * 1/7  + p0 * 0/7
+	  //   gamma.x = p7 * 7/7  + p6 * 7/7  + p5 *  7/7  + p4 *  7/7  + p3 *  7/7  + p2 *  7/7  + p1 * 7/7  + p0 * 7/7 = alpha.x + beta.x = xsum_wsum;
 	  //
 	  //  alphax.w =      0/7² +      1/7² +       2/7² +       3.7² +       4/7² +       5/7² +      6/7² +      ?/?²
 	  //   betax.w =      ?.?² +      6/7² +       5/7² +       4/7² +       3/7² +       2/7² +      1/7² +      0/7²
@@ -725,10 +732,10 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
 	  Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	  // apply the metric to the error term
-	  Vec4 eS = HorizontalAdd(e4 * metric);
+	  Vec4 eS = Dot(e4, metric);
 
 	  // keep the solution if it wins (error can be negative ...)
-	  if (CompareFirstLessThan(eS, besterror)) {
+	  if (besterror > eS) {
 	    besterror = eS;
 
 	    beststart = a;
@@ -861,19 +868,25 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
 
 	  // last cluster [k,count) is at the end
 	  Vec4 part7 = xsum_wsum - sub6;
+//	  Vec4 partI = xsum_wsum - (sub6 - part0);
 
 	  // compute least squares terms directly
 	  Vec4 const alphax_sum = add6a + part0;
 	  Vec4 const  betax_sum = add6b + part7;
-	  Vec4 const  betac_sum = xsum_wsum - alphax_sum;
 
 	  Vec4 const alpha2_sum = alphax_sum.SplatW();
 	  Vec4 const  beta2_sum =  betax_sum.SplatW();
 
 	  Vec4 const alphabeta_sum = sum16 + sum25 + sum34;
 
+	  // equivalent
+//	  Vec4 const  betac_sum =                                               xsum_wsum                                                    - alphax_sum;
+//	  Vec4 const beta2a_sum = (twonineths_ * (part1 + part6) + threenineths_ * (part2 + part5) + fournineths_ * (part3 + part4) + partI) - alpha2_sum;
+//	  Vec4 const beta2b_sum = (twoninethsc *      sum16      + threeninethsc *      sum25      + fourninethsc *      sum34      + partI) - alpha2_sum;
+
 	  //  alphax.t = p7 * 0/7  + p6 * 1/7  + p5 *  2/7  + p4 *  3/7  + p3 *  4/7  + p2 *  5/7  + p1 * 6/7  + p0 * 7/7
 	  //   betax.t = p7 * 7/7  + p6 * 6/7  + p5 *  5/7  + p4 *  4/7  + p3 *  3/7  + p2 *  2/7  + p1 * 1/7  + p0 * 0/7
+	  //   gamma.x = p7 * 7/7  + p6 * 7/7  + p5 *  7/7  + p4 *  7/7  + p3 *  7/7  + p2 *  7/7  + p1 * 7/7  + p0 * 7/7 = alpha.x + beta.x = xsum_wsum;
 	  //
 	  //  alphax.w =      0/7² +      1/7² +       2/7² +       3.7² +       4/7² +       5/7² +      6/7² +      ?/?²
 	  //   betax.w =      ?.?² +      6/7² +       5/7² +       4/7² +       3/7² +       2/7² +      1/7² +      0/7²
@@ -901,10 +914,10 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
 	  Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	  // apply the metric to the error term
-	  Vec4 eS = HorizontalAdd(e4 * metric);
+	  Scr4 eS = Dot(e4, metric);
 
 	  // keep the solution if it wins (error can be negative ...)
-	  if (CompareFirstLessThan(eS, besterror)) {
+	  if (besterror > eS) {
 	    besterror = eS;
 
 	    beststart = a;
@@ -991,7 +1004,7 @@ Vec4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
   return besterror;
 }
 
-Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
+Scr4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
 {
   /*
   Vec4 const weight1( 9.0f / 64.0f,  9.0f / 64.0f,  9.0f / 64.0f,   81.0f / 4096.0f);
@@ -1015,7 +1028,7 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
   // twonineths   = weight1 * weight6 = (6.0 / 49.0)
   // threenineths = weight2 * weight5 = (10.0 / 49.0)
   // fournineths  = weight3 * weight4 = (12.0 / 49.0)
-  
+
   // constants if weights == 1
 
   Vec4 const two = VEC4_CONST(2.0f);
@@ -1035,7 +1048,7 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
   ConstructOrdering(m_principle[set], 0, set);
 
   // check all possible clusters and iterate on the total order
-  Vec4 besterror = Vec4(FLT_MAX);
+  Scr4 besterror = Scr4(FLT_MAX);
 
   // loop over iterations (we avoid the case that all points in first or last cluster)
   for (int iterationIndex = 0;;) {
@@ -1045,7 +1058,7 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
     // first cluster [0,i) is at the start
     Vec4 part0 = VEC4_CONST(0.0f);
     for (int i = 0; i < count; ++i) {
-      
+
 	  Vec4 sum34;
 	  Vec4 sum25;
 	  Vec4 sum16;
@@ -1090,6 +1103,8 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 	  Vec4 add5a = weight2 * part5 + add4a;
 	  Vec4 add5b = weight5 * part5 + add4b;
 
+//	  fprintf(stderr, "/* begin part6 iterations */\n");
+
     // seventh cluster [n,o) is six seventh along
     Vec4 part6 = (n == 0) ? m_points_weights[set][0] : VEC4_CONST(0.0f);
          sum16 = (n == 0) ? twonineths * (part1.SplatW() + Vec4(1.0f)) : twonineths * (part1.SplatW());
@@ -1098,13 +1113,13 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 	  Vec4 sub6  =    sub5 + part6;
 	  Vec4 add6a = weight1 * part6 + add5a;
 	  Vec4 add6b = weight6 * part6 + add5b;
-	  
+
 #if 0
 #define	limit 1e-5
 //	  assert(fabs(_alpha2_sum.W() - alpha2_sum.X()) < limit);
 //	  assert(fabs(_beta2_sum.W() - beta2_sum.X()) < limit);
 //	  assert(fabs(_alphabeta_sum.W() - alphabeta_sum.X()) < limit);
-	  
+
 	  Vec4 _sum34 = fournineths  * (part3 + part4).SplatW();
 	  Vec4 _sum25 = threenineths * (part2 + part5).SplatW();
 	  Vec4 _sum16 = twonineths   * (part1 + part6).SplatW();
@@ -1116,15 +1131,19 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 	  // compute least squares terms directly
 	  Vec4 const alphax_sum = add6a + part0;
 	  Vec4 const  betax_sum = add6b + part7;
-	  Vec4 const  betac_sum = xsum_wsum - alphax_sum;
+//	  Vec4 const  betac_sum = xsum_wsum - alphax_sum;
 
 	  Vec4 const alpha2_sum = alphax_sum.SplatW();
 	  Vec4 const  beta2_sum =  betax_sum.SplatW();
 
+	  // TODO: the inner alphabeta_sum seems always to be the same sequence
 	  Vec4 const alphabeta_sum = sum16 + sum25 + sum34;
+
+//	  fprintf(stderr, "  {%.9ff},\n", alphabeta_sum.W());
 
 	  //  alphax.t = p7 * 0/7  + p6 * 1/7  + p5 *  2/7  + p4 *  3/7  + p3 *  4/7  + p2 *  5/7  + p1 * 6/7  + p0 * 7/7
 	  //   betax.t = p7 * 7/7  + p6 * 6/7  + p5 *  5/7  + p4 *  4/7  + p3 *  3/7  + p2 *  2/7  + p1 * 1/7  + p0 * 0/7
+	  //   gamma.x = p7 * 7/7  + p6 * 7/7  + p5 *  7/7  + p4 *  7/7  + p3 *  7/7  + p2 *  7/7  + p1 * 7/7  + p0 * 7/7 = alpha.x + beta.x = xsum_wsum;
 	  //
 	  //  alphax.w =      0/7² +      1/7² +       2/7² +       3.7² +       4/7² +       5/7² +      6/7² +      ?/?²
 	  //   betax.w =      ?.?² +      6/7² +       5/7² +       4/7² +       3/7² +       2/7² +      1/7² +      0/7²
@@ -1146,10 +1165,10 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 	  Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	  // apply the metric to the error term
-	  Vec4 eS = HorizontalAdd(e4 * metric);
+	  Scr4 eS = Dot(e4, metric);
 
 	  // keep the solution if it wins (error can be negative ...)
-	  if (CompareFirstLessThan(eS, besterror)) {
+	  if (besterror > eS) {
 	    besterror = eS;
 
 	    beststart = a;
@@ -1164,7 +1183,7 @@ Vec4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 	    bestn = n,
 	    besto = o;
 	  }
-	  
+
       // advance
       if (o == count) break;
       sum16 += twonineths;
@@ -1254,7 +1273,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
 
   // match each point to the closest code
   a16 u8 closest[4][16];
-  Vec4 error = Vec4(0.0f);
+  Scr4 error = Scr4(0.0f);
 
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
@@ -1285,7 +1304,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
       u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
 
       // find the closest code
-      Vec4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
+      Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
@@ -1297,7 +1316,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
     // (cluster-fit is really really really bad on one channel cases)
     else if (s >= isets) {
       // find the closest code
-      Vec4 dist = ComputeCodebook(s, metric, q, sb, kb, closest[s]);
+      Scr4 dist = ComputeCodebook(s, metric, q, sb, kb, closest[s]);
 
       // accumulate the error
       error += dist * 1.0f;
@@ -1305,8 +1324,8 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
     else {
       // metric is squared as well
       Vec4 cmetric = metric * metric;
-      Vec4 cerror = Vec4(0.0f);
-      
+      Scr4 cerror = Scr4(0.0f);
+
 #if defined(TRACK_STATISTICS)
       /* there is a clear skew towards unweighted clusterfit (all weights == 1)
        *
@@ -1320,7 +1339,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
        *  [3]	0x00340960 {194, 0}
        */
       if (m_palette->GetCount(s) > 1) {
-	if (m_palette->GetMaxFrequency(s) == 1)
+	if (m_palette->IsUnweighted(s))
 	  gstat.has_noweightsets[kb][s][0]++;
 	else
 	  gstat.has_noweightsets[kb][s][1]++;
@@ -1331,13 +1350,13 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
       assume(kb >= 2 && kb <= 3);
       switch(kb) {
         case 2:
-          if (m_palette->GetMaxFrequency(s) == 1)
+          if (m_palette->IsUnweighted(s))
             cerror = ClusterSearch4Constant(closest, count, s, KillW(cmetric), q, sb);
           else
             cerror = ClusterSearch4        (closest, count, s, KillW(cmetric), q, sb);
           break;
         case 3:
-          if (m_palette->GetMaxFrequency(s) == 1)
+          if (m_palette->IsUnweighted(s))
 	    cerror = ClusterSearch8Constant(closest, count, s, KillW(cmetric), q, sb);
           else
 	    cerror = ClusterSearch8        (closest, count, s, KillW(cmetric), q, sb);
@@ -1351,7 +1370,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
     }
 
     // kill early if this scheme looses
-    if (CompareFirstLessThan(m_besterror, error))
+    if (!(error < m_besterror))
       return;
   }
 
@@ -1368,9 +1387,9 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   // TODO: cluster-fit is still worst than range-fit currently, why?
 #if 1 //ndef NDEBUG
   // kill late if this scheme looses
-  error = Vec4(0.0f); SumError(closest, mode, error);
+  error = Scr4(0.0f); SumError(closest, mode, error);
   // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
-  if (CompareFirstLessThan(m_besterror, error))
+  if (!(error < m_besterror))
     return;
 #endif
 
@@ -1467,7 +1486,7 @@ void ClusterFit_CCR::AssignSet(tile_barrier barrier, const int thread, PaletteSe
   Sym3x3 covariance = ComputeWeightedCovariance3(barrier, thread, count, values, weights);
 
   // compute the principle component
-  float4 principle = ComputePrincipleComponent(barrier, thread, covariance);
+  float4 principle = GetPrincipleComponent(barrier, thread, covariance);
 
   threaded_cse(0) {
     // compute the principle component

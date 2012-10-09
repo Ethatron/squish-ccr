@@ -45,7 +45,7 @@ class PaletteClusterFit : public SinglePaletteFit, public PaletteChannelFit
 {
 public:
   PaletteClusterFit(PaletteSet const* palettes, int flags, int swap = -1, int shared = -1);
-  
+
   virtual void Compress(void* block, int mode);
 
 private:
@@ -58,11 +58,11 @@ private:
 
   bool ConstructOrdering(Vec4 const& axis, int iteration, int set);
 
-  Vec4 ClusterSearch4Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
-  Vec4 ClusterSearch8Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
+  Scr4 ClusterSearch4Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
+  Scr4 ClusterSearch8Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
 
-  Vec4 ClusterSearch4(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
-  Vec4 ClusterSearch8(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
+  Scr4 ClusterSearch4(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
+  Scr4 ClusterSearch8(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
 
   enum {
     kMinIterations = 1,
@@ -72,7 +72,7 @@ private:
   int  m_iterationCount;
   Vec4 m_principle[4];
   Vec4 m_xsum_wsum[4];
-  Vec4 m_xxsum_wwsum[4];
+//Vec4 m_xxsum_wwsum[4];
   Vec4 m_points_weights[4][16];
   a16 u8 m_order[4][16 * kMaxIterations];
 };
