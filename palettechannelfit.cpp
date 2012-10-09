@@ -41,7 +41,7 @@ PaletteChannelFit::PaletteChannelFit(PaletteSet const* palette, int flags, int s
 {
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  
+
   for (int a = isets; a < (isets + asets); a++) {
     // cache some values
     int const count = m_palette->GetCount(a);
@@ -70,31 +70,31 @@ PaletteChannelFit::PaletteChannelFit(PaletteSet const* palette, int flags, int s
   }
 }
 
-Vec4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer &q, int sb, int ib, u8 (&closest)[16])
+Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer &q, int sb, int ib, u8 (&closest)[16])
 {
   // cache some values
   int const count = m_palette->GetCount(set);
   Vec4 const* values = m_palette->GetPoints(set);
   u8 const* freq = m_palette->GetFrequencies(set);
-  
+
   // snap floating-point-values to the integer-lattice
   Vec4 cstart = q.SnapToLattice(m_start_candidate[set], sb, 1 << SBSTART);
   Vec4 cend   = q.SnapToLattice(m_end_candidate  [set], sb, 1 << SBEND);
-  
+
   // the lattice to walk over
   Vec4 wstart;
   Vec4 wend;
   Vec4 wdelta = q.gridrcp; if (sb) wdelta *= Vec4(2.0f);
 
-  // lower the lower by 1 and raise the higher by 1 
+  // lower the lower by 1 and raise the higher by 1
   // compensates a bit the rounding error of the end-points
   cstart = Max(cstart - wdelta, Vec4(0.0f));
   cend   = Min(cend   + wdelta, Vec4(1.0f));
-  
+
   // create a codebook
   Vec4 codes[1 << 4];
-  
-  Vec4 besterror = Vec4(FLT_MAX);
+
+  Scr4 besterror = Scr4(FLT_MAX);
   Vec4 beststart = cstart;
   Vec4 bestend = cend;
 
@@ -105,23 +105,23 @@ Vec4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
     while (!CompareFirstGreaterThan(wstart, wend)) {
       // swap the code-book when the swap-index bit is set
       int ccs = CodebookP(codes, ib, wstart, wend);
-	  
-      Vec4 error = Vec4(0.0f);
+
+      Scr4 error = Scr4(0.0f);
       for (int i = 0; i < count; ++i) {
-	Vec4 dist = Vec4(FLT_MAX);
+	Scr4 dist = Scr4(FLT_MAX);
 	for (int j = 0; j < ccs; ++j)
 	  dist = Min(dist, LengthSquared(metric * (values[i] - codes[j])));
 
 	// accumulate the error
 	error += dist * freq[i];
       }
-	  
-      if (CompareFirstLessThan(error, besterror)) {
+
+      if (besterror > error) {
 	besterror = error;
 	beststart = wstart;
 	bestend   = wend;
       }
-      
+
       wstart += wdelta;
     }
 
@@ -137,12 +137,12 @@ Vec4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
 
   for (int i = 0; i < count; ++i) {
     // find the closest code
-    Vec4 dist = Vec4(FLT_MAX);
+    Scr4 dist = Scr4(FLT_MAX);
     int idx = 0;
 
     for (int j = 0; j < ccs; ++j) {
-      Vec4 d = LengthSquared(metric * (values[i] - codes[j]));
-      if (CompareFirstLessThan(d, dist)) {
+      Scr4 d = LengthSquared(metric * (values[i] - codes[j]));
+      if (d < dist) {
 	dist = d;
 	idx = j;
       }

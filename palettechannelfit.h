@@ -48,7 +48,7 @@ private:
   Vec4 m_end_candidate[4];
 
 protected:
-  Vec4 ComputeCodebook(int set, Vec4 const &metric, vQuantizer &q, int sb, int ib, u8 (&closest)[16]);
+  Scr4 ComputeCodebook(int set, Vec4 const &metric, vQuantizer &q, int sb, int ib, u8 (&closest)[16]);
 };
 #endif
 
