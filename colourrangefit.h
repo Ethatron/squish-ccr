@@ -39,16 +39,16 @@ class ColourSet;
 class ColourRangeFit : public ColourFit
 {
 public:
-  ColourRangeFit( ColourSet const* colours, int flags );
+  ColourRangeFit(ColourSet const* colours, int flags);
 
 private:
-  virtual void Compress3( void* block );
-  virtual void Compress4( void* block );
+  virtual void Compress3(void* block);
+  virtual void Compress4(void* block);
 
   Vec3 m_metric;
   Vec3 m_start;
   Vec3 m_end;
-  float m_besterror;
+  Scr3 m_besterror;
 };
 #endif
 

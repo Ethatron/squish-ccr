@@ -35,8 +35,8 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(USE_PRE)
-ColourRangeFit::ColourRangeFit( ColourSet const* colours, int flags )
-  : ColourFit( colours, flags )
+ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
+  : ColourFit(colours, flags)
 {
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
 
@@ -52,7 +52,7 @@ ColourRangeFit::ColourRangeFit( ColourSet const* colours, int flags )
     m_metric = Vec3(0.3333f, 0.3334f, 0.3333f);
 
   // initialize the best error
-  m_besterror = FLT_MAX;
+  m_besterror = Scr3(FLT_MAX);
 
   // cache some values
   int const count = m_colours->GetCount();
@@ -63,28 +63,27 @@ ColourRangeFit::ColourRangeFit( ColourSet const* colours, int flags )
   Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
 
   // compute the principle component
-  Vec3 principle; ComputePrincipleComponent(covariance, principle);
+  Vec3 principle; GetPrincipleComponent(covariance, principle);
 
   // get the min and max range as the codebook endpoints
-  Vec3 start( 0.0f );
-  Vec3 end( 0.0f );
-  if( count > 0 )
-  {
-    float min, max;
+  Vec3 start(0.0f);
+  Vec3 end(0.0f);
+
+  if (count > 0) {
+    Scr3 min, max;
 
     // compute the range
     start = end = values[0];
-    min = max = Dot( values[0], principle );
-    for( int i = 1; i < count; ++i )
-    {
-      float val = Dot( values[i], principle );
-      if( val < min )
-      {
+    min = max = Dot(values[0], principle);
+
+    for (int i = 1; i < count; ++i) {
+      Scr3 val = Dot(values[i], principle);
+
+      if (val < min) {
 	start = values[i];
 	min = val;
       }
-      else if( val > max )
-      {
+      else if (val > max) {
 	end = values[i];
 	max = val;
       }
@@ -105,24 +104,23 @@ void ColourRangeFit::Compress3(void* block)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
+  u8 const* freq = m_colours->GetFrequencies();
 
   // create a codebook
-  Vec3 codes[3];
-
-  Codebook3(codes, m_start, m_end);
+  Vec3 codes[3]; Codebook3(codes, m_start, m_end);
 
   // match each point to the closest code
   u8 closest[16];
 
-  float error = 0.0f;
+  Scr3 error = Scr3(0.0f);
   for (int i = 0; i < count; ++i) {
     // find the closest code
-    float dist = FLT_MAX;
+    Scr3 dist = Scr3(FLT_MAX);
 
     int idx = 0;
     for (int j = 0; j < 3; ++j) {
-      float d = LengthSquared(m_metric * (values[i] - codes[j]));
-      if (d < dist) {
+      Scr3 d = LengthSquared(m_metric * (values[i] - codes[j]));
+      if (dist > d) {
 	dist = d;
 	idx = j;
       }
@@ -132,11 +130,14 @@ void ColourRangeFit::Compress3(void* block)
     closest[i] = (u8)idx;
 
     // accumulate the error
-    error += dist;
+    error += dist * freq[i];
   }
 
   // save this scheme if it wins
   if (error < m_besterror) {
+    // save the error
+    m_besterror = error;
+
     // remap the indices
     u8 indices[16];
 
@@ -144,9 +145,6 @@ void ColourRangeFit::Compress3(void* block)
 
     // save the block
     WriteColourBlock3(m_start, m_end, indices, block);
-
-    // save the error
-    m_besterror = error;
   }
 }
 
@@ -155,24 +153,23 @@ void ColourRangeFit::Compress4(void* block)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
+  u8 const* freq = m_colours->GetFrequencies();
 
   // create a codebook
-  Vec3 codes[4];
-
-  Codebook4(codes, m_start, m_end);
+  Vec3 codes[4]; Codebook4(codes, m_start, m_end);
 
   // match each point to the closest code
   u8 closest[16];
 
-  float error = 0.0f;
+  Scr3 error = Scr3(0.0f);
   for (int i = 0; i < count; ++i) {
     // find the closest code
-    float dist = FLT_MAX;
-
+    Scr3 dist = Scr3(FLT_MAX);
     int idx = 0;
+
     for (int j = 0; j < 4; ++j) {
-      float d = LengthSquared(m_metric * (values[i] - codes[j]));
-      if (d < dist) {
+      Scr3 d = LengthSquared(m_metric * (values[i] - codes[j]));
+      if (dist > d) {
 	dist = d;
 	idx = j;
       }
@@ -182,11 +179,14 @@ void ColourRangeFit::Compress4(void* block)
     closest[i] = (u8)idx;
 
     // accumulate the error
-    error += dist;
+    error += dist * freq[i];
   }
 
   // save this scheme if it wins
   if (error < m_besterror) {
+    // save the error
+    m_besterror = error;
+
     // remap the indices
     u8 indices[16];
 
@@ -194,9 +194,6 @@ void ColourRangeFit::Compress4(void* block)
 
     // save the block
     WriteColourBlock4(m_start, m_end, indices, block);
-
-    // save the error
-    m_besterror = error;
   }
 }
 #endif
@@ -238,7 +235,7 @@ void ColourRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Colou
   Sym3x3 covariance = ComputeWeightedCovariance3(barrier, thread, count, values, weights);
 
   // compute the principle component
-  float3 principle = ComputePrincipleComponent(barrier, thread, covariance);
+  float3 principle = GetPrincipleComponent(barrier, thread, covariance);
 
   // get the min and max range as the codebook endpoints
   float3 cline[CVALS];
