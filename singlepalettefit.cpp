@@ -64,12 +64,12 @@ SinglePaletteFit::SinglePaletteFit(PaletteSet const* palette, int flags, int swa
 {
 }
 
-Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask)
 {
 #ifdef FEATURE_SHAREDBITS_TRIALS
   // merge start and end shared bits
   sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
-  
+
 #define sp_lookup_5u1_4_sb_    sp_lookup_5u1_4[sb]
 #define sp_lookup_7u1_4_sb_    sp_lookup_7u1_4[sb]
 #define sp_lookup_4u1_8_sb_    sp_lookup_4u1_8[sb]
@@ -150,7 +150,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 	case  8: cl = sp_lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
 	default: abort(); break;
       }
-      
+
       assume(ab == 8);
       switch (ab) {
 	case  8: al = sp_lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
@@ -164,15 +164,15 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
     } break;
 
     default:
-      return Vec4(INT_MAX);
+      return Scr4(INT_MAX);
       break;
   }
 }
 
-Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup2 const* const* lookups, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup2 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
-  m_error = Vec4(FLT_MAX);
+  Scr4 besterror = Scr4(FLT_MAX);
 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
@@ -189,7 +189,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   for (int index = 0; index < 2; ++index) {
     // check the error for this codebook index
     SP_SourceBlock const* sources[4] = {NULL};
-    Vec4 error(0.0f);
+    Vec4 cerror(0.0f);
 
     for (int channel = 0; channel < 4; ++channel) {
       // skip if it's completely irrelevant what's in a specific channel
@@ -202,15 +202,18 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 	sources[channel] = lookup[target].sources + index;
 
 	// accumulate the error
-	error.GetO(channel) = eLUT[sources[channel]->error];
+	cerror.GetO(channel) = eLUT[sources[channel]->error];
       }
     }
 
     // calculate the error
-    error = LengthSquared(metric * error);
+    Scr4 error = LengthSquared(metric * cerror);
 
     // keep it if the error is lower
-    if (CompareFirstLessThan(error, m_error)) {
+    if (error < besterror) {
+      // save the error
+      besterror = error;
+
       m_start[set] = Vec4(
 	sources[0] ? (float)sources[0]->start : 0.0f,
 	sources[1] ? (float)sources[1]->start : 0.0f,
@@ -226,21 +229,20 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       ) * q.gridrcp;
 
       m_index = (u8)(1 * index);
-      m_error = error;
 
       // early out
-      if (!CompareFirstGreaterThan(m_error, Vec4(0.0f)))
-	return m_error;
+      if (!(besterror > Scr4(0.0f)))
+	return besterror;
     }
   }
 
-  return m_error;
+  return besterror;
 }
 
-Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup4 const* const* lookups, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup4 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
-  m_error = Vec4(FLT_MAX);
+  Scr4 besterror = Scr4(FLT_MAX);
 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
@@ -257,7 +259,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   for (int index = 0; index < 4; ++index) {
     // check the error for this codebook index
     SP_SourceBlock const* sources[4] = {NULL};
-    Vec4 error(0.0f);
+    Vec4 cerror(0.0f);
 
     for (int channel = 0; channel < 4; ++channel) {
       // skip if it's completely irrelevant what's in a specific channel
@@ -270,15 +272,17 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 	sources[channel] = lookup[target].sources + index;
 
 	// accumulate the error
-	error.GetO(channel) = eLUT[sources[channel]->error];
+	cerror.GetO(channel) = eLUT[sources[channel]->error];
       }
     }
 
     // calculate the error
-    error = LengthSquared(metric * error);
+    Scr4 error = LengthSquared(metric * cerror);
 
     // keep it if the error is lower
-    if (CompareFirstLessThan(error, m_error)) {
+    if (error < besterror) {
+      besterror = error;
+
       m_start[set] = Vec4(
 	sources[0] ? (float)sources[0]->start : 0.0f,
 	sources[1] ? (float)sources[1]->start : 0.0f,
@@ -294,21 +298,20 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       ) * q.gridrcp;
 
       m_index = (u8)(1 * index);
-      m_error = error;
 
       // early out
-      if (!CompareFirstGreaterThan(m_error, Vec4(0.0f)))
-	return m_error;
+      if (!(besterror > Scr4(0.0f)))
+	return besterror;
     }
   }
 
-  return m_error;
+  return besterror;
 }
 
-Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup8 const* const* lookups, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup8 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
-  m_error = Vec4(FLT_MAX);
+  Scr4 besterror = Scr4(FLT_MAX);
 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
@@ -325,7 +328,7 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   for (int index = 0; index < 8; ++index) {
     // check the error for this codebook index
     SP_SourceBlock const* sources[4] = {NULL};
-    Vec4 error(0.0f);
+    Vec4 cerror(0.0f);
 
     for (int channel = 0; channel < 4; ++channel) {
       // skip if it's completely irrelevant what's in a specific channel
@@ -338,15 +341,17 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 	sources[channel] = lookup[target].sources + index;
 
 	// accumulate the error
-	error.GetO(channel) = eLUT[sources[channel]->error];
+	cerror.GetO(channel) = eLUT[sources[channel]->error];
       }
     }
 
     // calculate the error
-    error = LengthSquared(metric * error);
+    Scr4 error = LengthSquared(metric * cerror);
 
     // keep it if the error is lower
-    if (CompareFirstLessThan(error, m_error)) {
+    if (error < besterror) {
+      besterror = error;
+
       m_start[set] = Vec4(
 	sources[0] ? (float)sources[0]->start : 0.0f,
 	sources[1] ? (float)sources[1]->start : 0.0f,
@@ -362,15 +367,14 @@ Vec4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       ) * q.gridrcp;
 
       m_index = (u8)(1 * index);
-      m_error = error;
 
       // early out
-      if (!CompareFirstGreaterThan(m_error, Vec4(0.0f)))
-	return m_error;
+      if (!(besterror > Scr4(0.0f)))
+	return besterror;
     }
   }
 
-  return m_error;
+  return besterror;
 }
 #endif
 

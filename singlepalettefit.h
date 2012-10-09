@@ -52,16 +52,15 @@ public:
   SinglePaletteFit(PaletteSet const* colours, int flags, int swap = -1, int shared = 0);
 
 private:
-  Vec4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup2 const* const* lookups, u8 cmask);
-  Vec4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup4 const* const* lookups, u8 cmask);
-  Vec4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup8 const* const* lookups, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup2 const* const* lookups, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup4 const* const* lookups, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup8 const* const* lookups, u8 cmask);
 
   u8 m_entry[4][4];
   u8 m_index;
-  Vec4 m_error;
 
 protected:
-  Vec4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask);
   u8 GetIndex() { return m_index; }
 };
 #endif
