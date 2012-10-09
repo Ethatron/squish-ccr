@@ -27,6 +27,16 @@
 #ifndef SQUISH_CONFIG_H
 #define SQUISH_CONFIG_H
 
+/* use frequencies of colour/palette-entries to calculate errors
+ * this is more exact but a bit slower and uses more memory
+ */
+#define	FEATURE_EXACT_ERROR
+
+/* use the power-method to estimate the principle component axis
+ * should be more precise if not faster
+ */
+#undef	FEATURE_POWERESTIMATE
+
 /* push start/end values away from the midpoint if the codebook contains
  * less unique entries than possible indices
  * to fill four indices at least one axis need to have an interval of 4/255th
