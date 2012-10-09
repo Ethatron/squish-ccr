@@ -33,22 +33,20 @@ namespace squish {
  */
 #if	!defined(USE_PRE)
 ColourFit::ColourFit( ColourSet const* colours, int flags )
-  : m_colours( colours ),
-	m_flags( flags )
+  : m_colours(colours), m_flags(flags)
 {
 }
 
 void ColourFit::Compress( void* block )
 {
-  bool isBtc1 = ( ( m_flags & kBtc1 ) != 0 );
-  if( isBtc1 )
-  {
-    Compress3( block );
-    if( !m_colours->IsTransparent() )
-      Compress4( block );
+  bool isBtc1 = ((m_flags & kBtc1) != 0);
+  if (isBtc1) {
+    Compress3(block);
+    if (!m_colours->IsTransparent())
+      Compress4(block);
   }
   else
-    Compress4( block );
+    Compress4(block);
 }
 #endif
 
