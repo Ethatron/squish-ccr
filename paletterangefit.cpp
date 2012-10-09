@@ -55,7 +55,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
       Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
 
       // compute the principle component
-      Vec4 principle; ComputePrincipleComponent(covariance, principle);
+      Vec4 principle; GetPrincipleComponent(covariance, principle);
 
       // get the min and max range as the codebook endpoints
       Vec4 start(0.0f);
@@ -65,17 +65,17 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 	// compute the range
 	start = end = values[0];
 
-	Vec4 min, max; min = max = Dot(values[0], principle);
+	Scr4 min, max; min = max = Dot(values[0], principle);
 	Vec4 mmn, mmx; mmn = mmx =     values[0];
 
 	for (int i = 1; i < count; ++i) {
-	  Vec4 val = Dot(values[i], principle);
+	  Scr4 val = Dot(values[i], principle);
 
-	  if (CompareFirstLessThan(val, min)) {
+	  if (min > val) {
 	    start = values[i];
 	    min = val;
 	  }
-	  else if (CompareFirstGreaterThan(val, max)) {
+	  else if (max < val) {
 	    end = values[i];
 	    max = val;
 	  }
@@ -141,15 +141,15 @@ void PaletteRangeFit::Compress(void* block, int mode)
   int zb = GetSharedBits();
 
   vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
-  
+
   // match each point to the closest code
-  Vec4 error = Vec4(0.0f);
+  Scr4 error = Scr4(0.0f);
   a16 u8 closest[4][16];
 
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  
+
   // create a codebook
   Vec4 codes[1 << 4];
 
@@ -174,7 +174,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
       u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
 
       // find the closest code
-      Vec4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
+      Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
@@ -203,18 +203,18 @@ void PaletteRangeFit::Compress(void* block, int mode)
       // snap floating-point-values to the integer-lattice
       Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
       Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
-      
+
       // swap the code-book when the swap-index bit is set
       int ccs = CodebookP(codes, kb, start, end);
-      
+
       for (int i = 0; i < count; ++i) {
 	// find the closest code
-	Vec4 dist = Vec4(FLT_MAX);
+	Scr4 dist = Scr4(FLT_MAX);
 	int idx = 0;
 
 	for (int j = 0; j < ccs; ++j) {
-	  Vec4 d = LengthSquared(metric * (values[i] - codes[j]));
-	  if (CompareFirstLessThan(d, dist)) {
+	  Scr4 d = LengthSquared(metric * (values[i] - codes[j]));
+	  if (d < dist) {
 	    dist = d;
 	    idx = j;
 	  }
@@ -231,37 +231,37 @@ void PaletteRangeFit::Compress(void* block, int mode)
       // if we have a down-forced bit we need to check 2 versions, the +2bt as well
       // if we have a up-forced bit we need to check 2 versions, the -2bt as well
       // this goes for all component permutations (r+-2,g+-2,...)
-      Vec4 gerror = Vec4(FLT_MAX);
+      Scr4 gerror = Scr4(FLT_MAX);
       int bestom = 0;
       Vec4 start;
       Vec4 end;
-      
+
       // try all sharedbits-opposing bit-combinations (64/256)
       // try all of the components separately (rrggbbaa)
       for (int om = 0x00; om <= (ab ? 0xFF : 0x3F); om++) {
 	// snap floating-point-values to the integer-lattice
 	start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART, om >> 0);
 	end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND  , om >> 1);
-      
+
 	// swap the code-book when the swap-index bit is set
 	int ccs = CodebookP(codes, kb, start, end);
-	  
-	Vec4 lerror = Vec4(0.0f);
+
+	Scr4 lerror = Scr4(0.0f);
 	for (int i = 0; i < count; ++i) {
-	  Vec4 dist = Vec4(FLT_MAX);
+	  Scr4 dist = Scr4(FLT_MAX);
 	  for (int j = 0; j < ccs; ++j)
 	    dist = Min(dist, LengthSquared(metric * (values[i] - codes[j])));
 
 	  // accumulate the error
 	  lerror += dist * freq[i];
 	}
-	  
-	if (CompareFirstLessThan(lerror, gerror)) {
+
+	if (gerror > lerror) {
 	  gerror = lerror;
 	  bestom = om;
 	}
       }
-      
+
       // snap floating-point-values to the integer-lattice with up/down skew
       start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART, bestom >> 0);
       end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND  , bestom >> 1);
@@ -271,12 +271,12 @@ void PaletteRangeFit::Compress(void* block, int mode)
 
       for (int i = 0; i < count; ++i) {
 	// find the closest code
-	Vec4 dist = Vec4(FLT_MAX);
+	Scr4 dist = Scr4(FLT_MAX);
 	int idx = 0;
 
 	for (int j = 0; j < ccs; ++j) {
-	  Vec4 d = LengthSquared(metric * (values[i] - codes[j]));
-	  if (CompareFirstLessThan(d, dist)) {
+	  Scr4 d = LengthSquared(metric * (values[i] - codes[j]));
+	  if (d < dist) {
 	    dist = d;
 	    idx = j;
 	  }
@@ -293,11 +293,11 @@ void PaletteRangeFit::Compress(void* block, int mode)
 
 #ifdef NDEBUG
     // kill early if this scheme looses
-    if (CompareFirstLessThan(m_besterror, error))
+    if (!(error < m_besterror))
       return;
 #endif // NDEBUG
   }
-  
+
   // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
   if (!m_palette->IsTransparent()) {
     switch (m_palette->GetRotation()) {
@@ -317,7 +317,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
     Vec4 verify_error2 = Vec4(0.0f); SumError(closest, mode, verify_error2);
     abort();
   }
-  if (CompareFirstLessThan(m_besterror, error))
+  if (!(error < m_besterror))
     return;
 #endif
 
@@ -338,7 +338,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   else
     fprintf(stderr, ", i:  %1d ", ib);
 
-  if (CompareFirstLessThan(m_besterror, error)) {
+  if (!(error < m_besterror)) {
     fprintf(stderr, ", e: %.8f (> %.8f)\n", error.X(), m_besterror.X());
     return;
   }
@@ -421,7 +421,7 @@ void PaletteRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Pale
   Sym3x3 covariance = ComputeWeightedCovariance(barrier, thread, count, values, weights);
 
   // compute the principle component
-  float3 principle = ComputePrincipleComponent(barrier, thread, covariance);
+  float3 principle = GetPrincipleComponent(barrier, thread, covariance);
 
   // get the min and max range as the codebook endpoints
   float3 cline[CVALS];
