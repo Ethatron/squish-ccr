@@ -29,6 +29,7 @@
 
 #pragma warning(disable: 4127)
 #pragma warning(disable: 4293)	// line 459
+#pragma warning(disable: 4505)	// line 954
 
 #if	!defined(USE_COMPUTE)
 #include <cmath>
@@ -36,6 +37,169 @@
 #endif
 
 namespace squish {
+
+class Col3
+{
+public:
+  typedef Col3 const& Arg;
+  typedef Col3 & aArg;
+
+  Col3()
+  {
+  }
+
+  explicit Col3( int _s )
+  {
+    x = _s;
+    y = _s;
+    z = _s;
+  }
+
+  Col3( int _x, int _y, int _z )
+  {
+    x = _x;
+    y = _y;
+    z = _z;
+  }
+
+  int X() const { return x; }
+  int Y() const { return y; }
+  int Z() const { return z; }
+
+  Col3 operator-() const
+  {
+    return Col3( -x, -y, -z );
+  }
+
+  Col3& operator+=(Arg v)
+  {
+    x += v.x;
+    y += v.y;
+    z += v.z;
+    return *this;
+  }
+
+  Col3& operator-=(Arg v)
+  {
+    x -= v.x;
+    y -= v.y;
+    z -= v.z;
+    return *this;
+  }
+
+  Col3& operator*=(Arg v)
+  {
+    x *= v.x;
+    y *= v.y;
+    z *= v.z;
+    return *this;
+  }
+
+  Col3& operator*=( int s )
+  {
+    x *= s;
+    y *= s;
+    z *= s;
+    return *this;
+  }
+
+  Col3& operator/=(Arg v)
+  {
+    x /= v.x;
+    y /= v.y;
+    z /= v.z;
+    return *this;
+  }
+
+  Col3& operator/=( int s )
+  {
+    int t = s;
+    x /= t;
+    y /= t;
+    z /= t;
+    return *this;
+  }
+
+  friend Col3 operator+(Arg left, Arg right)
+  {
+    Col3 copy( left );
+    return copy += right;
+  }
+
+  friend Col3 operator-(Arg left, Arg right)
+  {
+    Col3 copy( left );
+    return copy -= right;
+  }
+
+  friend Col3 operator*(Arg left, Arg right)
+  {
+    Col3 copy( left );
+    return copy *= right;
+  }
+
+  friend Col3 operator*(Arg left, int right )
+  {
+    Col3 copy( left );
+    return copy *= right;
+  }
+
+  friend Col3 operator*( int left, Arg right)
+  {
+    Col3 copy( right );
+    return copy *= left;
+  }
+
+  friend Col3 operator/(Arg left, Arg right)
+  {
+    Col3 copy( left );
+    return copy /= right;
+  }
+
+  friend Col3 operator/(Arg left, int right )
+  {
+    Col3 copy( left );
+    return copy /= right;
+  }
+  
+  friend Col3 Dot(Arg left, Arg right)
+  {
+    return Col3(left.x*right.x + left.y*right.y + left.z*right.z);
+  }
+
+  friend void Dot(Arg left, Arg right, int *r )
+  {
+    *r = left.x*right.x + left.y*right.y + left.z*right.z;
+  }
+
+  friend Col3 Min(Arg left, Arg right)
+  {
+    return Col3(
+      std::min<int>( left.x, right.x ),
+      std::min<int>( left.y, right.y ),
+      std::min<int>( left.z, right.z )
+      );
+  }
+
+  friend Col3 Max(Arg left, Arg right)
+  {
+    return Col3(
+      std::max<int>( left.x, right.x ),
+      std::max<int>( left.y, right.y ),
+      std::max<int>( left.z, right.z )
+      );
+  }
+
+  friend class Col4;
+  friend class Vec3;
+
+#if	!defined(USE_AMP)
+private:
+#endif
+  union { int x; int r; };
+  union { int y; int g; };
+  union { int z; int b; };
+};
 
 class Col4
 {
@@ -174,7 +338,7 @@ public:
     return *this;
   }
 
-  Col4& operator&=( Arg v )
+  Col4& operator&=(Arg v)
   {
     r &= v.r;
     g &= v.g;
@@ -184,7 +348,7 @@ public:
     return *this;
   }
 
-  Col4& operator^=( Arg v )
+  Col4& operator^=(Arg v)
   {
     r ^= v.r;
     g ^= v.g;
@@ -194,7 +358,7 @@ public:
     return *this;
   }
 
-  Col4& operator|=( Arg v )
+  Col4& operator|=(Arg v)
   {
     r |= v.r;
     g |= v.g;
@@ -224,7 +388,7 @@ public:
     return *this;
   }
 
-  Col4& operator+=( Arg v )
+  Col4& operator+=(Arg v)
   {
     r += v.r;
     g += v.g;
@@ -234,7 +398,7 @@ public:
     return *this;
   }
 
-  Col4& operator-=( Arg v )
+  Col4& operator-=(Arg v)
   {
     r -= v.r;
     g -= v.g;
@@ -244,7 +408,7 @@ public:
     return *this;
   }
 
-  Col4& operator*=( Arg v )
+  Col4& operator*=(Arg v)
   {
     r *= v.r;
     g *= v.g;
@@ -480,7 +644,7 @@ public:
   }
 
   template<const int n, const int p>
-  friend Col4 CopyBits( Col4::Arg left, Col4::Arg right )
+  friend Col4 CopyBits( Col4::Arg left, Col4::Arg right)
   {
     if (!n)
       return left;
@@ -602,17 +766,24 @@ public:
     return HorizontalAdd( a, b );
   }
 
-  friend Col4 Dot( Arg left, Arg right )
+  friend Col4 Dot(Arg left, Arg right)
   {
     return HorizontalAdd( left*right );
   }
 
-  friend Col4 DotTiny( Arg left, Arg right )
+  friend Col4 DotTiny(Arg left, Arg right)
   {
     return HorizontalAddTiny( left*right );
   }
+  
+  friend void Dot(Arg left, Arg right, int *r )
+  {
+    Col4 res = Dot( left, right );
 
-  friend Col4 Min( Col4::Arg left, Col4::Arg right )
+    *r = res.R();
+  }
+
+  friend Col4 Min( Col4::Arg left, Col4::Arg right)
   {
     return Col4(
       std::min<int>( left.r, right.r ),
@@ -622,7 +793,7 @@ public:
     );
   }
 
-  friend Col4 Max( Col4::Arg left, Col4::Arg right )
+  friend Col4 Max( Col4::Arg left, Col4::Arg right)
   {
     return Col4(
       std::max<int>( left.r, right.r ),
@@ -632,7 +803,7 @@ public:
     );
   }
 
-  friend bool CompareAnyLessThan( Col4::Arg left, Col4::Arg right )
+  friend bool CompareAnyLessThan( Col4::Arg left, Col4::Arg right)
   {
     return
       left.r < right.r ||
@@ -641,7 +812,7 @@ public:
       left.a < right.a;
   }
 
-  friend bool CompareAllEqualTo( Col4::Arg left, Col4::Arg right )
+  friend bool CompareAllEqualTo( Col4::Arg left, Col4::Arg right)
   {
     return
       left.r == right.r &&
@@ -670,12 +841,12 @@ public:
     );
   }
 
-  friend Col4 TransferA( Col4::Arg left, Col4::Arg right )
+  friend Col4 TransferA( Col4::Arg left, Col4::Arg right)
   {
     return Col4( left.r, left.g, left.b, right.a );
   }
 
-  friend Col4 KillA( Col4::Arg left )
+  friend Col4 KillA( Col4::Arg left)
   {
     return Col4( left.r, left.g, left.b, 0xFF );
   }
@@ -777,8 +948,301 @@ private:
   int a;
 };
 
+// scalar types
+typedef	float Scr3;
+typedef	float Scr4;
+
+static float Reciprocal(float v) {
+  return math::rcp(v);
+}
+
+static float ReciprocalSqrt(float v) {
+  return math::rcp(math::sqrt(v));
+}
+
+static float Min(float a, float b) {
+  return std::min(a, b);
+}
+
+static float Abs(float v) {
+  return std::abs(v);
+}
+
 #if	!defined(USE_COMPUTE)
 #define VEC4_CONST( X ) Vec4( X )
+
+class Vec3
+{
+public:
+  typedef Vec3 const& Arg;
+  typedef Vec3 & aArg;
+
+  Vec3()
+  {
+  }
+
+  explicit Vec3( float _s )
+  {
+    x = _s;
+    y = _s;
+    z = _s;
+  }
+
+  Vec3( float _x, float _y, float _z )
+  {
+    x = _x;
+    y = _y;
+    z = _z;
+  }
+  
+  Vec3( Vec3 _x, Vec3 _y, Vec3 _z )
+  {
+    x = _x.x;
+    y = _y.x;
+    z = _z.x;
+  }
+
+  float X() const { return x; }
+  float Y() const { return y; }
+  float Z() const { return z; }
+
+  Vec3 operator-() const
+  {
+    return Vec3( -x, -y, -z );
+  }
+
+  Vec3& operator+=(Arg v)
+  {
+    x += v.x;
+    y += v.y;
+    z += v.z;
+    return *this;
+  }
+
+  Vec3& operator+=(float v)
+  {
+    x += v;
+    y += v;
+    z += v;
+    return *this;
+  }
+
+  Vec3& operator-=(Arg v)
+  {
+    x -= v.x;
+    y -= v.y;
+    z -= v.z;
+    return *this;
+  }
+
+  Vec3& operator*=(Arg v)
+  {
+    x *= v.x;
+    y *= v.y;
+    z *= v.z;
+    return *this;
+  }
+
+  Vec3& operator*=( float s )
+  {
+    x *= s;
+    y *= s;
+    z *= s;
+    return *this;
+  }
+
+  Vec3& operator/=(Arg v)
+  {
+    x /= v.x;
+    y /= v.y;
+    z /= v.z;
+    return *this;
+  }
+
+  Vec3& operator/=( float s )
+  {
+    float t = 1.0f/s;
+    x *= t;
+    y *= t;
+    z *= t;
+    return *this;
+  }
+  
+  friend int operator<( Vec3::Arg left, Vec3::Arg right  )
+  {
+    return CompareFirstLessThan(left, right);
+  }
+	
+  friend int operator>( Vec3::Arg left, Vec3::Arg right  )
+  {
+    return CompareFirstGreaterThan(left, right);
+  }
+
+  friend Vec3 operator+(Arg left, Arg right)
+  {
+    Vec3 copy( left );
+    return copy += right;
+  }
+
+  friend Vec3 operator+(Arg left, float right )
+  {
+    Vec3 copy( left );
+    return copy += right;
+  }
+
+  friend Vec3 operator-(Arg left, Arg right)
+  {
+    Vec3 copy( left );
+    return copy -= right;
+  }
+
+  friend Vec3 operator*(Arg left, Arg right)
+  {
+    Vec3 copy( left );
+    return copy *= right;
+  }
+
+  friend Vec3 operator*(Arg left, float right )
+  {
+    Vec3 copy( left );
+    return copy *= right;
+  }
+
+  friend Vec3 operator*( float left, Arg right)
+  {
+    Vec3 copy( right );
+    return copy *= left;
+  }
+
+  friend Vec3 operator/(Arg left, Arg right)
+  {
+    Vec3 copy( left );
+    return copy /= right;
+  }
+
+  friend Vec3 operator/(Arg left, float right )
+  {
+    Vec3 copy( left );
+    return copy /= right;
+  }
+  
+  friend Vec3 Reciprocal( Vec3::Arg v )
+  {
+    return Vec3(
+      1.0f / v.x,
+      1.0f / v.y,
+      1.0f / v.z
+    );
+  }
+  
+  friend Vec3 ReciprocalSqrt( Vec3::Arg v )
+  {
+    return Vec3(
+      1.0f / math::sqrt(v.x),
+      1.0f / math::sqrt(v.y),
+      1.0f / math::sqrt(v.z)
+    );
+  }
+
+  friend Scr3 HorizontalMax( Arg a )
+  {
+    return Scr3(
+      std::max<float>( std::max<float>( a.x, a.y ), a.z )
+    );
+  }
+
+  friend Scr3 HorizontalAdd( Arg a )
+  {
+    return Scr3( a.x + a.y + a.z );
+  }
+
+  friend Scr3 HorizontalAdd( Arg a, Arg b )
+  {
+    return HorizontalAdd( a + b );
+  }
+
+  friend Vec3 Normalize(Arg left)
+  {
+    Vec3 sum = (left * left);
+    float rsq = 1.0f / math::sqrt(sum.x + sum.y + sum.z);
+
+    return left * rsq;
+  }
+
+  friend Scr3 Dot(Arg left, Arg right)
+  {
+    return HorizontalAdd( left*right );
+  }
+
+  friend void Dot(Arg left, Arg right, float *r )
+  {
+    *r = HorizontalAdd( left*right );
+  }
+  
+  friend Vec3 Abs( Vec3::Arg v )
+  {
+    return Vec3(
+      std::abs<float>( v.x ),
+      std::abs<float>( v.y ),
+      std::abs<float>( v.z )
+    );
+  }
+	
+  friend Vec3 Min(Arg left, Arg right)
+  {
+    return Vec3(
+      std::min<float>( left.x, right.x ),
+      std::min<float>( left.y, right.y ),
+      std::min<float>( left.z, right.z )
+    );
+  }
+
+  friend Vec3 Max(Arg left, Arg right)
+  {
+    return Vec3(
+      std::max<float>( left.x, right.x ),
+      std::max<float>( left.y, right.y ),
+      std::max<float>( left.z, right.z )
+    );
+  }
+
+  // clamp the output to [0, 1]
+  Vec3 Clamp() const {
+    Vec3 const one (1.0f);
+    Vec3 const zero(0.0f);
+
+    return Min(one, Max(zero, *this));
+  }
+
+  friend Vec3 Truncate(Arg v)
+  {
+    return Vec3(
+      v.x > 0.0f ? std::floor( v.x ) : std::ceil( v.x ),
+      v.y > 0.0f ? std::floor( v.y ) : std::ceil( v.y ),
+      v.z > 0.0f ? std::floor( v.z ) : std::ceil( v.z )
+    );
+  }
+  
+  friend int CompareFirstLessThan( Vec3::Arg left, Vec3::Arg right)
+  {
+    return left.x < right.x;
+  }
+
+  friend int CompareFirstGreaterThan( Vec3::Arg left, Vec3::Arg right)
+  {
+    return left.x > right.x;
+  }
+
+  friend class Col3;
+  friend class Vec4;
+
+#if	!defined(USE_AMP) && !defined(USE_COMPUTE)
+private:
+#endif
+  union { float x; float r; };
+  union { float y; float g; };
+  union { float z; float b; };
+};
 
 class Vec4
 {
@@ -810,7 +1274,7 @@ public:
       w( _w )
   {
   }
-  
+
   Vec4( float _x, float _y, float _z )
     : x( _x ),
       y( _y ),
@@ -818,7 +1282,7 @@ public:
       w( 0.0f )
   {
   }
-  
+
   Vec4( float _x, float _y )
     : x( _x ),
       y( _y ),
@@ -826,7 +1290,7 @@ public:
       w( 0.0f )
   {
   }
-  
+
   Vec4( Vec4 _x, Vec4 _y, Vec4 _z, Vec4 _w )
     : x( _x.x ),
       y( _y.x ),
@@ -834,7 +1298,7 @@ public:
       w( _w.x )
   {
   }
-  
+
   Vec4( Vec4 _x, Vec4 _y, Vec4 _z )
     : x( _x.x ),
       y( _y.x ),
@@ -842,7 +1306,7 @@ public:
       w( 0.0f )
   {
   }
-  
+
   Vec4( Vec4 _x, Vec4 _y )
     : x( _x.x ),
       y( _y.x ),
@@ -928,7 +1392,7 @@ public:
     return *this;
   }
 
-  Vec4& operator+=( Arg v )
+  Vec4& operator+=(Arg v)
   {
     x += v.x;
     y += v.y;
@@ -938,7 +1402,7 @@ public:
     return *this;
   }
 
-  Vec4& operator-=( Arg v )
+  Vec4& operator-=(Arg v)
   {
     x -= v.x;
     y -= v.y;
@@ -948,7 +1412,7 @@ public:
     return *this;
   }
 
-  Vec4& operator*=( Arg v )
+  Vec4& operator*=(Arg v)
   {
     x *= v.x;
     y *= v.y;
@@ -957,14 +1421,34 @@ public:
 
     return *this;
   }
+  
+  Vec4& operator*=(float v)
+  {
+    x *= v;
+    y *= v;
+    z *= v;
+    w *= v;
 
-  Vec4& operator/=( float v )
+    return *this;
+  }
+
+  Vec4& operator/=(float v)
   {
     *this *= Reciprocal( Vec4( v ) );
     return *this;
   }
+  
+  friend int operator<(Vec4::Arg left, Vec4::Arg right  )
+  {
+    return CompareFirstLessThan(left, right);
+  }
+	
+  friend int operator>(Vec4::Arg left, Vec4::Arg right  )
+  {
+    return CompareFirstGreaterThan(left, right);
+  }
 
-  friend Vec4 operator&( Vec4::Arg left, Vec4::Arg right  )
+  friend Vec4 operator&(Vec4::Arg left, Vec4::Arg right  )
   {
     Vec4 copy( left );
 
@@ -976,25 +1460,25 @@ public:
     return copy;
   }
 
-  friend Vec4 operator+( Vec4::Arg left, Vec4::Arg right  )
+  friend Vec4 operator+(Vec4::Arg left, Vec4::Arg right  )
   {
     Vec4 copy( left );
     return copy += right;
   }
 
-  friend Vec4 operator-( Vec4::Arg left, Vec4::Arg right  )
+  friend Vec4 operator-(Vec4::Arg left, Vec4::Arg right  )
   {
     Vec4 copy( left );
     return copy -= right;
   }
 
-  friend Vec4 operator*( Vec4::Arg left, Vec4::Arg right  )
+  friend Vec4 operator*(Vec4::Arg left, Vec4::Arg right  )
   {
     Vec4 copy( left );
     return copy *= right;
   }
 
-  friend Vec4 operator*( Vec4::Arg left, float right  )
+  friend Vec4 operator*(Vec4::Arg left, float right  )
   {
     Vec4 copy( left );
 
@@ -1012,14 +1496,14 @@ public:
     return copy * left;
   }
 
-  friend Vec4 operator/( Vec4::Arg left, float right  )
+  friend Vec4 operator/(Vec4::Arg left, float right  )
   {
     Vec4 copy( left );
     copy /= right;
     return copy;
   }
 
-  friend Vec4 operator*( Vec4::Arg left, int right  )
+  friend Vec4 operator*(Vec4::Arg left, int right  )
   {
     Vec4 copy( left );
 
@@ -1069,7 +1553,7 @@ public:
     return b;
   }
 
-  friend Vec4 Reciprocal( Vec4::Arg v )
+  friend Vec4 Reciprocal(Vec4::Arg v)
   {
     return Vec4(
       1.0f / v.x,
@@ -1079,52 +1563,62 @@ public:
     );
   }
   
-  friend Vec4 ReciprocalSqrt( Vec4::Arg v )
+  friend Vec4 ReciprocalSqrt(Vec4::Arg v)
   {
     return Vec4(
-      1.0f / std::sqrt(v.x),
-      1.0f / std::sqrt(v.y),
-      1.0f / std::sqrt(v.z),
-      1.0f / std::sqrt(v.w)
+      1.0f / math::sqrt(v.x),
+      1.0f / math::sqrt(v.y),
+      1.0f / math::sqrt(v.z),
+      1.0f / math::sqrt(v.w)
     );
   }
-	
-  friend Vec4 HorizontalMax( Arg a )
+
+  friend Scr4 HorizontalMax( Arg a )
   {
-    return Vec4(
+    return Scr4(
       std::max<float>( std::max<float>( a.x, a.y ), std::max<float>( a.z, a.w ) )
     );
   }
+
+  friend Scr4 HorizontalAdd( Arg a )
+  {
+    return Scr4(a.x + a.y + a.z + a.w);
+  }
+
+  friend Scr4 HorizontalAdd( Arg a, Arg b )
+  {
+    return HorizontalAdd(a + b);
+  }
   
-  friend Vec4 HorizontalAdd( Arg a )
+  friend Vec4 Length(Arg left)
   {
-    return Vec4( a.x + a.y + a.z + a.w );
-  }
+    Vec4 sum = (left * left);
+    float sqt = math::sqrt(sum.x + sum.y + sum.z + sum.w);
 
-  friend Vec4 HorizontalAdd( Arg a, Arg b )
-  {
-    return HorizontalAdd( a ) + HorizontalAdd( b );
+    return sqt;
   }
   
-  friend Vec4 Normalize( Arg left )
+  friend Vec4 ReciprocalLength(Arg left)
   {
-    Vec4 sum = HorizontalAdd(left * left);
-    Vec4 rsq = ReciprocalSqrt(sum);
-
-    return left * rsq;
+    return 1.0f / Length(left);
+  }
+  
+  friend Vec4 Normalize(Arg left)
+  {
+    return left * ReciprocalLength(left);
   }
 
-  friend Vec4 Dot( Arg left, Arg right )
+  friend Scr4 Dot(Arg left, Arg right)
   {
-    return HorizontalAdd( left*right );
+    return HorizontalAdd(left * right);
   }
 
-  friend void Dot( Arg left, Arg right, float *r )
+  friend void Dot(Arg left, Arg right, float *r )
   {
-    *r = HorizontalAdd( left*right ).x;
+    *r = HorizontalAdd(left * right);
   }
 
-  friend Vec4 Min( Vec4::Arg left, Vec4::Arg right )
+  friend Vec4 Min(Vec4::Arg left, Vec4::Arg right)
   {
     return Vec4(
       std::min<float>( left.x, right.x ),
@@ -1134,7 +1628,7 @@ public:
     );
   }
 
-  friend Vec4 Max( Vec4::Arg left, Vec4::Arg right )
+  friend Vec4 Max(Vec4::Arg left, Vec4::Arg right)
   {
     return Vec4(
       std::max<float>( left.x, right.x ),
@@ -1153,7 +1647,7 @@ public:
   }
 
   template<const bool round>
-  friend Col4 FloatToInt( Vec4::Arg v )
+  friend Col4 FloatToInt(Vec4::Arg v)
   {
     return Col4(
       (int)(v.x > 0.0f ? std::floor( v.x + (round ? 0.5f : 0.0f) ) : std::ceil( v.x - (round ? 0.5f : 0.0f) )),
@@ -1163,7 +1657,7 @@ public:
     );
   }
 
-  friend Vec4 Truncate( Vec4::Arg v )
+  friend Vec4 Truncate(Vec4::Arg v)
   {
     return Vec4(
       v.x > 0.0f ? std::floor( v.x ) : std::ceil( v.x ),
@@ -1173,7 +1667,7 @@ public:
     );
   }
 
-  friend bool CompareAnyLessThan( Vec4::Arg left, Vec4::Arg right )
+  friend bool CompareAnyLessThan(Vec4::Arg left, Vec4::Arg right)
   {
     return
       left.x < right.x ||
@@ -1182,12 +1676,12 @@ public:
       left.w < right.w;
   }
 
-  friend int CompareFirstLessThan( Vec4::Arg left, Vec4::Arg right )
+  friend int CompareFirstLessThan(Vec4::Arg left, Vec4::Arg right)
   {
     return left.x < right.x;
   }
 
-  friend int CompareFirstGreaterThan( Vec4::Arg left, Vec4::Arg right )
+  friend int CompareFirstGreaterThan(Vec4::Arg left, Vec4::Arg right)
   {
     return left.x > right.x;
   }
@@ -1203,7 +1697,7 @@ public:
 
     return m;
   }
-  
+
   Vec4 IsNotOne( ) const
   {
     Vec4 m;
@@ -1215,23 +1709,23 @@ public:
 
     return m;
   }
-  
-  friend Vec4 TransferZW( Vec4::Arg left, Vec4::Arg right )
+
+  friend Vec4 TransferZW(Vec4::Arg left, Vec4::Arg right)
   {
     return Vec4( left.x, left.y, right.z, right.w );
   }
 
-  friend Vec4 TransferW( Vec4::Arg left, Vec4::Arg right )
+  friend Vec4 TransferW(Vec4::Arg left, Vec4::Arg right)
   {
     return Vec4( left.x, left.y, left.z, right.w );
   }
 
-  friend Vec4 KillW( Vec4::Arg left )
+  friend Vec4 KillW(Vec4::Arg left)
   {
     return Vec4( left.x, left.y, left.z, 0.0f );
   }
 
-  friend Vec4 OnlyW( Vec4::Arg left )
+  friend Vec4 OnlyW(Vec4::Arg left)
   {
     return Vec4( 0.0f, 0.0f, 0.0f, left.w );
   }
@@ -1256,16 +1750,6 @@ public:
     std::swap(w, with.w);
   }
 
-  // 5-6% of execution time as std::sqrt
-  static doinline float sqrt(float in) {
-    return std::sqrt(in);
-  }
-
-  // 3-5% of execution time as std::pow
-  static doinline float cbrt(float in) {
-    return std::pow(in, 1.0f / 3.0f);
-  }
-
 #if	!defined(USE_AMP)
 private:
 #endif
@@ -1276,7 +1760,17 @@ private:
 };
 
 #if	!defined(USE_PRE)
-inline Vec4 LengthSquared( Vec4::Arg v )
+inline Scr3 LengthSquared( Vec3::Arg v )
+{
+  return Dot( v, v );
+}
+
+inline void LengthSquared( Vec3::Arg v , float *r )
+{
+  Dot( v, v, r );
+}
+
+inline Scr3 LengthSquared(Vec4::Arg v)
 {
   return Dot( v, v );
 }

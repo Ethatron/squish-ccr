@@ -61,7 +61,7 @@ Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weight
   // accumulate the covariance smatrix
   Sym3x3 covariance(0.0f);
   for (int i = 0; i < n; ++i) {
-    Vec3 a = points[i] - centroid;
+    Vec3 a = points [i] - centroid;
     Vec3 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
@@ -91,9 +91,8 @@ Sym2x2 ComputeWeightedCovariance2(int n, Vec4 const* points, float const* weight
 
   // accumulate the covariance smatrix
   Sym2x2 covariance(0.0f);
-  for( int i = 0; i < n; ++i )
-  {
-    Vec4 a = points[i] - centroid;
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = points [i] - centroid;
     Vec4 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
@@ -120,9 +119,8 @@ Sym3x3 ComputeWeightedCovariance3(int n, Vec4 const* points, float const* weight
 
   // accumulate the covariance smatrix
   Sym3x3 covariance(0.0f);
-  for( int i = 0; i < n; ++i )
-  {
-    Vec4 a = points[i] - centroid;
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = points [i] - centroid;
     Vec4 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
@@ -153,7 +151,7 @@ Sym4x4 ComputeWeightedCovariance4(int n, Vec4 const* points, float const* weight
   // accumulate the covariance smatrix
   Sym4x4 covariance(0.0f);
   for (int i = 0; i < n; ++i) {
-    Vec4 a = points[i] - centroid;
+    Vec4 a = points [i] - centroid;
     Vec4 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
@@ -271,37 +269,44 @@ static void GetMultiplicity2Evector(Sym3x3 const& smatrix, Vec &out, float evalu
 void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out)
 {
   // compute the cubic coefficients
-  float c0 = smatrix[0]*smatrix[3]*smatrix[5]
-  + 2.0f*smatrix[1]*smatrix[2]*smatrix[4]
-  - smatrix[0]*smatrix[4]*smatrix[4]
-  - smatrix[3]*smatrix[2]*smatrix[2]
-  - smatrix[5]*smatrix[1]*smatrix[1];
-  float c1 = smatrix[0]*smatrix[3] + smatrix[0]*smatrix[5] + smatrix[3]*smatrix[5]
-  - smatrix[1]*smatrix[1] - smatrix[2]*smatrix[2] - smatrix[4]*smatrix[4];
-  float c2 = smatrix[0] + smatrix[3] + smatrix[5];
+  float c0 = 
+           smatrix[0] * smatrix[3] * smatrix[5]
+  + 2.0f * smatrix[1] * smatrix[2] * smatrix[4]
+  -        smatrix[0] * smatrix[4] * smatrix[4]
+  -        smatrix[3] * smatrix[2] * smatrix[2]
+  -        smatrix[5] * smatrix[1] * smatrix[1];
+  float c1 = 
+           smatrix[0] * smatrix[3] 
+  +        smatrix[0] * smatrix[5] 
+  +        smatrix[3] * smatrix[5]
+  -        smatrix[1] * smatrix[1] 
+  -        smatrix[2] * smatrix[2] 
+  -        smatrix[4] * smatrix[4];
+  float c2 = 
+           smatrix[0] 
+  +        smatrix[3] 
+  +        smatrix[5];
 
   // compute the quadratic coefficients
-  float a = c1 - ( 1.0f/3.0f )*c2*c2;
-  float b = ( -2.0f/27.0f )*c2*c2*c2 + ( 1.0f/3.0f )*c1*c2 - c0;
+  float a = c1 - ( 1.0f /  3.0f) * c2 * c2;
+  float b =      (-2.0f / 27.0f) * c2 * c2 * c2 
+  +              ( 1.0f /  3.0f) * c1 * c2 - c0;
 
   // compute the root count check
-  float Q = 0.25f*b*b + ( 1.0f/27.0f )*a*a*a;
+  float Q = 0.25f * b * b + (1.0f / 27.0f) * a * a * a;
 
   // test the multiplicity
-  if( FLT_EPSILON < Q )
-  {
+  if (FLT_EPSILON < Q) {
     // only one root, which implies we have a multiple of the identity
-    out = Vec3( 1.0f ); return;
-  }
+    out = Vec3(1.0f); return; }
 
-  if( Q < -FLT_EPSILON )
-  {
+  if (Q < -FLT_EPSILON) {
     // three distinct roots
-    float theta = std::atan2( Vec4::sqrt( -Q ), -0.5f*b );
-    float rho = Vec4::sqrt( 0.25f*b*b - Q );
+    float theta = std::atan2(math::sqrt(-Q), -0.5f * b);
+    float rho = math::sqrt(0.25f * b * b - Q);
 
 //  float rt = std::pow( rho, 1.0f/3.0f );
-    float rt = Vec4::cbrt( rho );
+    float rt = math::cbrt( rho );
     float ct = std::cos( theta/3.0f );
     float st = std::sin( theta/3.0f );
 
@@ -324,10 +329,10 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out)
     float rt;
     if( b < 0.0f )
 //    rt = -std::pow( -0.5f*b, 1.0f/3.0f );
-      rt = -Vec4::cbrt( -0.5f*b );
+      rt = -math::cbrt( -0.5f*b );
     else
 //    rt = std::pow( 0.5f*b, 1.0f/3.0f );
-      rt = Vec4::cbrt( 0.5f*b );
+      rt = math::cbrt( 0.5f*b );
 
     float l1 = ( 1.0f/3.0f )*c2 + rt;		// repeated
     float l2 = ( 1.0f/3.0f )*c2 - 2.0f*rt;
@@ -342,7 +347,7 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out)
 
 void ComputePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out)
 {
-  abort();
+  out = Vec4(smatrix[0]); abort();
 }
 
 void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
@@ -374,11 +379,11 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
   if( Q < -FLT_EPSILON )
   {
     // three distinct roots
-    float theta = std::atan2( Vec4::sqrt( -Q ), -0.5f*b );
-    float rho = Vec4::sqrt( 0.25f*b*b - Q );
+    float theta = std::atan2( math::sqrt( -Q ), -0.5f*b );
+    float rho = math::sqrt( 0.25f*b*b - Q );
 
 //  float rt = std::pow( rho, 1.0f/3.0f );
-    float rt = Vec4::cbrt( rho );
+    float rt = math::cbrt( rho );
     float ct = std::cos( theta/3.0f );
     float st = std::sin( theta/3.0f );
 
@@ -401,10 +406,10 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
     float rt;
     if( b < 0.0f )
 //    rt = -std::pow( -0.5f*b, 1.0f/3.0f );
-      rt = -Vec4::cbrt( -0.5f*b );
+      rt = -math::cbrt( -0.5f*b );
     else
 //    rt = std::pow( 0.5f*b, 1.0f/3.0f );
-      rt = Vec4::cbrt( 0.5f*b );
+      rt = math::cbrt( 0.5f*b );
 
     float l1 = ( 1.0f/3.0f )*c2 + rt;		// repeated
     float l2 = ( 1.0f/3.0f )*c2 - 2.0f*rt;
@@ -420,58 +425,22 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
 /* .............................................................................
  */
 
-static Vec3 GetMajorMagnitudeVector3(Sym3x3 const& matrix)
-{
-  Vec3 const row0(matrix[0], matrix[1], matrix[2]);
-  Vec3 const row1(matrix[1], matrix[3], matrix[4]);
-  Vec3 const row2(matrix[2], matrix[4], matrix[5]);
-
-  float r0 = Dot(row0, row0);
-  float r1 = Dot(row1, row1);
-  float r2 = Dot(row2, row2);
-
-  if (r0 > r1 && r0 > r2) return row0;
-  if (r1 > r2) return row1;
-  return row2;
-}
-
-void EstimatePrincipleComponent3(Sym3x3 const& matrix, Vec3 &out)
-{
-  Vec3 v = GetMajorMagnitudeVector3(matrix);
-
-#define POWER_ITERATION_COUNT   8
-  for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
-    float x = v.X() * matrix[0] + v.Y() * matrix[1] + v.Z() * matrix[2];
-    float y = v.X() * matrix[1] + v.Y() * matrix[3] + v.Z() * matrix[4];
-    float z = v.X() * matrix[2] + v.Y() * matrix[4] + v.Z() * matrix[5];
-
-    float norm = std::max(std::max(x, y), z);
-    if (norm == 0.0f) {
-      v = Vec3(0.0f); break; }
-
-    float iv = 1.0f / norm;
-    v = Vec3(x, y, z) * iv;
-  }
-
-  out = v;
-}
-
-void EstimatePrincipleComponent2(Sym2x2 const& matrix, Vec4 &out)
+void EstimatePrincipleComponent(Sym2x2 const& matrix, Vec4 &out)
 {
   Vec4 const row0(matrix[0], matrix[1], 0.0f, 0.0f);
   Vec4 const row1(matrix[1], matrix[2], 0.0f, 0.0f);
   Vec4 v;
-
-  float r0; Dot(row0, row0, &r0);
-  float r1; Dot(row1, row1, &r1);
+  
+  Scr4 r0 = LengthSquared(row0);
+  Scr4 r1 = LengthSquared(row1);
 
   if (r0 > r1) v = row0;
   else v = row1;
 
 #define POWER_ITERATION_COUNT   8
   for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
-    Vec4 x = HorizontalAdd(v * row0);
-    Vec4 y = HorizontalAdd(v * row1);
+    Scr4 x = HorizontalAdd(v * row0);
+    Scr4 y = HorizontalAdd(v * row1);
 
     v  = Vec4(x, y);
     v *= Reciprocal(HorizontalMax(v));
@@ -480,16 +449,16 @@ void EstimatePrincipleComponent2(Sym2x2 const& matrix, Vec4 &out)
   out = v;
 }
 
-void EstimatePrincipleComponent3(Sym3x3 const& matrix, Vec4 &out)
+void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec3 &out)
 {
-  Vec4 const row0(matrix[0], matrix[1], matrix[2], 0.0f);
-  Vec4 const row1(matrix[1], matrix[3], matrix[4], 0.0f);
-  Vec4 const row2(matrix[2], matrix[4], matrix[5], 0.0f);
-  Vec4 v;
-
-  float r0; Dot(row0, row0, &r0);
-  float r1; Dot(row1, row1, &r1);
-  float r2; Dot(row2, row2, &r2);
+  Vec3 const row0(matrix[0], matrix[1], matrix[2]);
+  Vec3 const row1(matrix[1], matrix[3], matrix[4]);
+  Vec3 const row2(matrix[2], matrix[4], matrix[5]);
+  Vec3 v;
+  
+  Scr3 r0 = LengthSquared(row0);
+  Scr3 r1 = LengthSquared(row1);
+  Scr3 r2 = LengthSquared(row2);
 
   if (r0 > r1 && r0 > r2) v = row0;
   else if (r1 > r2) v = row1;
@@ -497,9 +466,37 @@ void EstimatePrincipleComponent3(Sym3x3 const& matrix, Vec4 &out)
 
 #define POWER_ITERATION_COUNT   8
   for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
-    Vec4 x = HorizontalAdd(v * row0);
-    Vec4 y = HorizontalAdd(v * row1);
-    Vec4 z = HorizontalAdd(v * row2);
+    Scr3 x = HorizontalAdd(v * row0);
+    Scr3 y = HorizontalAdd(v * row1);
+    Scr3 z = HorizontalAdd(v * row2);
+
+    v  = Vec3(x, y, z);
+    v *= Reciprocal(HorizontalMax(v));
+  }
+
+  out = v;
+}
+
+void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec4 &out)
+{
+  Vec4 const row0(matrix[0], matrix[1], matrix[2], 0.0f);
+  Vec4 const row1(matrix[1], matrix[3], matrix[4], 0.0f);
+  Vec4 const row2(matrix[2], matrix[4], matrix[5], 0.0f);
+  Vec4 v;
+  
+  Scr4 r0 = LengthSquared(row0);
+  Scr4 r1 = LengthSquared(row1);
+  Scr4 r2 = LengthSquared(row2);
+
+  if (r0 > r1 && r0 > r2) v = row0;
+  else if (r1 > r2) v = row1;
+  else v = row2;
+
+#define POWER_ITERATION_COUNT   8
+  for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
+    Scr4 x = HorizontalAdd(v * row0);
+    Scr4 y = HorizontalAdd(v * row1);
+    Scr4 z = HorizontalAdd(v * row2);
 
     v  = Vec4(x, y, z);
     v *= Reciprocal(HorizontalMax(v));
@@ -508,7 +505,7 @@ void EstimatePrincipleComponent3(Sym3x3 const& matrix, Vec4 &out)
   out = v;
 }
 
-void EstimatePrincipleComponent4(Sym4x4 const& matrix, Vec4 &out)
+void EstimatePrincipleComponent(Sym4x4 const& matrix, Vec4 &out)
 {
   Vec4 const row0(matrix[0], matrix[1], matrix[2], matrix[3]);
   Vec4 const row1(matrix[1], matrix[4], matrix[5], matrix[6]);
@@ -516,10 +513,10 @@ void EstimatePrincipleComponent4(Sym4x4 const& matrix, Vec4 &out)
   Vec4 const row3(matrix[3], matrix[6], matrix[8], matrix[9]);
   Vec4 v;
 
-  float r0; Dot(row0, row0, &r0);
-  float r1; Dot(row1, row1, &r1);
-  float r2; Dot(row2, row2, &r2);
-  float r3; Dot(row3, row3, &r3);
+  Scr4 r0 = LengthSquared(row0);
+  Scr4 r1 = LengthSquared(row1);
+  Scr4 r2 = LengthSquared(row2);
+  Scr4 r3 = LengthSquared(row3);
 
   if (r0 > r1 && r0 > r2 && r0 > r3) v = row0;
   else if (r1 > r2 && r1 > r3) v = row1;
@@ -528,10 +525,10 @@ void EstimatePrincipleComponent4(Sym4x4 const& matrix, Vec4 &out)
 
 #define POWER_ITERATION_COUNT   8
   for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
-    Vec4 x = HorizontalAdd(v * row0);
-    Vec4 y = HorizontalAdd(v * row1);
-    Vec4 z = HorizontalAdd(v * row2);
-    Vec4 w = HorizontalAdd(v * row3);
+    Scr4 x = HorizontalAdd(v * row0);
+    Scr4 y = HorizontalAdd(v * row1);
+    Scr4 z = HorizontalAdd(v * row2);
+    Scr4 w = HorizontalAdd(v * row3);
 
     v  = Vec4(x, y, z, w);
     v *= Reciprocal(HorizontalMax(v));
