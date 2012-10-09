@@ -145,7 +145,7 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
     m_metric[0];
 
   // initialize the best error
-  m_besterror = Vec4(FLT_MAX);
+  m_besterror = Scr4(FLT_MAX);
   m_best = false;
 
   m_swapindex = swap;
@@ -216,7 +216,7 @@ void PaletteFit::Compress(void* block)
 }
 
 #if 1 //ndef NDEBUG
-void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Vec4 &error) {
+void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Scr4 &error) {
   int ib = GetIndexBits(mode);
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
