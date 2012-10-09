@@ -79,7 +79,7 @@ namespace squish {
   __declspec(align(16))
 #endif
 
-static const unsigned int blockxor[64][/*6*/5][4] = {
+const unsigned int blockxor[64][/*6*/5][4] = {
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x0000ffff,0x0000ffff,0x0000ffff,0x0000ffff}, {0xffff0000,0xffff0000,0xffff0000,0xffff0000}, {0x0000ffff,0x0000ffff,0x000000ff,0x00000000}, {0xffff0000,0xffff0000,0xff000000,0x00000000}, {0x00000000,0x00000000,0x00ffff00,0xffffffff} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x00ffffff,0x00ffffff,0x00ffffff,0x00ffffff}, {0xff000000,0xff000000,0xff000000,0xff000000}, {0x00ffffff,0x0000ffff,0x00000000,0x00000000}, {0xff000000,0xffff0000,0xffff0000,0xff000000}, {0x00000000,0x00000000,0x0000ffff,0x00ffffff} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x000000ff,0x000000ff,0x000000ff,0x000000ff}, {0xffffff00,0xffffff00,0xffffff00,0xffffff00}, {0xffffffff,0x00ffff00,0x00000000,0x00000000}, {0x00000000,0xff000000,0xffff0000,0xffff0000}, {0x00000000,0x000000ff,0x0000ffff,0x0000ffff} },
@@ -146,7 +146,7 @@ static const unsigned int blockxor[64][/*6*/5][4] = {
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffff00ff,0xffff00ff,0x000000ff,0x000000ff}, {0x0000ff00,0x0000ff00,0xffffff00,0xffffff00}, {0x000000ff,0x0000ff00,0x00ff0000,0xff000000}, {0xffffff00,0xffff0000,0xff000000,0x00000000}, {0x00000000,0x000000ff,0x0000ffff,0x00ffffff} }
 };
 
-static const int shorterindex[64][/*6*/5] = {
+const int shorterindex[64][/*6*/5] = {
  //   1       1 | 2      1 | 2 | 3     1 | 2 | 3 (ordered)
   { /*0,*/  /*0,*/15,  /*0,*/ 3,15,  /*0,*/ 3,15},
   { /*0,*/  /*0,*/15,  /*0,*/ 3, 8,  /*0,*/ 3, 8},
@@ -462,7 +462,7 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[3], Vec4 (&en
   }
 #else
   Col4 xors = Col4(0);
-  
+
   LoadAligned(idxs[0], indices[0]);
 
   /* same for all set 1s */
@@ -503,7 +503,7 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[2], Vec4 (&en
   }
 #else
   Col4 xors = Col4(0);
-  
+
   LoadAligned(idxs[0], indices[0]);
 
   /* same for all set 1s */
@@ -512,7 +512,7 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[2], Vec4 (&en
   /* set 2 */
   if (indices[0][shorterindex[partition][0]] & ihibit) {
     start[1].SwapXYZW(end[1]); ExchangeBits<1>(sharedbits); xors |= Col4(blockxor[partition][1]); }
-  
+
   idxs[0] ^= (xors & ihixor);
 #endif
 }
@@ -543,7 +543,7 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&en
 #else
   Col4 ixors = Col4(0);
   Col4 axors = Col4(0);
-  
+
   LoadAligned(idxs[0], indices[0]);
   LoadAligned(idxs[1], indices[1]);
 
@@ -553,7 +553,7 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&en
   /* same for all set 1s */
   if (indices[1][                        0 ] & ahibit) {
     start[0].SwapW   (end[0]); ExchangeBits<0>(sharedbits); axors  = Col4(0xFFFFFFFF); }
-  
+
   idxs[0] ^= (ixors & ihixor);
   idxs[1] ^= (axors & ahixor);
 #endif
@@ -580,13 +580,13 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&en
   }
 #else
   Col4 xors = Col4(0);
-  
+
   LoadAligned(idxs[0], indices[0]);
 
   /* same for all set 1s */
   if (indices[0][                        0 ] & ihibit) {
     start[0].SwapXYZW(end[0]); ExchangeBits<0>(sharedbits); xors  = Col4(0xFFFFFFFF); }
-  
+
   idxs[0] ^= (xors & ihixor);
 #endif
 }
@@ -715,7 +715,7 @@ void WritePaletteBlock3_m2(int partition, Vec4 const (&start)[2], Vec4 const (&e
   Col4 b[2][FIELDN];
   Col4 blkl, blkh;
   Col4 idxs[1];
-  
+
   // remap the indices
   RemapPaletteBlock<3>(partition, s, e, sharedbits, idxs, indices);
 
@@ -780,7 +780,7 @@ void WritePaletteBlock3_m3(int partition, Vec4 const (&start)[3], Vec4 const (&e
   Col4 b[3][FIELDN];
   Col4 blkl, blkh;
   Col4 idxs[1];
-  
+
   // remap the indices
   RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
@@ -843,7 +843,7 @@ void WritePaletteBlock3_m4(int partition, Vec4 const (&start)[2], Vec4 const (&e
   Col4 b[2][FIELDN];
   Col4 blkl, blkh;
   Col4 idxs[1];
-  
+
   // remap the indices
   RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
@@ -910,7 +910,7 @@ void WritePaletteBlock4_m5(int r, int ix, Vec4 const (&start)[1], Vec4 const (&e
   Col4 b[1][FIELDN];
   Col4 blkl, blkh;
   Col4 idxs[2];
-  
+
   // remap the indices
   if (!ix)
     RemapPaletteBlock<2,3>(0, s, e, sharedbits, idxs, indices);
@@ -981,7 +981,7 @@ void WritePaletteBlock4_m6(int rotation, Vec4 const (&start)[1], Vec4 const (&en
   Col4 b[1][FIELDN];
   Col4 blkl, blkh;
   Col4 idxs[2];
-  
+
   // remap the indices
   RemapPaletteBlock<2,2>(0, s, e, sharedbits, idxs, indices);
 
@@ -1045,7 +1045,7 @@ void WritePaletteBlock4_m7(int partition, Vec4 const (&start)[1], Vec4 const (&e
   Col4 b[1][FIELDN];
   Col4 blkl, blkh;
   Col4 idxs[1];
-  
+
   // remap the indices
   RemapPaletteBlock<4>(partition, s, e, sharedbits, idxs, indices);
 
@@ -1108,7 +1108,7 @@ void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&e
   Col4 b[2][FIELDN];
   Col4 blkl, blkh;
   Col4 idxs[1];
-  
+
   // remap the indices
   RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
@@ -1171,7 +1171,7 @@ void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&e
 
 /* *****************************************************************************
  */
-static const u8 whichsetinpartition[64][/*3*/2][16] = {
+const u8 whichsetinpartition[64][/*3*/2][16] = {
 { /*{0},*/ {0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1},{0,0,1,1,0,0,1,1,0,2,2,1,2,2,2,2}},
 { /*{0},*/ {0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1},{0,0,0,1,0,0,1,1,2,2,1,1,2,2,2,1}},
 { /*{0},*/ {0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1},{0,0,0,0,2,0,0,1,2,2,1,1,2,2,1,1}},
@@ -1256,7 +1256,8 @@ void ReadPaletteBlock(int partition, int *codes, Col4 &blkl, Col4 &blkh, int *ou
    */
 
   // one bit is omited per set, so it's one instruction per set + 1
-  switch (sets) {
+  assume(sets >= 1 && sets <= 3);
+  switch(sets) {
     case 1: {
       // always index 0
       iblk = ShiftLeftHalf<ibits>(

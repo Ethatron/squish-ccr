@@ -197,7 +197,7 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
   int bestbit = -1;
   int besttyp = -1;
 
-  Vec4 error(FLT_MAX);
+  Scr4 error(FLT_MAX);
 
   for (int m = sm; m <= em; m++) {
     int mode = modeorder[om][m - 1];
