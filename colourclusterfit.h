@@ -40,26 +40,32 @@ namespace squish {
 class ColourClusterFit : public ColourFit
 {
 public:
-  ColourClusterFit( ColourSet const* colours, int flags );
+  ColourClusterFit(ColourSet const* colours, int flags);
 
 private:
-  bool ConstructOrdering( Vec3 const& axis, int iteration );
+  bool ConstructOrdering(Vec3 const& axis, int iteration);
 
-  virtual void Compress3( void* block );
-  virtual void Compress4( void* block );
+  void ClusterFit3Constant(void* block);
+  void ClusterFit4Constant(void* block);
+
+  void ClusterFit3(void* block);
+  void ClusterFit4(void* block);
+
+  virtual void Compress3(void* block);
+  virtual void Compress4(void* block);
 
   enum {
     kMinIterations = 1,
     kMaxIterations = 15
   };
 
-  int m_iterationCount;
+  int  m_iterationCount;
   Vec3 m_principle;
-  u8 m_order[16 * kMaxIterations];
-  Vec4 m_points_weights[16];
-  Vec4 m_xsum_wsum;
   Vec4 m_metric;
-  Vec4 m_besterror;
+  Scr4 m_besterror;
+  Vec4 m_xsum_wsum;
+  Vec4 m_points_weights[16];
+  a16 u8 m_order[16 * kMaxIterations];
 };
 #endif
 
