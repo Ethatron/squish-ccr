@@ -400,7 +400,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
     // cache some values
     Vec4 const xsum_wsum = m_xsum_wsum;
 
-#if 1
+#if 0
   Vec4 lasta = Vec4(0.0f);
   Vec4 lastb = xsum_wsum;
   Vec4 lastc = Vec4(0.0f);
@@ -429,7 +429,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
 	Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_factor.SplatZ(), alphax_sum * alphabeta_factor.SplatY());
 	Vec4 b = NegativeMultiplySubtract(alphax_sum, alphabeta_factor.SplatZ(),  betax_sum * alphabeta_factor.SplatX());
 	
-#if 1
+#if 0
 	// last cluster [j,count) is at the end
 	Vec4 part2 = xsum_wsum - part1 - part0;
 
@@ -622,7 +622,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
 	  Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_factor.SplatZ(), alphax_sum * alphabeta_factor.SplatY());
 	  Vec4 b = NegativeMultiplySubtract(alphax_sum, alphabeta_factor.SplatZ(),  betax_sum * alphabeta_factor.SplatX());
 
-#if 1
+#if 0
 	  // last cluster [k,count) is at the end
 	  Vec4 part3 = xsum_wsum - part2 - part1 - part0;
 

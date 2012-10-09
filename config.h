@@ -56,6 +56,8 @@
 /* .............................................................................
  */
 
+#ifndef NDEBUG
+
 // adjustments working in "Debug" or "Release" builds:
 // throw the quantized rgba values back into the input.image
 #define	VERIFY_QUANTIZER
@@ -70,6 +72,8 @@
 #undef	DEBUG_SETTING
 // print out lots of information about the search
 #undef	DEBUG_DETAILS
+
+#endif // NDEBUG
 
 #if defined(TRACK_STATISTICS)
 namespace squish {
