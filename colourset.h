@@ -41,19 +41,33 @@ class ColourSet
 public:
   ColourSet( u8 const* rgba, int mask, int flags );
 
+  bool IsTransparent() const { return m_transparent; }
+  bool IsUnweighted() const { return m_unweighted; }
+
   int GetCount() const { return m_count; }
   Vec3 const* GetPoints() const { return m_points; }
   float const* GetWeights() const { return m_weights; }
-  bool IsTransparent() const { return m_transparent; }
 
   void RemapIndices(u8 const* source, u8* target) const;
 
 private:
-  int m_count;
-  Vec3 m_points[16];
+  bool  m_transparent, m_unweighted;
+  int   m_count;
+  Vec3  m_points[16];
   float m_weights[16];
-  int m_remap[16];
-  bool m_transparent;
+  int   m_remap[16];
+
+#ifdef	FEATURE_EXACT_ERROR
+  /* --------------------------------------------------------------------------- */
+public:
+  u8 const* GetFrequencies() const {
+    return m_frequencies; }
+  u8 GetMaxFrequency() const {
+    u8 mx = 1; for (int i = 0; i < m_count; ++i) mx = std::max(mx, m_frequencies[i]); return mx; }
+
+private:
+  u8    m_frequencies[16];
+#endif
 };
 #endif
 

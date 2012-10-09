@@ -31,8 +31,8 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(USE_PRE)
-ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
-  : m_count(0), m_transparent(false)
+ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
+  : m_count(0), m_unweighted(true), m_transparent(false)
 {
   /*
   static const float dw[] = {
@@ -63,6 +63,28 @@ ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
   bool clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
   bool weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
   const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
+  
+#ifdef	FEATURE_TEST_LINES
+  Scr3 angl, epsl = Scr3(1.0f - (1.0f / 256));
+  Vec3 chkl, line;
+#endif
+
+  // build mapped data
+  u8 clra = clearAlpha || !isBtc1 ? 0xFF : 0x00;
+  u8 wgta = weightByAlpha         ? 0x00 : 0xFF;
+  u8 rgbx[4 * 16];
+  u8 ___a[1 * 16];
+
+  for (int i = 0; i < 16; ++i) {
+    // clear alpha
+    rgbx[4 * i + 0] = rgba[4 * i + 0];
+    rgbx[4 * i + 1] = rgba[4 * i + 1];
+    rgbx[4 * i + 2] = rgba[4 * i + 2];
+    rgbx[4 * i + 3] = 0;
+
+    // threshold alpha
+    ___a[1 * i + 0] = (((signed char)rgba[4 * i + 3]) >> 7) | clra;
+  }
 
   // create the minimal set
   for (int i = 0; i < 16; ++i) {
@@ -74,28 +96,49 @@ ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
     }
 
     // check for transparent pixels when using dxt1
-    if (isBtc1 && !clearAlpha && (rgba[4 * i + 3] < 128)) {
+    if (isBtc1 && !___a[i]) {
       m_remap[i] = -1;
       m_transparent = true;
       continue;
     }
 
+    // ensure there is always non-zero weight even for zero alpha
+    u8    w = rgba[4 * i + 3] | wgta;
+    float W = (float)(w + 1) / 256.0f;
+
     // loop over previous points for a match
+    u8 *rgbvalue = &rgbx[4 * i + 0];
     for (int j = 0;; ++j) {
+      u8 *crgbvalue = &rgbx[4 * j + 0];
+
       // allocate a new point
       if (j == i) {
 	// normalize coordinates to [0,1]
-	float x = rgbLUT[rgba[4 * i + 0]];
-	float y = rgbLUT[rgba[4 * i + 1]];
-	float z = rgbLUT[rgba[4 * i + 2]];
-
-	// ensure there is always non-zero weight even for zero alpha
-	float w = (float)(rgba[4 * i + 3] + 1) / 256.0f;
+	float r = rgbLUT[rgbvalue[0]];
+	float g = rgbLUT[rgbvalue[1]];
+	float b = rgbLUT[rgbvalue[2]];
 
 	// add the point
-	m_points[m_count] = Vec3(x, y, z);
-	m_weights[m_count] = (weightByAlpha ? w : 1.0f);
 	m_remap[i] = m_count;
+	m_points[m_count] = Vec3(r, g, b);
+	m_weights[m_count] = W;
+	m_unweighted = m_unweighted && !(u8)(~w);
+#ifdef	FEATURE_EXACT_ERROR
+	m_frequencies[m_count] = 1;
+#endif
+	
+#ifdef	FEATURE_TEST_LINES
+        // straight line test
+	if (m_count >= 2) {
+	  // (a/n * b/m + c/n * d/m + e/n * f/m)
+	  chkl = Normalize(m_points[m_count - 1] - m_points[m_count - 2]);
+	  angl = Abs(Dot(line, chkl));
+
+	  m_straight = m_straight && (angl < epsl);
+        }
+	else if (m_count >= 1)
+	  line = Normalize(m_points[m_count - 0] - m_points[m_count - 1]);
+#endif
 
 	// advance
 	++m_count;
@@ -105,21 +148,23 @@ ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
       // check for a match
       int oldbit = 1 << j;
       bool match = ((mask & oldbit) != 0)
+	&& (*((int *)rgbvalue) == *((int *)crgbvalue)) && ___a[j]/*
 	&& (rgba[4 * i + 0] == rgba[4 * j + 0])
 	&& (rgba[4 * i + 1] == rgba[4 * j + 1])
 	&& (rgba[4 * i + 2] == rgba[4 * j + 2])
-	&& (rgba[4 * j + 3] >= 128 || !isBtc1 || clearAlpha);
+	&& (rgba[4 * j + 3] >= 128 || !isBtc1 || clearAlpha)*/;
 
       if (match) {
 	// get the index of the match
 	int index = m_remap[j];
 
-	// ensure there is always non-zero weight even for zero alpha
-	float w = (float)(rgba[4 * i + 3] + 1) / 256.0f;
-
 	// map to this point and increase the weight
-	m_weights[index] += (weightByAlpha ? w : 1.0f);
 	m_remap[i] = index;
+	m_weights[index] += W;
+	m_unweighted = false;
+#ifdef	FEATURE_EXACT_ERROR
+	m_frequencies[index] += 1;
+#endif
 	break;
       }
     }
@@ -127,10 +172,16 @@ ColourSet::ColourSet( u8 const* rgba, int mask, int flags )
 
   // square root the weights
   for (int i = 0; i < m_count; ++i)
-    m_weights[i] = std::sqrt(m_weights[i]);
+    m_weights[i] = math::sqrt(m_weights[i]);
+
+  // clear if we're suppose to throw alway alpha
+  m_transparent = m_transparent && !clearAlpha;
+
+  // we have tables for this
+  m_unweighted = m_unweighted && ((m_count == 16) || isBtc1);
 }
 
-void ColourSet::RemapIndices( u8 const* source, u8* target ) const
+void ColourSet::RemapIndices(u8 const* source, u8* target) const
 {
   for (int i = 0; i < 16; ++i) {
     u8 t = 3; t = ((m_remap[i] == -1) ? t : source[m_remap[i]]); target[i] = t;
