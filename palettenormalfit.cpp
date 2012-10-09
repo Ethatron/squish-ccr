@@ -55,7 +55,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
       Sym2x2 covariance = ComputeWeightedCovariance2(count, values, weights);
 
       // compute the principle component
-      Vec4 principle; ComputePrincipleComponent(covariance, principle);
+      Vec4 principle; GetPrincipleComponent(covariance, principle);
 
       // get the min and max normal as the codebook endpoints
       Vec4 start(0.0f);
@@ -65,17 +65,17 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 	// compute the normal
 	start = end = values[0];
 
-	Vec4 min, max; min = max = Dot(values[0], principle);
+	Scr4 min, max; min = max = Dot(values[0], principle);
 	Vec4 mmn, mmx; mmn = mmx =     values[0];
 
 	for (int i = 1; i < count; ++i) {
-	  Vec4 val = Dot(values[i], principle);
+	  Scr4 val = Dot(values[i], principle);
 
-	  if (CompareFirstLessThan(val, min)) {
+	  if (min > val) {
 	    start = values[i];
-	    min = val;
+	    min   = val;
 	  }
-	  else if (CompareFirstGreaterThan(val, max)) {
+	  else if (max < val) {
 	    end = values[i];
 	    max = val;
 	  }
@@ -135,7 +135,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
   vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
 
   // match each point to the closest code
-  Vec4 error = Vec4(0.0f);
+  Scr4 error = Scr4(0.0f);
   a16 u8 closest[4][16];
 
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
@@ -166,7 +166,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
       u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
 
       // find the closest code
-      Vec4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
+      Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
@@ -184,17 +184,17 @@ void PaletteNormalFit::Compress(void* block, int mode)
 
       for (int i = 0; i < count; ++i) {
 	// find the closest code
-	Vec4 dist = Vec4(FLT_MAX);
+	Scr4 dist = Scr4(FLT_MAX);
 	int idx = 0;
 
 	for (int j = 0; j < ccs; ++j) {
 	  // measure angle-deviation
 	  Vec4 cnormal = Normalize(codes[j]);
 	  Vec4 vnormal = Normalize(values[j]);
-	  Vec4 angle = Vec4(1.0f) - Dot(values[i], codes[j]);
+	  Scr4 angle = Scr4(1.0f) - Dot(values[i], codes[j]);
 
-	  Vec4 d = angle * angle;
-	  if (CompareFirstLessThan(d, dist)) {
+	  Scr4 d = angle * angle;
+	  if (d < dist) {
 	    dist = d;
 	    idx = j;
 	  }
@@ -209,7 +209,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
     }
 
     // kill early if this scheme looses
-    if (CompareFirstLessThan(m_besterror, error))
+    if (!(error < m_besterror))
       return;
   }
 
