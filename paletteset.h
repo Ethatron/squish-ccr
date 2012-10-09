@@ -58,8 +58,10 @@ public:
   int GetPartition() const { return m_partid; }
 
   // information determined when the palette-set has been formed
-  bool IsTransparent() const { return m_transparent; }
   bool IsSeperateAlpha() const { return /*m_transparent &&*/ m_seperatealpha; }
+  bool IsTransparent() const { return m_transparent; }
+
+  bool IsUnweighted(int idx) const { return m_unweighted[idx]; }
   Vec4 const* GetPoints(int idx) const { return m_points[idx]; }
   float const* GetWeights(int idx) const { return m_weights[idx]; }
   int GetCount(int idx) const { return m_count[idx]; }
@@ -68,9 +70,6 @@ public:
     /*(m_numsets > 0 ? m_count[0] : 0)*/ (m_seperatealpha ? m_count[m_numsets + 0] : 0) +
       (m_numsets > 1 ? m_count[1] : 0) /*(m_seperatealpha ? m_count[m_numsets + 1] : 0)*/ +
       (m_numsets > 2 ? m_count[2] : 0) /*(m_seperatealpha ? m_count[m_numsets + 2] : 0)*/; }
-  u8 const* GetFrequencies(int idx) const { return m_frequencies[idx]; }
-  u8 GetMaxFrequency(int idx) const {
-    u8 mx = 1; for (int i = 0; i < m_count[idx]; ++i) mx = std::max(mx, m_frequencies[idx][i]); return mx; }
 
   // map from the set to indices and back to colours
   void RemapIndices(u8 const* source, u8* target, int set) const;
@@ -83,13 +82,25 @@ private:
   int   m_partmask;
   bool  m_seperatealpha;
 
+  bool  m_transparent;
+  bool  m_unweighted[4];
   int   m_mask[4];
   int   m_count[4];
   Vec4  m_points[4][16];
   float m_weights[4][16];
-  u8    m_frequencies[4][16];
   int   m_remap[4][16];
-  bool  m_transparent;
+
+#ifdef	FEATURE_EXACT_ERROR
+  /* --------------------------------------------------------------------------- */
+public:
+  u8 const* GetFrequencies(int idx) const {
+    return m_frequencies[idx]; }
+  u8 GetMaxFrequency(int idx) const {
+    u8 mx = 1; for (int i = 0; i < m_count[idx]; ++i) mx = std::max(mx, m_frequencies[idx][i]); return mx; }
+
+private:
+  u8    m_frequencies[4][16];
+#endif
 };
 #endif
 

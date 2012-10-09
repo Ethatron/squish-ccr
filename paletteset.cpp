@@ -114,7 +114,8 @@ void PaletteSet::GetMasks(int flags, int partition, int (&masks)[4]) {
 PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation)
   : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF), m_seperatealpha(false), m_transparent(false)
 {
-  m_count[0] = m_count[1] = m_count[2] = m_count[3] = 0;
+  m_count     [0] = m_count     [1] = m_count     [2] = m_count     [3] = 0;
+  m_unweighted[0] = m_unweighted[1] = m_unweighted[2] = m_unweighted[3] = true;
 
   /* determine the number of sets and select the partition
   if ((0))
@@ -188,6 +189,7 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
   // build mapped data
   u8 mska = !seperateAlpha ? 0xFF : 0x00;
   u8 clra = !clearAlpha    ? 0x00 : 0xFF;
+  u8 wgta =  weightByAlpha ? 0x00 : 0xFF;
   u8 rgbx[4 * 16];
   u8 ___a[1 * 16];
 
@@ -229,7 +231,8 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
       }
 
       // ensure there is always non-zero weight even for zero alpha
-      float W = (float)(rgba[4 * i + 3] + 1) / 256.0f;
+      u8    w = rgba[4 * i + 3] | wgta;
+      float W = (float)(w + 1) / 256.0f;
 
       // loop over previous points for a match
       u8 *rgbvalue = &rgbx[4 * i + 0];
@@ -242,16 +245,19 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	  int index = m_count[s]++;
 
 	  // normalize coordinates to [0,1]
-	  float x = rgbLUT[rgbvalue[0]];
-	  float y = rgbLUT[rgbvalue[1]];
-	  float z = rgbLUT[rgbvalue[2]];
-	  float w =   aLUT[rgbvalue[3]];
+	  float r = rgbLUT[rgbvalue[0]];
+	  float g = rgbLUT[rgbvalue[1]];
+	  float b = rgbLUT[rgbvalue[2]];
+	  float a =   aLUT[rgbvalue[3]];
 
 	  // add the point
-	  m_points[s][index] = Vec4(x, y, z, w);
-	  m_weights[s][index] = (weightByAlpha ? W : 1.0f);
-	  m_frequencies[s][index] = 1;
 	  m_remap[s][i] = index;
+	  m_points[s][index] = Vec4(r, g, b, a);
+	  m_weights[s][index] = W;
+	  m_unweighted[s] = m_unweighted && !(u8)(~w);
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][index] = 1;
+#endif
 	  break;
 	}
 
@@ -270,9 +276,12 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	  int index = m_remap[s][j];
 
 	  // map to this point and increase the weight
-	  m_weights[s][index] += (weightByAlpha ? W : 1.0f);
-	  m_frequencies[s][index] += 1;
 	  m_remap[s][i] = index;
+	  m_weights[s][index] += W;
+	  m_unweighted[s] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][index] += 1;
+#endif
 	  break;
 	}
       }
@@ -280,7 +289,10 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 
     // square root the weights
     for (int i = 0; i < m_count[s]; ++i)
-      m_weights[s][i] = Vec4::sqrt(m_weights[s][i]);
+      m_weights[s][i] = math::sqrt(m_weights[s][i]);
+    
+    // we have tables for this
+    m_unweighted[s] = m_unweighted[s] && (m_count[s] == 16);
 
     // TODO: if not m_transparent this all becomes a constant!
     if (seperateAlpha) {
@@ -314,10 +326,13 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	    float w = aLUT[avalue[0]];
 
 	    // add the point
+	    m_remap[a][i] = index;
 	    m_points[a][index] = Vec4(w);
 	    m_weights[a][index] = (weightByAlpha ? W : 1.0f);
+	    m_unweighted[a] = m_unweighted && (!weightByAlpha || !(u8)(~avalue[0]));
+#ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] = 1;
-	    m_remap[a][i] = index;
+#endif
 	    break;
 	  }
 
@@ -331,9 +346,12 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	    int index = m_remap[a][j];
 
 	    // map to this point and increase the weight
-	    m_weights[a][index] += (weightByAlpha ? W : 1.0f);
-	    m_frequencies[a][index] += 1;
 	    m_remap[a][i] = index;
+	    m_weights[a][index] += (weightByAlpha ? W : 1.0f);
+	    m_unweighted[a] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	    m_frequencies[a][index] += 1;
+#endif
 	    break;
 	  }
 	}
@@ -341,7 +359,10 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 
       // square root the weights
       for (int i = 0; i < m_count[a]; ++i)
-	m_weights[a][i] = Vec4::sqrt(m_weights[a][i]);
+	m_weights[a][i] = math::sqrt(m_weights[a][i]);
+      
+      // we have tables for this
+      m_unweighted[a] = m_unweighted[a] && (m_count[a] == 16);
     }
   }
 
