@@ -245,158 +245,373 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 
   // do the iterative tangent search
   if (flags & kAlphaIterativeFit) {
-    // binary search, tangent-fitting
-    int s = min5; int oe = 0;
-    int e = max5; int os = 0;
-    int p = 1;
-    int l = 0;
-    while ((l = (e - s) >> p) != 0) {
-      int cs =          s + os;
-      int ce =          e - oe;
-      int ms = std::max(cs - l, 0x00);
-      int ps = std::min(cs + l, 0xFF);
-      int me = std::max(ce - l, 0x00);
-      int pe = std::min(ce + l, 0xFF);
+#if	defined(SQUISH_USE_SIMD)
+    // initial values
+    int err5 = 0;
+    int err7 = 0;
 
-      int error0 = 0;
-      int error1 = 0;
-      int error2 = 0;
-      int error3 = 0;
-      int error4 = 0;
-      for (int v = 0; v < 16; v++) {
-	// find the closest code
-	int dist0, dist1, dist2, dist3, dist4;
-	dist0 = dist1 = dist2 = dist3 = dist4 = 0xFFFF;
+    for (int v = 0; v < 16; v++) {
+      // find the closest code
+      int dist5, dist7;
+      dist5 = dist7 = 0xFFFF;
 
-	// for all possible codebook-entries
-	for (int f = 0; f < 8; f++) {
-	  int cb0 = (((5 - f) * cs + f * ce) / 5);
-	  int cb1 = (((5 - f) * cs + f * me) / 5);
-	  int cb2 = (((5 - f) * cs + f * pe) / 5);
-	  int cb3 = (((5 - f) * ms + f * ce) / 5);
-	  int cb4 = (((5 - f) * ps + f * ce) / 5);
+      // for all possible codebook-entries
+      for (int f = 0; f < 8; f++) {
+	int cb5 = (((5 - f) * min5 + f * max5) / 5);
+	int cb7 = (((7 - f) * min7 + f * max7) / 7);
 
-	  if (f >= 6) cb0 = cb1 = cb2 = cb3 = cb4 = 0x00;
-	  if (f >= 7) cb0 = cb1 = cb2 = cb3 = cb4 = 0xFF;
+	if (f >= 6) cb5 = 0x00;
+	if (f >= 7) cb7 = 0xFF;
 
-	  int d0 = std::abs(cb0 - rgba[4 * v + 3]); d0 *= d0;
-	  int d1 = std::abs(cb1 - rgba[4 * v + 3]); d1 *= d1;
-	  int d2 = std::abs(cb2 - rgba[4 * v + 3]); d2 *= d2;
-	  int d3 = std::abs(cb3 - rgba[4 * v + 3]); d3 *= d3;
-	  int d4 = std::abs(cb4 - rgba[4 * v + 3]); d4 *= d4;
+	int d5 = cb5 - rgba[4 * v + 3]; d5 *= d5;
+	int d7 = cb7 - rgba[4 * v + 3]; d7 *= d7;
 
-	  if (dist0 > d0) dist0 = d0;
-	  if (dist1 > d1) dist1 = d1;
-	  if (dist2 > d2) dist2 = d2;
-	  if (dist3 > d3) dist3 = d3;
-	  if (dist4 > d4) dist4 = d4;
-	}
-
-	// accumulate the error
-	error0 += dist0;
-	error1 += dist1;
-	error2 += dist2;
-	error3 += dist3;
-	error4 += dist4;
+	if (dist5 > d5) dist5 = d5;
+	if (dist7 > d7) dist7 = d7;
       }
 
-      int merr = 0xFFFFFF;
-      if (merr > error0) merr = error0;
-      if (merr > error1) merr = error1;
-      if (merr > error4) merr = error4;
-      if (merr > error2) merr = error2;
-      if (merr > error3) merr = error3;
-
-      /**/ if (merr == error0) p++;	// half range
-      else if (merr == error1) oe += l;	// range up
-      else if (merr == error4) os += l;	// range dn
-      else if (merr == error2) oe -= l;	// range up
-      else if (merr == error3) os -= l;	// range dn
-
-      // lossless
-      if (!merr)
-	break;
+      // accumulate the error
+      err5 += dist5;
+      err7 += dist7;
     }
-
-    // final match
-    min5 = std::max(s + os, 0x00);
-    max5 = std::min(e - oe, 0xFF);
 
     // binary search, tangent-fitting
-    s = min7; oe = 0;
-    e = max7; os = 0;
-    p = 1;
-    l = 0;
-    while ((l = (e - s) >> p) != 0) {
-      int cs =          s + os;
-      int ce =          e - oe;
-      int ms = std::max(cs - l, 0x00);
-      int ps = std::min(cs + l, 0xFF);
-      int me = std::max(ce - l, 0x00);
-      int pe = std::min(ce + l, 0xFF);
+    int errM = std::min(err5, err7);
 
-      int error0 = 0;
-      int error1 = 0;
-      int error2 = 0;
-      int error3 = 0;
-      int error4 = 0;
-      for (int v = 0; v < 16; v++) {
-	// find the closest code
-	int dist0, dist1, dist2, dist3, dist4;
-	dist0 = dist1 = dist2 = dist3 = dist4 = 0xFFFF;
+    // !lossless
+    if (errM) {
+      float r = (float)((max5 - min5) >> 1);	// max 127
 
-	// for all possible codebook-entries
-	for (int f = 0; f < 8; f++) {
-	  int cb0 = (((7 - f) * cs + f * ce) / 7);
-	  int cb1 = (((7 - f) * cs + f * me) / 7);
-	  int cb2 = (((7 - f) * cs + f * pe) / 7);
-	  int cb3 = (((7 - f) * ms + f * ce) / 7);
-	  int cb4 = (((7 - f) * ps + f * ce) / 7);
+      Vec4 errC  = Vec4(err5);
+      Vec4 s     = Vec4(min5);
+      Vec4 e     = Vec4(max5);
+      Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
 
-	  int d0 = std::abs(cb0 - rgba[4 * v + 3]); d0 *= d0;
-	  int d1 = std::abs(cb1 - rgba[4 * v + 3]); d1 *= d1;
-	  int d2 = std::abs(cb2 - rgba[4 * v + 3]); d2 *= d2;
-	  int d3 = std::abs(cb3 - rgba[4 * v + 3]); d3 *= d3;
-	  int d4 = std::abs(cb4 - rgba[4 * v + 3]); d4 *= d4;
+      while (range > Vec4(0.0f)) {
+	// s + os, s + os, s + os - r, s + os + r
+	// e - oe - r, e - oe + r, e - oe, e - oe
+	Vec4 rssmp = s + range;
+	Vec4 rmpee = e + range.Swap();
 
-	  if (dist0 > d0) dist0 = d0;
-	  if (dist1 > d1) dist1 = d1;
-	  if (dist2 > d2) dist2 = d2;
-	  if (dist3 > d3) dist3 = d3;
-	  if (dist4 > d4) dist4 = d4;
+	Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
+	Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
+	
+	Vec4 errors = Vec4(0.0f);
+	for (int v = 0; v < 16; v++) {
+	  // find the closest code
+	  Vec4 val = Vec4(rgba[4 * v + 3]);
+	  Vec4 dists = Vec4(255.0f * 255.0f);
+
+	  // for all possible codebook-entries
+	  Vec4 _cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
+	  Vec4 _cb1 = (cssmp * Vec4(4.0f / 5.0f)) + (cmpee * Vec4(1.0f / 5.0f)); _cb1 = Truncate(_cb1);
+	  Vec4 _cb2 = (cssmp * Vec4(3.0f / 5.0f)) + (cmpee * Vec4(2.0f / 5.0f)); _cb2 = Truncate(_cb2);
+	  Vec4 _cb3 = (cssmp * Vec4(2.0f / 5.0f)) + (cmpee * Vec4(3.0f / 5.0f)); _cb3 = Truncate(_cb3);
+	  Vec4 _cb4 = (cssmp * Vec4(1.0f / 5.0f)) + (cmpee * Vec4(4.0f / 5.0f)); _cb4 = Truncate(_cb4);
+	  Vec4 _cb5 =                                cmpee                     ; //b5 = Truncate(_cb5);
+	  Vec4 _cb6 = Vec4(0.0f);
+	  Vec4 _cb7 = Vec4(255.0f);
+
+	  _cb0 = _cb0 - val; dists = Min(dists, _cb0 * _cb0);
+	  _cb1 = _cb1 - val; dists = Min(dists, _cb1 * _cb1);
+	  _cb2 = _cb2 - val; dists = Min(dists, _cb2 * _cb2);
+	  _cb3 = _cb3 - val; dists = Min(dists, _cb3 * _cb3);
+	  _cb4 = _cb4 - val; dists = Min(dists, _cb4 * _cb4);
+	  _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
+	  _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
+	  _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
+	  
+	  // accumulate the error
+	  errors = errors + dists;
 	}
 
-	// accumulate the error
-	error0 += dist0;
-	error1 += dist1;
-	error2 += dist2;
-	error3 += dist3;
-	error4 += dist4;
+	Scr4 merr = HorizontalMin(errors);
+	if (!(merr < errC))
+	  range = Truncate(range * Vec4(0.5f));
+	else {
+	  int value = CompareEqualTo(errors, merr);
+
+	  // e -= r;// range up
+	  /**/ if (value & 0x8) e = rmpee.SplatW();
+	  // s += r;// range dn
+	  else if (value & 0x1) s = rssmp.SplatX();
+	  // e += r;// range up
+	  else if (value & 0x4) e = rmpee.SplatZ();
+	  // s -= r;// range dn
+	  else if (value & 0x2) s = rssmp.SplatY();
+
+	  errC = merr;
+	}
+
+	// lossless
+	if (!(errC > Vec4(0.0f)))
+	  break;
       }
 
-      int merr = 0xFFFFFF;
-      if (merr > error0) merr = error0;
-      if (merr > error1) merr = error1;
-      if (merr > error4) merr = error4;
-      if (merr > error2) merr = error2;
-      if (merr > error3) merr = error3;
-
-      /**/ if (merr == error0) p++;	// half range
-      else if (merr == error1) oe += l;	// range up
-      else if (merr == error4) os += l;	// range dn
-      else if (merr == error2) oe -= l;	// range up
-      else if (merr == error3) os -= l;	// range dn
-
-      // lossless
-      if (!merr)
-	break;
+      // final match
+      min5 = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
+      max5 = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
+      errM = FloatToInt<false>(errC).GetLong();
     }
 
-    // final match
-    min7 = std::max(s + os, 0x00);
-    max7 = std::min(e - oe, 0xFF);
+    // !lossless
+    if (errM) {
+      float r = (float)((max7 - min7) >> 1);	// max 127
+
+      Vec4 errC  = Vec4(err7);
+      Vec4 s     = Vec4(min7);
+      Vec4 e     = Vec4(max7);
+      Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
+      
+      while (range > Vec4(0.0f)) {
+	// s + os, s + os, s + os - r, s + os + r
+	// e - oe - r, e - oe + r, e - oe, e - oe
+	Vec4 rssmp = s + range;
+	Vec4 rmpee = e + range.Swap();
+
+	Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
+	Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
+	
+	Vec4 errors = Vec4(0.0f);
+	for (int v = 0; v < 16; v++) {
+	  // find the closest code
+	  Vec4 val = Vec4(rgba[4 * v + 3]);
+	  Vec4 dists = Vec4(255.0f * 255.0f);
+	  
+	  // for all possible codebook-entries
+	  Vec4 _cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
+	  Vec4 _cb1 = (cssmp * Vec4(6.0f / 7.0f)) + (cmpee * Vec4(1.0f / 7.0f)); _cb1 = Truncate(_cb1);
+	  Vec4 _cb2 = (cssmp * Vec4(5.0f / 7.0f)) + (cmpee * Vec4(2.0f / 7.0f)); _cb2 = Truncate(_cb2);
+	  Vec4 _cb3 = (cssmp * Vec4(4.0f / 7.0f)) + (cmpee * Vec4(3.0f / 7.0f)); _cb3 = Truncate(_cb3);
+	  Vec4 _cb4 = (cssmp * Vec4(3.0f / 7.0f)) + (cmpee * Vec4(4.0f / 7.0f)); _cb4 = Truncate(_cb4);
+	  Vec4 _cb5 = (cssmp * Vec4(2.0f / 7.0f)) + (cmpee * Vec4(5.0f / 7.0f)); _cb5 = Truncate(_cb5);
+	  Vec4 _cb6 = (cssmp * Vec4(1.0f / 7.0f)) + (cmpee * Vec4(6.0f / 7.0f)); _cb6 = Truncate(_cb6);
+	  Vec4 _cb7 =                                cmpee                     ; //b7 = Truncate(_cb7);
+
+	  _cb0 = _cb0 - val; dists = Min(dists, _cb0 * _cb0);
+	  _cb1 = _cb1 - val; dists = Min(dists, _cb1 * _cb1);
+	  _cb2 = _cb2 - val; dists = Min(dists, _cb2 * _cb2);
+	  _cb3 = _cb3 - val; dists = Min(dists, _cb3 * _cb3);
+	  _cb4 = _cb4 - val; dists = Min(dists, _cb4 * _cb4);
+	  _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
+	  _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
+	  _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
+	  
+	  // accumulate the error
+	  errors = errors + dists;
+	}
+
+	Scr4 merr = HorizontalMin(errors);
+	if (!(merr < errC))
+	  range = Truncate(range * Vec4(0.5f));
+	else {
+	  int value = CompareEqualTo(errors, merr);
+
+	  // e -= r;// range up
+	  /**/ if (value & 0x8) e = rmpee.SplatW();
+	  // s += r;// range dn
+	  else if (value & 0x1) s = rssmp.SplatX();
+	  // e += r;// range up
+	  else if (value & 0x4) e = rmpee.SplatZ();
+	  // s -= r;// range dn
+	  else if (value & 0x2) s = rssmp.SplatY();
+
+	  errC = merr;
+	}
+	
+	// lossless
+	if (!(errC > Vec4(0.0f)))
+	  break;
+      }
+
+      // final match
+      min7 = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
+      max7 = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
+//    errM = FloatToInt<false>(_e0).GetLong();
+    }
+#else
+    // initial values
+    int err5 = 0;
+    int err7 = 0;
+
+    for (int v = 0; v < 16; v++) {
+      // find the closest code
+      int dist5, dist7;
+      dist5 = dist7 = 0xFFFF;
+
+      // for all possible codebook-entries
+      for (int f = 0; f < 8; f++) {
+	int cb5 = (((5 - f) * min5 + f * max5) / 5);
+	int cb7 = (((7 - f) * min7 + f * max7) / 7);
+
+	if (f >= 6) cb5 = 0x00;
+	if (f >= 7) cb7 = 0xFF;
+
+	int d5 = cb5 - rgba[4 * v + 3]; d5 *= d5;
+	int d7 = cb7 - rgba[4 * v + 3]; d7 *= d7;
+
+	if (dist5 > d5) dist5 = d5;
+	if (dist7 > d7) dist7 = d7;
+      }
+
+      // accumulate the error
+      err5 += dist5;
+      err7 += dist7;
+    }
+
+    // binary search, tangent-fitting
+    int error0 = std::min(err5, err7);
+    int s;
+    int e;
+    int r;
+
+    // !lossless
+    if (error0) {
+      error0 = err5;
+      s = min5;
+      e = max5;
+      r = (e - s) >> 1;	// max 127
+
+      while (r != 0) {
+	int ms = std::max(std::min(s - r, 0xFF), 0x00);  // os - r
+	int cs = std::max(std::min(s    , 0xFF), 0x00);  // os
+	int ps = std::max(std::min(s + r, 0xFF), 0x00);  // os + r
+	int me = std::max(std::min(e - r, 0xFF), 0x00);  // oe + r
+	int ce = std::max(std::min(e    , 0xFF), 0x00);  // oe
+	int pe = std::max(std::min(e + r, 0xFF), 0x00);  // oe - r
+
+	int error1 = 0;
+	int error2 = 0;
+	int error3 = 0;
+	int error4 = 0;
+	for (int v = 0; v < 16; v++) {
+	  // find the closest code
+	  int dist1, dist2, dist3, dist4;
+	  dist1 = dist2 = dist3 = dist4 = 0xFFFF;
+
+	  // for all possible codebook-entries
+	  for (int f = 0; f < 8; f++) {
+	    int cb1 = (((5 - f) * cs + f * me) / 5);
+	    int cb2 = (((5 - f) * cs + f * pe) / 5);
+	    int cb3 = (((5 - f) * ms + f * ce) / 5);
+	    int cb4 = (((5 - f) * ps + f * ce) / 5);
+
+	    if (f >= 6) cb1 = cb2 = cb3 = cb4 = 0x00;
+	    if (f >= 7) cb1 = cb2 = cb3 = cb4 = 0xFF;
+
+	    int d1 = cb1 - rgba[4 * v + 3]; d1 *= d1;
+	    int d2 = cb2 - rgba[4 * v + 3]; d2 *= d2;
+	    int d3 = cb3 - rgba[4 * v + 3]; d3 *= d3;
+	    int d4 = cb4 - rgba[4 * v + 3]; d4 *= d4;
+
+	    if (dist1 > d1) dist1 = d1;
+	    if (dist2 > d2) dist2 = d2;
+	    if (dist3 > d3) dist3 = d3;
+	    if (dist4 > d4) dist4 = d4;
+	  }
+
+	  // accumulate the error
+	  error1 += dist1;
+	  error2 += dist2;
+	  error3 += dist3;
+	  error4 += dist4;
+	}
+
+	int                merr = error0;
+	if (merr > error1) merr = error1;
+	if (merr > error4) merr = error4;
+	if (merr > error2) merr = error2;
+	if (merr > error3) merr = error3;
+
+	/**/ if (merr == error0) r >>= 1;	// half range
+	else if (merr == error1) e -= r;	// range up
+	else if (merr == error4) s += r;	// range dn
+	else if (merr == error2) e += r;	// range up
+	else if (merr == error3) s -= r;	// range dn
+
+	// lossless
+	if (!(error0 = merr))
+	  break;
+      }
+
+      // final match
+      min5 = std::max(s, 0x00);
+      max5 = std::min(e, 0xFF);
+    }
+
+    // !lossless
+    if (error0) {
+      error0 = err7;
+      s = min7;
+      e = max7;
+      r = (e - s) >> 1;
+
+      while (r != 0) {
+	int ms = std::max(std::min(s - r, 0xFF), 0x00);  // os - r
+	int cs = std::max(std::min(s    , 0xFF), 0x00);  // os
+	int ps = std::max(std::min(s + r, 0xFF), 0x00);  // os + r
+	int me = std::max(std::min(e - r, 0xFF), 0x00);  // oe + r
+	int ce = std::max(std::min(e    , 0xFF), 0x00);  // oe
+	int pe = std::max(std::min(e + r, 0xFF), 0x00);  // oe - r
+
+	int error1 = 0;
+	int error2 = 0;
+	int error3 = 0;
+	int error4 = 0;
+	for (int v = 0; v < 16; v++) {
+	  // find the closest code
+	  int dist1, dist2, dist3, dist4;
+	  dist1 = dist2 = dist3 = dist4 = 0xFFFF;
+
+	  // for all possible codebook-entries
+	  for (int f = 0; f < 8; f++) {
+	    int cb1 = (((7 - f) * cs + f * me) / 7);
+	    int cb2 = (((7 - f) * cs + f * pe) / 7);
+	    int cb3 = (((7 - f) * ms + f * ce) / 7);
+	    int cb4 = (((7 - f) * ps + f * ce) / 7);
+
+	    int d1 = cb1 - rgba[4 * v + 3]; d1 *= d1;
+	    int d2 = cb2 - rgba[4 * v + 3]; d2 *= d2;
+	    int d3 = cb3 - rgba[4 * v + 3]; d3 *= d3;
+	    int d4 = cb4 - rgba[4 * v + 3]; d4 *= d4;
+
+	    if (dist1 > d1) dist1 = d1;
+	    if (dist2 > d2) dist2 = d2;
+	    if (dist3 > d3) dist3 = d3;
+	    if (dist4 > d4) dist4 = d4;
+	  }
+
+	  // accumulate the error
+	  error1 += dist1;
+	  error2 += dist2;
+	  error3 += dist3;
+	  error4 += dist4;
+	}
+
+	int                merr = error0;
+	if (merr > error1) merr = error1;
+	if (merr > error4) merr = error4;
+	if (merr > error2) merr = error2;
+	if (merr > error3) merr = error3;
+
+	/**/ if (merr == error0) r >>= 1;	// half range
+	else if (merr == error1) e -= r;	// range up
+	else if (merr == error4) s += r;	// range dn
+	else if (merr == error2) e += r;	// range up
+	else if (merr == error3) s -= r;	// range dn
+
+	// lossless
+	if (!(error0 = merr))
+	  break;
+      }
+
+      // final match
+      min7 = std::max(s, 0x00);
+      max7 = std::min(e, 0xFF);
+    }
+#endif
   }
-  
+
   // fix the range to be the minimum in each case
   FixRange(min5, max5, 5);
   FixRange(min7, max7, 7);
