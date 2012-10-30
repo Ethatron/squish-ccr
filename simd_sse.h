@@ -80,7 +80,7 @@ public:
 	}
 
 	explicit Col3( int s ) : m_v( _mm_set1_epi32( s ) ) {}
-	explicit Col3( float s ) : m_v( _mm_set1_epi32( (int) s ) ) {}
+	explicit Col3( float s ) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
 
 	Col3( int r, int g, int b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
 
@@ -509,7 +509,7 @@ public:
 
 	friend Col3 HorizontalAddTiny( Arg a )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 res = _mm_castsi128_ps ( a.m_v );
 
 		// relies on correct de-normal floating-point treatment
@@ -525,7 +525,7 @@ public:
 
 	friend Col3 HorizontalAddTiny( Arg a, Arg b )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 resa = _mm_castsi128_ps ( a.m_v );
 		__m128 resb = _mm_castsi128_ps ( b.m_v );
 		__m128 resc;
@@ -655,6 +655,7 @@ private:
 	__m128i m_v;
 
 	friend class Col4;
+	friend class Vec3;
 };
 
 class Col4
@@ -675,7 +676,7 @@ public:
 	}
 
 	explicit Col4( int s ) : m_v( _mm_set1_epi32( s ) ) {}
-	explicit Col4( float s ) : m_v( _mm_set1_epi32( (int) s ) ) {}
+	explicit Col4( float s ) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
 
 	Col4( int r, int g, int b, int a ) : m_v( _mm_setr_epi32( r, g, b, a ) ) {}
 	Col4( Col3 &v, int w ) : m_v( v.m_v ) { m_v.m128i_i32[3] = w; }
@@ -1106,7 +1107,7 @@ public:
 
 	friend Col4 HorizontalAddTiny( Arg a )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 res = _mm_castsi128_ps ( a.m_v );
 
 		// relies on correct de-normal floating-point treatment
@@ -1121,7 +1122,7 @@ public:
 
 	friend Col4 HorizontalAddTiny( Arg a, Arg b )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 resa = _mm_castsi128_ps ( a.m_v );
 		__m128 resb = _mm_castsi128_ps ( b.m_v );
 		__m128 resc;
@@ -1261,6 +1262,8 @@ public:
 
 private:
 	__m128i m_v;
+
+	friend class Vec4;
 };
 
 #if	!defined(SQUISH_USE_PRE)
@@ -1305,10 +1308,10 @@ public:
 	}
 
 	explicit Vec3( float s ) : m_v( _mm_set1_ps( s ) ) {}
-	explicit Vec3( int s ) : m_v( _mm_set1_ps( (float) s ) ) {}
+	explicit Vec3( int s ) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
 
 	Vec3( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
-	Vec3( Vec3 x, Vec3 y, Vec3 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), z.m_v ) ) {}
+	Vec3( Vec3 x, Vec3 y, Vec3 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), y.m_v ) ) {}
 	Vec3( Vec3 x, Vec3 y ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_set1_ps( 0.0f ) ) ) {}
 
 	float X() const { return ((float *)&m_v)[0]; }
@@ -1377,6 +1380,12 @@ public:
 	}
 
 	Vec3& operator/=( float v )
+	{
+		*this *= Reciprocal( Vec3( v ) );
+		return *this;
+	}
+	
+	Vec3& operator/=( int v )
 	{
 		*this *= Reciprocal( Vec3( v ) );
 		return *this;
@@ -1483,7 +1492,7 @@ public:
 
 	friend Vec3 HorizontalAdd( Arg a )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 res = a.m_v;
 		
 		res = _mm_and_ps( res , _mm_castsi128_ps( _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) ) );
@@ -1504,7 +1513,7 @@ public:
 
 	friend Vec3 HorizontalAdd( Arg a, Arg b )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 resc;
 
 		resc = _mm_hadd_ps( a.m_v, b.m_v );
@@ -1645,19 +1654,22 @@ public:
 		return Vec3( _mm_cvtepi32_ps( _mm_cvttps_epi32( v.m_v ) ) );
 #endif
 	}
-
-	friend Vec3 SummedAbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
+	
+	friend Vec3 AbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
 	{
 		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
 		diff = _mm_and_ps( diff, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) );
-		return HorizontalAdd( Vec3( diff ) );
+		return Vec3( diff );
+	}
+
+	friend Vec3 SummedAbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
+	{
+		return HorizontalAdd( AbsoluteDifference( left, right ) );
 	}
 
 	friend Vec3 MaximumAbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
 	{
-		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
-		diff = _mm_and_ps( diff, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) );
-		return HorizontalMax( Vec3( diff ) );
+		return HorizontalMax( AbsoluteDifference( left, right ) );
 	}
 
 	friend bool CompareAnyLessThan( Vec3::Arg left, Vec3::Arg right )
@@ -1726,13 +1738,13 @@ public:
 	}
 
 	explicit Vec4( float s ) : m_v( _mm_set1_ps( s ) ) {}
-	explicit Vec4( int s ) : m_v( _mm_set1_ps( (float) s ) ) {}
+	explicit Vec4( int s ) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
 
 	Vec4( float x, float y, float z, float w ) : m_v( _mm_setr_ps( x, y, z, w ) ) {}
 	Vec4( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec4( Vec3::Arg &v, float w ) : m_v( v.m_v ) { m_v = _mm_or_ps( _mm_and_ps( m_v, _mm_castsi128_ps( _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) ) ),  _mm_setr_ps( 0.0f, 0.0f, 0.0f, w ) ); }
-	Vec4( Vec4 x, Vec4 y, Vec4 z, Vec4 w ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_unpacklo_ps( z.m_v, w.m_v ) ) ) {}
-	Vec4( Vec4 x, Vec4 y, Vec4 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_unpacklo_ps( z.m_v,  _mm_set1_ps( 0.0f ) ) ) ) {}
+	Vec4( Vec4 x, Vec4 y, Vec4 z, Vec4 w ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), _mm_unpacklo_ps( y.m_v, w.m_v ) ) ) {}
+	Vec4( Vec4 x, Vec4 y, Vec4 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), _mm_unpacklo_ps( y.m_v,  _mm_set1_ps( 0.0f ) ) ) ) {}
 	Vec4( Vec4 x, Vec4 y ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_set1_ps( 0.0f ) ) ) {}
 
 	Vec3 GetVec3() const
@@ -1751,7 +1763,8 @@ public:
 	float &GetW() { return ((float *)&m_v)[3]; }
 	// let the compiler figure this one out, probably spills to memory
 	float &GetO(int o) { return ((float *)&m_v)[o]; }
-
+	
+	Vec4 Swap  () const { return Vec4( _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SWAP64() ) ); }
 	Vec4 SplatX() const { return Vec4( _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 0 ) ) ); }
 	Vec4 SplatY() const { return Vec4( _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 1 ) ) ); }
 	Vec4 SplatZ() const { return Vec4( _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 2 ) ) ); }
@@ -1811,6 +1824,12 @@ public:
 	}
 
 	Vec4& operator/=( float v )
+	{
+		*this *= Reciprocal( Vec4( v ) );
+		return *this;
+	}
+	
+	Vec4& operator/=( int v )
 	{
 		*this *= Reciprocal( Vec4( v ) );
 		return *this;
@@ -1917,7 +1936,7 @@ public:
 
 	friend Vec4 HorizontalAdd( Arg a )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 res = a.m_v;
 
 		res = _mm_hadd_ps( res, res );
@@ -1936,7 +1955,7 @@ public:
 
 	friend Vec4 HorizontalAdd( Arg a, Arg b )
 	{
-#if ( SQUISH_USE_XSSE == 4 ) || ( SQUISH_USE_SSE >= 3 )
+#if ( SQUISH_USE_SSE >= 3 )
 		__m128 resc;
 
 		resc = _mm_hadd_ps( a.m_v, b.m_v );
@@ -1955,6 +1974,16 @@ public:
 #endif
 	}
 
+	friend Vec4 HorizontalMin( Arg a )
+	{
+		__m128 res = a.m_v;
+
+		res = _mm_min_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SWAP64() ) );
+		res = _mm_min_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SWAP32() ) );
+
+		return Vec4( res );
+	}
+	
 	friend Vec4 HorizontalMax( Arg a )
 	{
 		__m128 res = a.m_v;
@@ -2057,24 +2086,39 @@ public:
 		return Vec4( _mm_cvtepi32_ps( _mm_cvttps_epi32( v.m_v ) ) );
 #endif
 	}
-
-	friend Vec4 SummedAbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
+	
+	friend Vec4 AbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
 	{
 		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
 		diff = _mm_and_ps( diff, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) );
-		return HorizontalAdd( Vec4( diff ) );
+		return Vec4( diff );
+	}
+
+	friend Vec4 SummedAbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
+	{
+		return HorizontalAdd( AbsoluteDifference( left, right ) );
 	}
 
 	friend Vec4 MaximumAbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
 	{
-		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
-		diff = _mm_and_ps( diff, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) );
-		return HorizontalMax( Vec4( diff ) );
+		return HorizontalMax( AbsoluteDifference( left, right ) );
+	}
+	
+	friend int CompareEqualTo( Vec4::Arg left, Vec4::Arg right )
+	{
+		return _mm_movemask_ps( _mm_cmpeq_ps( left.m_v, right.m_v ) );
 	}
 
 	friend bool CompareAnyLessThan( Vec4::Arg left, Vec4::Arg right )
 	{
 		__m128 bits = _mm_cmplt_ps( left.m_v, right.m_v );
+		int value = _mm_movemask_ps( bits );
+		return value != 0;
+	}
+	
+	friend bool CompareAnyGreaterThan( Vec4::Arg left, Vec4::Arg right )
+	{
+		__m128 bits = _mm_cmpgt_ps( left.m_v, right.m_v );
 		int value = _mm_movemask_ps( bits );
 		return value != 0;
 	}

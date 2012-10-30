@@ -1068,6 +1068,15 @@ public:
     return *this;
   }
   
+  Vec3& operator/=( int s )
+  {
+    float t = 1.0f/s;
+    x *= t;
+    y *= t;
+    z *= t;
+    return *this;
+  }
+  
   friend int operator<( Vec3::Arg left, Vec3::Arg right  )
   {
     return CompareFirstLessThan(left, right);
@@ -1138,9 +1147,9 @@ public:
   friend Vec3 ReciprocalSqrt( Vec3::Arg v )
   {
     return Vec3(
-      1.0f / math::sqrt(v.x),
-      1.0f / math::sqrt(v.y),
-      1.0f / math::sqrt(v.z)
+      math::rsqrt(v.x),
+      math::rsqrt(v.y),
+      math::rsqrt(v.z)
     );
   }
 
@@ -1164,7 +1173,7 @@ public:
   friend Vec3 Normalize(Arg left)
   {
     Vec3 sum = (left * left);
-    float rsq = 1.0f / math::sqrt(sum.x + sum.y + sum.z);
+    float rsq = math::rsqrt(sum.x + sum.y + sum.z);
 
     return left * rsq;
   }
@@ -1182,9 +1191,9 @@ public:
   friend Vec3 Abs( Vec3::Arg v )
   {
     return Vec3(
-      std::abs<float>( v.x ),
-      std::abs<float>( v.y ),
-      std::abs<float>( v.z )
+      abs( v.x ),
+      abs( v.y ),
+      abs( v.z )
     );
   }
 	
@@ -1223,6 +1232,45 @@ public:
     );
   }
   
+  friend Vec3 AbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
+  {
+    return Abs( left - right );
+  }
+
+  friend Scr3 SummedAbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
+  {
+    return HorizontalAdd( AbsoluteDifference( left, right ) );
+  }
+
+  friend Scr3 MaximumAbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
+  {
+    return HorizontalMax( AbsoluteDifference( left, right ) );
+  }
+
+  friend int CompareEqualTo(Vec3::Arg left, Vec3::Arg right)
+  {
+    return
+      (left.x == right.x ? 0x1 : 0x0) |
+      (left.y == right.y ? 0x2 : 0x0) |
+      (left.z == right.z ? 0x4 : 0x0);
+  }
+
+  friend bool CompareAnyLessThan(Vec3::Arg left, Vec3::Arg right)
+  {
+    return
+      left.x < right.x ||
+      left.y < right.y ||
+      left.z < right.z;
+  }
+  
+  friend bool CompareAnyGreaterThan(Vec3::Arg left, Vec3::Arg right)
+  {
+    return
+      left.x > right.x ||
+      left.y > right.y ||
+      left.z > right.z;
+  }
+
   friend int CompareFirstLessThan( Vec3::Arg left, Vec3::Arg right)
   {
     return left.x < right.x;
@@ -1339,7 +1387,8 @@ public:
   float &GetW() { return w; }
   // let the compiler figure this one out, probably spills to memory
   float &GetO(int o) { return ((float *)this)[o]; }
-
+  
+  Vec4 Swap  () const { return Vec4( z, w, x, y ); }
   Vec4 SplatX() const { return Vec4( x ); }
   Vec4 SplatY() const { return Vec4( y ); }
   Vec4 SplatZ() const { return Vec4( z ); }
@@ -1433,6 +1482,12 @@ public:
   }
 
   Vec4& operator/=(float v)
+  {
+    *this *= Reciprocal( Vec4( v ) );
+    return *this;
+  }
+  
+  Vec4& operator/=(int v)
   {
     *this *= Reciprocal( Vec4( v ) );
     return *this;
@@ -1566,13 +1621,20 @@ public:
   friend Vec4 ReciprocalSqrt(Vec4::Arg v)
   {
     return Vec4(
-      1.0f / math::sqrt(v.x),
-      1.0f / math::sqrt(v.y),
-      1.0f / math::sqrt(v.z),
-      1.0f / math::sqrt(v.w)
+      math::rsqrt(v.x),
+      math::rsqrt(v.y),
+      math::rsqrt(v.z),
+      math::rsqrt(v.w)
     );
   }
 
+  friend Scr4 HorizontalMin( Arg a )
+  {
+    return Scr4(
+      std::min<float>( std::min<float>( a.x, a.y ), std::min<float>( a.z, a.w ) )
+    );
+  }
+  
   friend Scr4 HorizontalMax( Arg a )
   {
     return Scr4(
@@ -1590,17 +1652,16 @@ public:
     return HorizontalAdd(a + b);
   }
   
-  friend Vec4 Length(Arg left)
+  friend Scr4 Length(Arg left)
   {
     Vec4 sum = (left * left);
-    float sqt = math::sqrt(sum.x + sum.y + sum.z + sum.w);
-
-    return sqt;
+    return math::sqrt(sum.x + sum.y + sum.z + sum.w);
   }
   
-  friend Vec4 ReciprocalLength(Arg left)
+  friend Scr4 ReciprocalLength(Arg left)
   {
-    return 1.0f / Length(left);
+    Vec4 sum = (left * left);
+    return math::rsqrt(sum.x + sum.y + sum.z + sum.w);
   }
   
   friend Vec4 Normalize(Arg left)
@@ -1617,7 +1678,17 @@ public:
   {
     *r = HorizontalAdd(left * right);
   }
-
+  
+  friend Vec4 Abs( Vec4::Arg v )
+  {
+    return Vec4(
+      abs( v.x ),
+      abs( v.y ),
+      abs( v.z ),
+      abs( v.w )
+    );
+  }
+	
   friend Vec4 Min(Vec4::Arg left, Vec4::Arg right)
   {
     return Vec4(
@@ -1666,6 +1737,30 @@ public:
       v.w > 0.0f ? std::floor( v.w ) : std::ceil( v.w )
     );
   }
+  
+  friend Vec4 AbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
+  {
+    return Abs( left - right );
+  }
+
+  friend Scr4 SummedAbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
+  {
+    return HorizontalAdd( AbsoluteDifference( left, right ) );
+  }
+
+  friend Scr4 MaximumAbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
+  {
+    return HorizontalMax( AbsoluteDifference( left, right ) );
+  }
+
+  friend int CompareEqualTo(Vec4::Arg left, Vec4::Arg right)
+  {
+    return
+      (left.x == right.x ? 0x1 : 0x0) |
+      (left.y == right.y ? 0x2 : 0x0) |
+      (left.z == right.z ? 0x4 : 0x0) |
+      (left.w == right.w ? 0x8 : 0x0);
+  }
 
   friend bool CompareAnyLessThan(Vec4::Arg left, Vec4::Arg right)
   {
@@ -1674,6 +1769,15 @@ public:
       left.y < right.y ||
       left.z < right.z ||
       left.w < right.w;
+  }
+  
+  friend bool CompareAnyGreaterThan(Vec4::Arg left, Vec4::Arg right)
+  {
+    return
+      left.x > right.x ||
+      left.y > right.y ||
+      left.z > right.z ||
+      left.w > right.w;
   }
 
   friend int CompareFirstLessThan(Vec4::Arg left, Vec4::Arg right)
