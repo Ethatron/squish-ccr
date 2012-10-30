@@ -37,6 +37,11 @@ namespace math {
   static doinline float sqrt(float in) {
     return std::sqrt(in);
   }
+  
+  // 5-6% of execution time as std::sqrt
+  static doinline float rsqrt(float in) {
+    return rcp(sqrt(in));
+  }
 
   // 3-5% of execution time as std::pow
   static doinline float cbrt(float in) {

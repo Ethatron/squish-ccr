@@ -49,11 +49,13 @@ namespace squish {
 namespace math {
   
 	static doinline float rcp(float in) {
-		__m128 s;
+		__m128 s, e, d;
 		float r;
 
 		s = _mm_load_ss(&in);
-		s = _mm_rcp_ss(s);
+		e = _mm_rcp_ss(s);
+		d = _mm_sub_ss(_mm_set1_ps(1.0f), _mm_mul_ss(e, s));
+		s = _mm_add_ss(_mm_mul_ss(d, e), e);
 
 		_mm_store_ss(&r, s);
 		return r;
