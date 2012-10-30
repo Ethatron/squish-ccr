@@ -1681,7 +1681,7 @@ public:
 	
 	friend bool CompareAnyGreaterThan( Vec3::Arg left, Vec3::Arg right )
 	{
-		__m128 bits = _mm_cmpeq_ps( left.m_v, right.m_v );
+		__m128 bits = _mm_cmpgt_ps( left.m_v, right.m_v );
 		int value = _mm_movemask_ps( bits );
 		return (value & 0x7) == 0x7;
 	}
