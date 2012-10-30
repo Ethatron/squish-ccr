@@ -245,7 +245,6 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 
   // do the iterative tangent search
   if (flags & kAlphaIterativeFit) {
-#if	defined(SQUISH_USE_SIMD)
     // initial values
     int err5 = 0;
     int err7 = 0;
@@ -275,6 +274,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
       err7 += dist7;
     }
 
+#if	(SQUISH_USE_SIMD > 0)
     // binary search, tangent-fitting
     int errM = std::min(err5, err7);
 
@@ -282,7 +282,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
     if (errM) {
       float r = (float)((max5 - min5) >> 1);	// max 127
 
-      Vec4 errC  = Vec4(err5);
+      Scr4 errC  = Scr4(err5);
       Vec4 s     = Vec4(min5);
       Vec4 e     = Vec4(max5);
       Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
@@ -295,7 +295,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 
 	Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
 	Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
-	
+
 	Vec4 errors = Vec4(0.0f);
 	for (int v = 0; v < 16; v++) {
 	  // find the closest code
@@ -320,7 +320,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	  _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
 	  _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
 	  _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
-	  
+
 	  // accumulate the error
 	  errors = errors + dists;
 	}
@@ -348,21 +348,41 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	  break;
       }
 
+#if defined(TRACK_STATISTICS)
+      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
+       *
+       * C == 3, numset ==
+       *  [0]	0x00f796e0 {124800, 15616}
+       */
+      gstat.alpha[0] += err5;
+      gstat.alpha[2] += 1;
+#endif
+
       // final match
       min5 = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
       max5 = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-      errM = FloatToInt<false>(errC).GetLong();
+      err5 = FloatToInt<false>(errC).GetLong();
+      errM = err5;
+
+#if defined(TRACK_STATISTICS)
+      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
+       *
+       * C == 3, numset ==
+       *  [0]	0x00f796e0 {124800, 15616}
+       */
+      gstat.alpha[1] += err5;
+#endif
     }
 
     // !lossless
     if (errM) {
       float r = (float)((max7 - min7) >> 1);	// max 127
 
-      Vec4 errC  = Vec4(err7);
+      Scr4 errC  = Scr4(err7);
       Vec4 s     = Vec4(min7);
       Vec4 e     = Vec4(max7);
       Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
-      
+
       while (range > Vec4(0.0f)) {
 	// s + os, s + os, s + os - r, s + os + r
 	// e - oe - r, e - oe + r, e - oe, e - oe
@@ -371,13 +391,13 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 
 	Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
 	Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
-	
+
 	Vec4 errors = Vec4(0.0f);
 	for (int v = 0; v < 16; v++) {
 	  // find the closest code
 	  Vec4 val = Vec4(rgba[4 * v + 3]);
 	  Vec4 dists = Vec4(255.0f * 255.0f);
-	  
+
 	  // for all possible codebook-entries
 	  Vec4 _cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
 	  Vec4 _cb1 = (cssmp * Vec4(6.0f / 7.0f)) + (cmpee * Vec4(1.0f / 7.0f)); _cb1 = Truncate(_cb1);
@@ -396,7 +416,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	  _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
 	  _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
 	  _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
-	  
+
 	  // accumulate the error
 	  errors = errors + dists;
 	}
@@ -418,47 +438,38 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 
 	  errC = merr;
 	}
-	
+
 	// lossless
 	if (!(errC > Vec4(0.0f)))
 	  break;
       }
 
+#if defined(TRACK_STATISTICS)
+      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
+       *
+       * C == 3, numset ==
+       *  [0]	0x00f796e0 {124800, 15616}
+       */
+      gstat.alpha[3] += err7;
+      gstat.alpha[5] += 1;
+#endif
+
       // final match
       min7 = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
       max7 = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-//    errM = FloatToInt<false>(_e0).GetLong();
+      err7 = FloatToInt<false>(errC).GetLong();
+      err7 = err5;
+
+#if defined(TRACK_STATISTICS)
+      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
+       *
+       * C == 3, numset ==
+       *  [0]	0x00f796e0 {124800, 15616}
+       */
+      gstat.alpha[4] += err7;
+#endif
     }
 #else
-    // initial values
-    int err5 = 0;
-    int err7 = 0;
-
-    for (int v = 0; v < 16; v++) {
-      // find the closest code
-      int dist5, dist7;
-      dist5 = dist7 = 0xFFFF;
-
-      // for all possible codebook-entries
-      for (int f = 0; f < 8; f++) {
-	int cb5 = (((5 - f) * min5 + f * max5) / 5);
-	int cb7 = (((7 - f) * min7 + f * max7) / 7);
-
-	if (f >= 6) cb5 = 0x00;
-	if (f >= 7) cb7 = 0xFF;
-
-	int d5 = cb5 - rgba[4 * v + 3]; d5 *= d5;
-	int d7 = cb7 - rgba[4 * v + 3]; d7 *= d7;
-
-	if (dist5 > d5) dist5 = d5;
-	if (dist7 > d7) dist7 = d7;
-      }
-
-      // accumulate the error
-      err5 += dist5;
-      err7 += dist7;
-    }
-
     // binary search, tangent-fitting
     int error0 = std::min(err5, err7);
     int s;
@@ -534,9 +545,24 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	  break;
       }
 
+#if defined(TRACK_STATISTICS)
+      /* way better!
+       * [0]	17302780	int
+       * [1]	3868483		int
+       * [2]	69408		int
+       */
+      gstat.alpha[0] += err5;
+      gstat.alpha[2] += 1;
+#endif
+
       // final match
       min5 = std::max(s, 0x00);
       max5 = std::min(e, 0xFF);
+      err5 = error0;
+
+#if defined(TRACK_STATISTICS)
+      gstat.alpha[1] += err5;
+#endif
     }
 
     // !lossless
@@ -605,9 +631,24 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	  break;
       }
 
+#if defined(TRACK_STATISTICS)
+      /* way better!
+       * [3]	6452753	int
+       * [4]	3856783	int
+       * [5]	61245	int
+       */
+      gstat.alpha[3] += err7;
+      gstat.alpha[5] += 1;
+#endif
+
       // final match
       min7 = std::max(s, 0x00);
       max7 = std::min(e, 0xFF);
+      err7 = error0;
+
+#if defined(TRACK_STATISTICS)
+      gstat.alpha[4] += err7;
+#endif
     }
 #endif
   }
