@@ -29,13 +29,59 @@
 
 /* use frequencies of colour/palette-entries to calculate errors
  * this is more exact but a bit slower and uses more memory
+ * this doesn't impact BC2/BC3 but BC1 (one vs. the other) and BC7
  */
 #define	FEATURE_EXACT_ERROR
 
 /* use the power-method to estimate the principle component axis
  * should be more precise if not faster
  */
-#undef	FEATURE_POWERESTIMATE
+#define	FEATURE_POWERESTIMATE
+
+/* totally blank out any colours in the alpha==0 case when colours
+ * are weighted by alpha (which is the indicator too assure the third
+ * channel actually really is to be used for alpha or at least contains
+ * the importance-factor)
+ *
+ * we assume the blanked out value receives at least a quantized and
+ * rounded alpha value that makes the pixel unperceivable in case it
+ * won't be assigned 0 by the matcher (very optimistic but probably
+ * better than the "damage" done to the fit-algorithms in case the
+ * colour gets through)
+ *   
+ * Results (ARGB):
+ *   
+ *				  omit					     keep
+ *   #cluster		R       G       B	J		R       G       B	J
+ *   RMSE no m.		2.0099	1.7891	1.9644	1.9235		2.0174	1.7958	1.9753	1.9319
+ *   RMSE metric	2.0846	1.6368	2.1797	1.9812		2.0949	1.6444	2.1911	1.9911
+ *   SSIM no m.			0.0014593				    0.0014612
+ *   SSIM metric		0.0012824				    0.0012850
+ *   
+ *				  omit					     keep
+ *   #range		R       G       B	J		R       G       B	J
+ *   RMSE no m.		3.4200	2.8293	3.1534	3.1435		3.2591	2.7265	3.0184	3.0092
+ *   RMSE metric	4.0410	2.3455	3.6444	3.4211		4.0410	2.3455	3.6444	3.4211
+ *   SSIM no m.			0.0021402				    0.0023996
+ *   SSIM metric		0.0020360				    0.0023973
+ */
+#define	FEATURE_IGNORE_ALPHA0
+
+/* project the colour-values onto the principle component (which is
+ * anchored at the centroid) instead of using the just the principle
+ * direction
+ * problems with the principle direction: if black exist it will always
+ * end up as one endpoint (dot-product being 0)
+ */
+#define	FEATURE_PROJECT_FAST
+
+/* - use the weights building the covariance-matrix, affects all
+ * - sqr() the metric for least-squares, affects only cluster-fit
+ * - sqrt() the weights in the colourset, affects only cluster-fit
+ */
+#undef	FEATURE_WEIGHTS_ROOTED		// SSIM: 0.0012824 off, 0.0013257 on - RMSE: 1.9235 off, 1.9540 on
+#undef	FEATURE_METRIC_COVARIANCE	// SSIM: 0.0013466 off, 0.0013596 on
+#undef	FEATURE_METRIC_SQUARED		// SSIM: 0.0012824 off, 0.0013466 on
 
 /* push start/end values away from the midpoint if the codebook contains
  * less unique entries than possible indices
@@ -53,6 +99,8 @@
  */
 #undef	FEATURE_SHAREDBITS_TRIALS
 
+#undef	FEATURE_TEST_LINES
+
 /* .............................................................................
  */
 
@@ -60,12 +108,12 @@
 
 // adjustments working in "Debug" or "Release" builds:
 // throw the quantized rgba values back into the input.image
-#define	VERIFY_QUANTIZER
+#undef	VERIFY_QUANTIZER
 // throw the decoded rgba values back into the input-image
 #undef	VERIFY_ENCODER
 
 // print out lots of information about the algorithm behaviour
-#define	TRACK_STATISTICS
+#undef	TRACK_STATISTICS
 
 // adjustments working only in "Debug" builds:
 // code only a specific mode-setting
@@ -84,8 +132,11 @@ namespace squish {
     int win_swap[8][2][2];
     int win_cluster[8][2];
     int win_mode[8];
+//  int num_lines[4];
     int has_countsets[4];
     int has_noweightsets[8][4][2];
+    int num_poweritrs[64];
+    int alpha[6];
   } gstat;
 }
 #endif
