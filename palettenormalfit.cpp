@@ -42,6 +42,10 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   for (int s = 0; s < isets; s++) {
     // cache some values
@@ -51,11 +55,18 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 
     // we don't do this for sparse sets
     if (count != 1) {
+      Sym2x2 covariance;
+      Vec4 centroid;
+      Vec4 principle;
+
       // get the covariance matrix
-      Sym2x2 covariance = ComputeWeightedCovariance2(count, values, weights);
+      if (m_palette->IsUnweighted(s))
+	ComputeWeightedCovariance2(covariance, centroid, count, values, m_metric[s]);
+      else
+	ComputeWeightedCovariance2(covariance, centroid, count, values, m_metric[s], weights);
 
       // compute the principle component
-      Vec4 principle; GetPrincipleComponent(covariance, principle);
+      GetPrincipleComponent(covariance, principle);
 
       // get the min and max normal as the codebook endpoints
       Vec4 start(0.0f);
@@ -141,6 +152,10 @@ void PaletteNormalFit::Compress(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   // create a codebook
   Vec4 codes[1 << 4];
