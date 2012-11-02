@@ -1533,17 +1533,64 @@ public:
 		return Vec3( resc );
 #endif
 	}
+	
+	friend Vec3 Select( Arg a, Arg b, Arg c )
+	{
+#if 0
+		__m128 res;
+		__m128 bits = _mm_cmpeq_ps( b.m_v, c.m_v );
+		int mask = _mm_movemask_ps( bits );
+		
+		/* (1 >> 1) = 0
+		 * (2 >> 1) = 1
+		 * (4 >> 1) = 2
+		mask = (mask & 7) >> 1;
+		mask = (mask) * ((1 << 0) + (1 << 2) + (1 << 4) + (1 << 6));
+		 */
 
+		/**/ if (mask & 1)
+		  res = _mm_shuffle_ps( a.m_v, a.m_v, SQUISH_SSE_SHUF( 0, 0, 0, 0 ) );
+		else if (mask & 2)
+		  res = _mm_shuffle_ps( a.m_v, a.m_v, SQUISH_SSE_SHUF( 1, 1, 1, 1 ) );
+		else
+		  res = _mm_shuffle_ps( a.m_v, a.m_v, SQUISH_SSE_SHUF( 2, 2, 2, 2 ) );
+
+		return Vec3( res );
+#else
+		// branch free, and no CPU<->SSEunit transfer
+		__m128 mask = _mm_cmpeq_ps( b.m_v, c.m_v );
+		__m128 res = _mm_and_ps( a.m_v, mask );
+
+		__m128 r0 = _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 0, 0, 0, 0 ) );
+		__m128 r1 = _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 1, 1, 1 ) );
+		__m128 r2 = _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 2, 2, 2, 2 ) );
+
+		res = _mm_or_ps( _mm_or_ps( r0, r1 ), r2 );
+
+		return Vec3(res);
+#endif
+	}
+	
+	friend Vec3 HorizontalMin( Arg a )
+	{
+		__m128 res = a.m_v;
+
+		res = _mm_min_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 2, 0, 1, 3 ) ) );
+		res = _mm_min_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 2, 0, 3 ) ) );
+
+		return Vec3( res );
+	}
+	
 	friend Vec3 HorizontalMax( Arg a )
 	{
 		__m128 res = a.m_v;
 
-		res = _mm_max_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 2, 2, 0, 1 ) ) );
-		res = _mm_max_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SWAP32() ) );
+		res = _mm_max_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 2, 0, 1, 3 ) ) );
+		res = _mm_max_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 2, 0, 3 ) ) );
 
 		return Vec3( res );
 	}
-
+	
 	friend Vec3 Reciprocal( Vec3::Arg v )
 	{
 		// get the reciprocal estimate
@@ -1682,6 +1729,13 @@ public:
 	friend bool CompareAnyGreaterThan( Vec3::Arg left, Vec3::Arg right )
 	{
 		__m128 bits = _mm_cmpgt_ps( left.m_v, right.m_v );
+		int value = _mm_movemask_ps( bits );
+		return (value & 0x7) != 0x0;
+	}
+
+	friend bool CompareAllEqualTo( Vec3::Arg left, Vec3::Arg right )
+	{
+		__m128 bits = _mm_cmpeq_ps( left.m_v, right.m_v );
 		int value = _mm_movemask_ps( bits );
 		return (value & 0x7) == 0x7;
 	}
@@ -1933,7 +1987,47 @@ public:
 			(t == 3 ? f : (f == 3 ? t : 3))
 		) ) ) );
 	}
+	
+	friend Vec4 Select( Arg a, Arg b, Arg c )
+	{
+#if 0
+		__m128 res;
+		__m128 bits = _mm_cmpeq_ps( b.m_v, c.m_v );
+		int mask = _mm_movemask_ps( bits );
+		
+		/* (1 >> 1) = 0
+		 * (2 >> 1) = 1
+		 * (4 >> 1) = 2
+		mask = (mask & 7) >> 1;
+		mask = (mask) * ((1 << 0) + (1 << 2) + (1 << 4) + (1 << 6));
+		 */
 
+		/**/ if (mask & 1)
+		  res = _mm_shuffle_ps( a.m_v, a.m_v, SQUISH_SSE_SHUF( 0, 0, 0, 0 ) );
+		else if (mask & 2)
+		  res = _mm_shuffle_ps( a.m_v, a.m_v, SQUISH_SSE_SHUF( 1, 1, 1, 1 ) );
+		else if (mask & 4)
+		  res = _mm_shuffle_ps( a.m_v, a.m_v, SQUISH_SSE_SHUF( 2, 2, 2, 2 ) );
+		else
+		  res = _mm_shuffle_ps( a.m_v, a.m_v, SQUISH_SSE_SHUF( 3, 3, 3, 3 ) );
+
+		return Vec3( res );
+#else
+		// branch free, and no CPU<->SSEunit transfer
+		__m128 mask = _mm_cmpeq_ps( b.m_v, c.m_v );
+		__m128 res = _mm_and_ps( a.m_v, mask );
+
+		__m128 r0 = _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 0, 0, 0, 0 ) );
+		__m128 r1 = _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 1, 1, 1 ) );
+		__m128 r2 = _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 2, 2, 2, 2 ) );
+		__m128 r3 = _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 3, 3, 3, 3 ) );
+
+		res = _mm_or_ps( _mm_or_ps( r0, r1 ), _mm_or_ps( r2, r3 ) );
+
+		return Vec4(res);
+#endif
+	}
+	
 	friend Vec4 HorizontalAdd( Arg a )
 	{
 #if ( SQUISH_USE_SSE >= 3 )
@@ -2033,7 +2127,12 @@ public:
 
 		_mm_store_ss( r, res.m_v );
 	}
-
+	
+	friend Vec4 Abs( Vec4::Arg a )
+	{
+		return Vec4( _mm_and_ps( a.m_v, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) ) );
+	}
+	
 	friend Vec4 Min( Vec4::Arg left, Vec4::Arg right )
 	{
 		return Vec4( _mm_min_ps( left.m_v, right.m_v ) );
