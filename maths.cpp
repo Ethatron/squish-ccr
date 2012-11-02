@@ -44,12 +44,116 @@ namespace squish {
 
 /* *****************************************************************************
  */
+#pragma warning(disable: 4100)
+
+#ifdef FEATURE_METRIC_COVARIANCE
+#define CoVar(a,b)  (a - b) * metric
+#else
+#define CoVar(a,b)  (a - b)
+#endif
+  
 #if	!defined(SQUISH_USE_PRE)
-Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weights)
-{
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric) {
+  // compute the centroid
+  centroid = Vec3(0.0f);
+
+  for (int i = 0; i < n; ++i)
+    centroid += points[i];
+
+  centroid /= n;
+
+  // accumulate the covariance smatrix
+  covariance = Sym3x3(0.0f);
+  for (int i = 0; i < n; ++i) {
+    Vec3 a = CoVar(points[i], centroid);
+    Vec3 b = a;
+
+    covariance[0] += a.X() * b.X();
+    covariance[1] += a.X() * b.Y();
+    covariance[2] += a.X() * b.Z();
+    covariance[3] += a.Y() * b.Y();
+    covariance[4] += a.Y() * b.Z();
+    covariance[5] += a.Z() * b.Z();
+  }
+}
+
+void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric) {
+  // compute the centroid
+  centroid = Vec4(0.0f);
+
+  for (int i = 0; i < n; ++i)
+    centroid += points[i];
+
+  centroid /= n;
+
+  // accumulate the covariance smatrix
+  covariance = Sym2x2(0.0f);
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], centroid);
+    Vec4 b = a;
+
+    covariance[0] += a.X() * b.X();
+    covariance[1] += a.X() * b.Y();
+    covariance[2] += a.Y() * b.Y();
+  }
+}
+
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric) {
+  // compute the centroid
+  centroid = Vec4(0.0f);
+
+  for (int i = 0; i < n; ++i)
+    centroid += points[i];
+
+  centroid /= n;
+
+  // accumulate the covariance smatrix
+  covariance = Sym3x3(0.0f);
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], centroid);
+    Vec4 b = a;
+
+    covariance[0] += a.X() * b.X();
+    covariance[1] += a.X() * b.Y();
+    covariance[2] += a.X() * b.Z();
+    covariance[3] += a.Y() * b.Y();
+    covariance[4] += a.Y() * b.Z();
+    covariance[5] += a.Z() * b.Z();
+  }
+}
+
+void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric) {
+  // compute the centroid
+  centroid = Vec4(0.0f);
+
+  for (int i = 0; i < n; ++i)
+    centroid += points[i];
+
+  centroid /= n;
+
+  // accumulate the covariance smatrix
+  covariance = Sym4x4(0.0f);
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], centroid);
+    Vec4 b = a;
+
+    covariance[0] += a.X() * b.X();
+    covariance[1] += a.X() * b.Y();
+    covariance[2] += a.X() * b.Z();
+    covariance[3] += a.X() * b.W();
+    covariance[4] += a.Y() * b.Y();
+    covariance[5] += a.Y() * b.Z();
+    covariance[6] += a.Y() * b.W();
+    covariance[7] += a.Z() * b.Z();
+    covariance[8] += a.Z() * b.W();
+    covariance[9] += a.W() * b.W();
+  }
+}
+
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric, float const* weights) {
   // compute the centroid
   float total = 0.0f;
-  Vec3 centroid(0.0f);
+  centroid = Vec3(0.0f);
 
   for (int i = 0; i < n; ++i) {
     total    += weights[i];
@@ -59,9 +163,9 @@ Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weight
   centroid /= total;
 
   // accumulate the covariance smatrix
-  Sym3x3 covariance(0.0f);
+  covariance = Sym3x3(0.0f);
   for (int i = 0; i < n; ++i) {
-    Vec3 a = points [i] - centroid;
+    Vec3 a = CoVar(points[i], centroid);
     Vec3 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
@@ -71,16 +175,12 @@ Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weight
     covariance[4] += a.Y() * b.Z();
     covariance[5] += a.Z() * b.Z();
   }
-
-  // return it
-  return covariance;
 }
 
-Sym2x2 ComputeWeightedCovariance2(int n, Vec4 const* points, float const* weights)
-{
+void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights) {
   // compute the centroid
   float total = 0.0f;
-  Vec4 centroid(0.0f);
+  centroid = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i) {
     total    += weights[i];
@@ -90,25 +190,21 @@ Sym2x2 ComputeWeightedCovariance2(int n, Vec4 const* points, float const* weight
   centroid /= total;
 
   // accumulate the covariance smatrix
-  Sym2x2 covariance(0.0f);
+  covariance = Sym2x2(0.0f);
   for (int i = 0; i < n; ++i) {
-    Vec4 a = points [i] - centroid;
+    Vec4 a = CoVar(points[i], centroid);
     Vec4 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
     covariance[1] += a.X() * b.Y();
     covariance[2] += a.Y() * b.Y();
   }
-
-  // return it
-  return covariance;
 }
 
-Sym3x3 ComputeWeightedCovariance3(int n, Vec4 const* points, float const* weights)
-{
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights) {
   // compute the centroid
   float total = 0.0f;
-  Vec4 centroid(0.0f);
+  centroid = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i) {
     total    += weights[i];
@@ -118,9 +214,9 @@ Sym3x3 ComputeWeightedCovariance3(int n, Vec4 const* points, float const* weight
   centroid /= total;
 
   // accumulate the covariance smatrix
-  Sym3x3 covariance(0.0f);
+  covariance = Sym3x3(0.0f);
   for (int i = 0; i < n; ++i) {
-    Vec4 a = points [i] - centroid;
+    Vec4 a = CoVar(points[i], centroid);
     Vec4 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
@@ -130,16 +226,12 @@ Sym3x3 ComputeWeightedCovariance3(int n, Vec4 const* points, float const* weight
     covariance[4] += a.Y() * b.Z();
     covariance[5] += a.Z() * b.Z();
   }
-
-  // return it
-  return covariance;
 }
 
-Sym4x4 ComputeWeightedCovariance4(int n, Vec4 const* points, float const* weights)
-{
+void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights) {
   // compute the centroid
   float total = 0.0f;
-  Vec4 centroid(0.0f);
+  centroid = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i) {
     total    += weights[i];
@@ -149,9 +241,9 @@ Sym4x4 ComputeWeightedCovariance4(int n, Vec4 const* points, float const* weight
   centroid /= total;
 
   // accumulate the covariance smatrix
-  Sym4x4 covariance(0.0f);
+  covariance = Sym4x4(0.0f);
   for (int i = 0; i < n; ++i) {
-    Vec4 a = points [i] - centroid;
+    Vec4 a = CoVar(points[i], centroid);
     Vec4 b = weights[i] * a;
 
     covariance[0] += a.X() * b.X();
@@ -165,9 +257,6 @@ Sym4x4 ComputeWeightedCovariance4(int n, Vec4 const* points, float const* weight
     covariance[8] += a.Z() * b.W();
     covariance[9] += a.W() * b.W();
   }
-
-  // return it
-  return covariance;
 }
 
 /* .............................................................................
@@ -423,7 +512,78 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
 }
 
 /* .............................................................................
+ *        16bit     8bit
+ *
+ * [ 0]       0        0
+ * [ 1]   10855    10855
+ * [ 2]   13404   792634
+ * [ 3]  147487   571689
+ * [ 4]  301039   341389
+ * [ 5]  335015   194660
+ * [ 6]  297186   112792
+ * [ 7]  238783    68232
+ * [ 8]  184111    42843
+ *   =  1527880  2135094
+ *
+ * [ 9]  140932    28428
+ * [10]  107016    19683
+ * [11]   82490    14083
+ * [12]   64155    10192
+ * [13]   50592     7341
+ * [14]   40557     5815
+ * [15]   32226     4433
+ * [16]   26161     3554
+ * [17]   21705     2867
+ * [18]   18087     2360
+ * [19]   15273     1889
+ * [20]   12975     1575
+ * [21]   10988     1343
+ * [22]    9442     1135
+ * [23]    8345      976
+ * [24]    7246      803
+ * [25]    6122      734
+ * [26]    5474      605
+ * [27]    4805      556
+ * [28]    4327      464
+ * [29]    3875      411
+ * [30]    3491      369
+ * [31]    3116      334
+ * [32]    2816      286
+ * [33]    2530      239
+ * [34]    2258      261
+ * [35]    2064      226
+ * [36]    1843      182
+ * [37]    1774      189
+ * [38]    1599      172
+ * [39]    1453      150
+ * [40]    1369      129
+ * [41]    1197      128
+ * [42]    1129      106
+ * [43]    1131      113
+ * [44]    1036      105
+ * [45]     930       93
+ * [46]     895       72
+ * [47]     814       90
+ * [48]     718       86
+ * [49]     693       71
+ * [50]     710       57
+ * [51]     634       67
+ * [52]     594       58
+ * [53]     576       61
+ * [54]     533       54
+ * [55]     458       53
+ * [56]     451       35
+ * [57]     434       46
+ * [58]     441       42
+ * [59]     355       44
+ * [60]     373       52
+ * [61]     396       37
+ * [62]     327       48
+ * [63]    9401      816
+ *   =  2249212  2249212
  */
+#define POWER_ITERATION_COUNT	-1
+#define POWER_ITERATION_PREC	1.0f / 256
 
 void EstimatePrincipleComponent(Sym2x2 const& matrix, Vec4 &out)
 {
@@ -437,14 +597,24 @@ void EstimatePrincipleComponent(Sym2x2 const& matrix, Vec4 &out)
   if (r0 > r1) v = row0;
   else v = row1;
 
-#define POWER_ITERATION_COUNT   8
+#if POWER_ITERATION_COUNT > 0
   for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
+#else
+  int i = 0; Vec4 d; do { d = v; i++;
+#endif
     Scr4 x = HorizontalAdd(v * row0);
     Scr4 y = HorizontalAdd(v * row1);
 
     v  = Vec4(x, y);
-    v *= Reciprocal(HorizontalMax(v));
+    v *= Reciprocal(HorizontalMax(Abs(v)));
   }
+#if POWER_ITERATION_COUNT <= 0
+  while (CompareAnyGreaterThan(AbsoluteDifference(v, d), Vec4(POWER_ITERATION_PREC)) && (i < 64));
+#endif
+  
+#if defined(TRACK_STATISTICS)
+  gstat.num_poweritrs[std::min(i, 63)]++;
+#endif
 
   out = v;
 }
@@ -463,16 +633,26 @@ void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec3 &out)
   if (r0 > r1 && r0 > r2) v = row0;
   else if (r1 > r2) v = row1;
   else v = row2;
-
-#define POWER_ITERATION_COUNT   8
+  
+#if POWER_ITERATION_COUNT > 0
   for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
+#else
+  int i = 0; Vec3 d; do { d = v; i++;
+#endif
     Scr3 x = HorizontalAdd(v * row0);
     Scr3 y = HorizontalAdd(v * row1);
     Scr3 z = HorizontalAdd(v * row2);
 
     v  = Vec3(x, y, z);
-    v *= Reciprocal(HorizontalMax(v));
+    v *= Reciprocal(HorizontalMax(Abs(v)));
   }
+#if POWER_ITERATION_COUNT <= 0
+  while (CompareAnyGreaterThan(AbsoluteDifference(v, d), Vec3(POWER_ITERATION_PREC)) && (i < 64));
+#endif
+  
+#if defined(TRACK_STATISTICS)
+  gstat.num_poweritrs[std::min(i, 63)]++;
+#endif
 
   out = v;
 }
@@ -491,16 +671,26 @@ void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec4 &out)
   if (r0 > r1 && r0 > r2) v = row0;
   else if (r1 > r2) v = row1;
   else v = row2;
-
-#define POWER_ITERATION_COUNT   8
+  
+#if POWER_ITERATION_COUNT > 0
   for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
+#else
+  int i = 0; Vec4 d; do { d = v; i++;
+#endif
     Scr4 x = HorizontalAdd(v * row0);
     Scr4 y = HorizontalAdd(v * row1);
     Scr4 z = HorizontalAdd(v * row2);
 
     v  = Vec4(x, y, z);
-    v *= Reciprocal(HorizontalMax(v));
+    v *= Reciprocal(HorizontalMax(Abs(v)));
   }
+#if POWER_ITERATION_COUNT <= 0
+  while (CompareAnyGreaterThan(AbsoluteDifference(v, d), Vec4(POWER_ITERATION_PREC)) && (i < 64));
+#endif
+  
+#if defined(TRACK_STATISTICS)
+  gstat.num_poweritrs[std::min(i, 63)]++;
+#endif
 
   out = v;
 }
@@ -523,16 +713,26 @@ void EstimatePrincipleComponent(Sym4x4 const& matrix, Vec4 &out)
   else if (r2 > r3) v = row2;
   else v = row3;
 
-#define POWER_ITERATION_COUNT   8
+#if POWER_ITERATION_COUNT > 0
   for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
+#else
+  int i = 0; Vec4 d; do { d = v; i++;
+#endif
     Scr4 x = HorizontalAdd(v * row0);
     Scr4 y = HorizontalAdd(v * row1);
     Scr4 z = HorizontalAdd(v * row2);
     Scr4 w = HorizontalAdd(v * row3);
 
     v  = Vec4(x, y, z, w);
-    v *= Reciprocal(HorizontalMax(v));
+    v *= Reciprocal(HorizontalMax(Abs(v)));
   }
+#if POWER_ITERATION_COUNT <= 0
+  while (CompareAnyGreaterThan(AbsoluteDifference(v, d), Vec4(POWER_ITERATION_PREC)) && (i < 64));
+#endif
+
+#if defined(TRACK_STATISTICS)
+  gstat.num_poweritrs[std::min(i, 63)]++;
+#endif
 
   out = v;
 }
