@@ -62,9 +62,15 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
+  
+  Sym3x3 covariance;
+  Vec3 centroid;
 
-  // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance3(count, values, m_colours->GetWeights());
+  // get the covariance matrix
+  if (m_colours->IsUnweighted())
+    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric.GetVec3());
+  else
+    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric.GetVec3(), m_colours->GetWeights());
 
   // compute the principle component
   GetPrincipleComponent(covariance, m_principle);
@@ -119,6 +125,12 @@ bool ColourClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
   return true;
 }
 
+#ifdef	FEATURE_METRIC_SQUARED
+#define CMetric(m)  m * m
+#else
+#define CMetric(m)  m
+#endif
+
 void ColourClusterFit::ClusterFit3(void* block)
 {
   cQuantizer4<5,6,5,0> q = cQuantizer4<5,6,5,0>();
@@ -128,6 +140,8 @@ void ColourClusterFit::ClusterFit3(void* block)
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const one = VEC4_CONST(1.0f);
   Vec4 const half_half2(0.5f, 0.5f, 0.5f, 0.25f);
+
+  assume((count > 0) && (count <= 16));
 
   // prepare an ordering using the principle axis
   ConstructOrdering(m_principle, 0);
@@ -139,6 +153,9 @@ void ColourClusterFit::ClusterFit3(void* block)
   a16 u8 bestindices[16];
   int bestiteration = 0;
   int besti = 0, bestj = 0;
+
+  // metric is squared as well
+  Vec4 cmetric = CMetric(m_metric);
 
   // loop over iterations (we avoid the case that all points in first or last cluster)
   for (int iterationIndex = 0;;) {
@@ -177,7 +194,7 @@ void ColourClusterFit::ClusterFit3(void* block)
 	Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	// apply the metric to the error term
-	Scr4 eS = Dot(e4, m_metric);
+	Scr4 eS = Dot(e4, cmetric);
 
 	// keep the solution if it wins
 	if (besterror > eS) {
@@ -249,6 +266,8 @@ void ColourClusterFit::ClusterFit4(void* block)
   Vec4 const twothirds_twothirds2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
   Vec4 const twonineths                                     = VEC4_CONST(2.0f / 9.0f);
 
+  assume((count > 0) && (count <= 16));
+
   // prepare an ordering using the principle axis
   ConstructOrdering(m_principle, 0);
 
@@ -259,6 +278,9 @@ void ColourClusterFit::ClusterFit4(void* block)
   u8 bestindices[16];
   int bestiteration = 0;
   int besti = 0, bestj = 0, bestk = 0;
+  
+  // metric is squared as well
+  Vec4 cmetric = CMetric(m_metric);
 
   // loop over iterations (we avoid the case that all points in first or last cluster)
   for (int iterationIndex = 0;;) {
@@ -300,7 +322,7 @@ void ColourClusterFit::ClusterFit4(void* block)
 	  Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	  // apply the metric to the error term
-	  Scr4 eS = Dot(e4, m_metric);
+	  Scr4 eS = Dot(e4, cmetric);
 
 	  // keep the solution if it wins
 	  if (besterror > eS) {
@@ -379,6 +401,8 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
   Vec4 const one = VEC4_CONST(1.0f);
   Vec4 const half_half2(0.5f, 0.5f, 0.5f, 0.25f);
 
+  assume((count > 0) && (count <= 16));
+
   // check all possible clusters and iterate on the total order
   Vec4 beststart = VEC4_CONST(0.0f);
   Vec4 bestend = VEC4_CONST(0.0f);
@@ -386,6 +410,9 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
   a16 u8 bestindices[16];
   int bestiteration = 0;
   int besti = 0, bestj = 0;
+  
+  // metric is squared as well
+  Vec4 cmetric = CMetric(m_metric);
 
   // prepare an ordering using the principle axis
   ConstructOrdering(m_principle, 0);
@@ -495,7 +522,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
 	Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	// apply the metric to the error term
-	Scr4 eS = Dot(e4, m_metric);
+	Scr4 eS = Dot(e4, cmetric);
 
 	// keep the solution if it wins
 	if (besterror > eS) {
@@ -567,6 +594,8 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
   Vec4 const onethird_onethird2  (1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
   Vec4 const twothirds_twothirds2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
   Vec4 const twonineths                                     = VEC4_CONST(2.0f / 9.0f);
+
+  assume((count > 0) && (count <= 16));
   
   // check all possible clusters and iterate on the total order
   Vec4 beststart = VEC4_CONST(0.0f);
@@ -576,6 +605,9 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
   int bestiteration = 0;
   int besti = 0, bestj = 0, bestk = 0;
   
+  // metric is squared as well
+  Vec4 cmetric = CMetric(m_metric);
+
   // prepare an ordering using the principle axis
   ConstructOrdering(m_principle, 0);
 
@@ -690,7 +722,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
 	  Vec4 e4 = MultiplyAdd(two, e3, e1);
 
 	  // apply the metric to the error term
-	  Scr4 eS = Dot(e4, m_metric);
+	  Scr4 eS = Dot(e4, cmetric);
 
 	  // keep the solution if it wins
 	  if (besterror > eS) {
