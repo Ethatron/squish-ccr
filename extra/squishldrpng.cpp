@@ -436,7 +436,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
 	  unsigned long btcvalue = *((int *)targetBlock);
 	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
 
-	  fprintf(stderr, "%1d", btcmode);
+	  fprintf(stderr, "%1ud", btcmode);
 	}
 	// draw the pattern
 	else if ( paint == 1 ) {
@@ -577,7 +577,7 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 	  unsigned long btcvalue = *((int *)sourceBlock);
 	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
 
-	  fprintf(stderr, "%1d", btcmode);
+	  fprintf(stderr, "%1ud", btcmode);
 	}
 	// draw the pattern
 	else if ( paint == 1 ) {
