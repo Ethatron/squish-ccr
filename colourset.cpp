@@ -24,6 +24,7 @@
 
    -------------------------------------------------------------------------- */
 
+#include <assert.h>
 #include "colourset.h"
 
 namespace squish {
@@ -84,6 +85,12 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
     // threshold alpha
     ___a[1 * i + 0] = (((signed char)rgba[4 * i + 3]) >> 7) | clra;
+
+#ifdef FEATURE_IGNORE_ALPHA0
+    // threshold color
+    if (!(rgba[4 * i + 3] | wgta))
+      ___a[1 * i + 0] = 0x00;
+#endif
   }
 
   // create the minimal set
@@ -95,8 +102,10 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
       continue;
     }
 
-    // check for transparent pixels when using dxt1
-    if (isBtc1 && !___a[i]) {
+    /* check for transparent pixels when using dxt1
+     * check for blanked out pixels when weighting
+     */
+    if (!___a[i]) {
       m_remap[i] = -1;
       m_transparent = true;
       continue;
@@ -105,7 +114,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
     // ensure there is always non-zero weight even for zero alpha
     u8    w = rgba[4 * i + 3] | wgta;
     float W = (float)(w + 1) / 256.0f;
-
+    
     // loop over previous points for a match
     u8 *rgbvalue = &rgbx[4 * i + 0];
     for (int j = 0;; ++j) {
@@ -120,6 +129,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
 	// add the point
 	m_remap[i] = m_count;
+    assert((m_remap[i] == -1) || (m_remap[i] < 16));
 	m_points[m_count] = Vec3(r, g, b);
 	m_weights[m_count] = W;
 	m_unweighted = m_unweighted && !(u8)(~w);
@@ -156,10 +166,12 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
       if (match) {
 	// get the index of the match
-	int index = m_remap[j];
+	int const index = m_remap[j];
+	assume (index >= 0 && index < 16);
 
 	// map to this point and increase the weight
 	m_remap[i] = index;
+    assert((m_remap[i] == -1) || (m_remap[i] < 16));
 	m_weights[index] += W;
 	m_unweighted = false;
 #ifdef	FEATURE_EXACT_ERROR
@@ -170,10 +182,12 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
     }
   }
 
+#ifdef FEATURE_WEIGHTS_ROOTED
   // square root the weights
   for (int i = 0; i < m_count; ++i)
     m_weights[i] = math::sqrt(m_weights[i]);
-
+#endif
+  
   // clear if we're suppose to throw alway alpha
   m_transparent = m_transparent && !clearAlpha;
 
