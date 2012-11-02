@@ -1152,11 +1152,28 @@ public:
       math::rsqrt(v.z)
     );
   }
-
+  
+  friend Vec3 Select( Arg a, Arg b, Arg c )
+  {
+    if (b.x == c.x)
+      return Vec3(a.x);
+    if (b.y == c.y)
+      return Vec3(a.y);
+//  if (b.z == c.z)
+      return Vec3(a.z);
+  }
+	
+  friend Scr3 HorizontalMin( Arg a )
+  {
+    return Scr3(
+      std::min<float>(std::min<float>(a.x, a.y), a.z)
+    );
+  }
+  
   friend Scr3 HorizontalMax( Arg a )
   {
     return Scr3(
-      std::max<float>( std::max<float>( a.x, a.y ), a.z )
+      std::max<float>(std::max<float>(a.x, a.y), a.z)
     );
   }
 
@@ -1627,7 +1644,19 @@ public:
       math::rsqrt(v.w)
     );
   }
-
+  
+  friend Vec4 Select( Arg a, Arg b, Arg c )
+  {
+    if (b.x == c.x)
+      return Vec4(a.x);
+    if (b.y == c.y)
+      return Vec4(a.y);
+    if (b.z == c.z)
+      return Vec4(a.z);
+//  if (b.w == c.w)
+      return Vec4(a.w);
+  }
+	
   friend Scr4 HorizontalMin( Arg a )
   {
     return Scr4(
