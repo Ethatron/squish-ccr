@@ -42,6 +42,10 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   for (int s = 0; s < isets; s++) {
     // cache some values
@@ -51,22 +55,71 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 
     // we don't do this for sparse sets
     if (count != 1) {
+      Sym3x3 covariance;
+      Vec4 centroid;
+      Vec4 principle;
+      
       // get the covariance matrix
-      Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
+      if (m_palette->IsUnweighted(s))
+	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
+      else
+	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
 
       // compute the principle component
-      Vec4 principle; GetPrincipleComponent(covariance, principle);
+      GetPrincipleComponent(covariance, principle);
 
       // get the min and max range as the codebook endpoints
       Vec4 start(0.0f);
       Vec4 end(0.0f);
 
       if (count > 0) {
+#ifdef	FEATURE_PROJECT_FAST
+	Scr4 div = Reciprocal(Dot(principle, principle));
+	Scr4 len, min, max;
+	Vec4 chk;
+
+	// compute the projection
+	min = max = Dot(values[0] - centroid, principle);
+
+	for (int i = 1; i < count; ++i) {
+	  len = Dot(values[i] - centroid, principle);
+	  min = Min(min, len);
+	  max = Max(max, len);
+	}
+    
+	start = centroid + principle * min * div;
+	end   = centroid + principle * max * div;
+
+	// intersect with negative axis-plane, clamp to 0.0
+	chk = start;
+	while (CompareAnyLessThan(chk, Vec4(-1.0f / 65536))) {
+	  Vec4 fct = chk * Reciprocal(principle);
+	  Vec4 min = Select(fct, chk, HorizontalMin(chk));
+      
+	  start -= principle * min;
+	  chk = start;
+	}
+    
+	// intersect with positive axis-plane, clamp to 1.0
+	chk = end - Vec4(1.0f);
+	while (CompareAnyGreaterThan(chk, Vec4(1.0f / 65536))) {
+	  Vec4 fct = chk * Reciprocal(principle);
+	  Vec4 max = Select(fct, chk, HorizontalMax(chk));
+      
+	  end -= principle * max;
+	  chk = end - Vec4(1.0f);
+	}
+
+	assert(HorizontalMin(start).X() > -0.0001);
+	assert(HorizontalMin(end  ).X() > -0.0001);
+	assert(HorizontalMax(start).X() <  1.0001);
+	assert(HorizontalMax(end  ).X() <  1.0001);
+#else
+	Scr4 min, max; 
+
 	// compute the range
 	start = end = values[0];
-
-	Scr4 min, max; min = max = Dot(values[0], principle);
-	Vec4 mmn, mmx; mmn = mmx =     values[0];
+	min = max = Dot(values[0], principle);
 
 	for (int i = 1; i < count; ++i) {
 	  Scr4 val = Dot(values[i], principle);
@@ -79,14 +132,8 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 	    end = values[i];
 	    max = val;
 	  }
-
-	  mmn = Min(mmn, values[i]);
-	  mmx = Max(mmx, values[i]);
 	}
-
-	// exclude alpha from PCA
-	start = TransferW(start, mmn);
-	end   = TransferW(end  , mmx);
+#endif
       }
 
       // clamp the output to [0, 1]
@@ -149,6 +196,10 @@ void PaletteRangeFit::Compress(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   // create a codebook
   Vec4 codes[1 << 4];
@@ -310,11 +361,11 @@ void PaletteRangeFit::Compress(void* block, int mode)
 
 #ifndef NDEBUG
   // kill late if this scheme looses
-  Vec4 verify_error = Vec4(0.0f); SumError(closest, mode, verify_error);
-  Vec4 one_error = Vec4(1.0f / (1 << cb)); one_error *= one_error;
+  Scr4 verify_error = Scr4(0.0f); SumError(closest, mode, verify_error);
+  Scr4 one_error = Scr4(1.0f / (1 << cb)); one_error *= one_error;
   // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
-  if (CompareFirstGreaterThan(verify_error, error + one_error)) {
-    Vec4 verify_error2 = Vec4(0.0f); SumError(closest, mode, verify_error2);
+  if (verify_error > (error + one_error)) {
+    Scr4 verify_error2 = Scr4(0.0f); SumError(closest, mode, verify_error2);
     abort();
   }
   if (!(error < m_besterror))
