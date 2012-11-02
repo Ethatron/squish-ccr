@@ -233,6 +233,15 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
       // ensure there is always non-zero weight even for zero alpha
       u8    w = rgba[4 * i + 3] | wgta;
       float W = (float)(w + 1) / 256.0f;
+      
+#ifdef FEATURE_IGNORE_ALPHA0
+      /* check for blanked out pixels when weighting
+       */
+      if (!w) {
+	m_remap[s][i] = -1;
+	continue;
+      }
+#endif
 
       // loop over previous points for a match
       u8 *rgbvalue = &rgbx[4 * i + 0];
@@ -273,7 +282,8 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 
 	if (match) {
 	  // get the index of the match
-	  int index = m_remap[s][j];
+	  int const index = m_remap[s][j];
+	  assume (index >= 0 && index < 16);
 
 	  // map to this point and increase the weight
 	  m_remap[s][i] = index;
@@ -286,10 +296,12 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	}
       }
     }
-
+    
+#ifdef FEATURE_WEIGHTS_ROOTED
     // square root the weights
     for (int i = 0; i < m_count[s]; ++i)
       m_weights[s][i] = math::sqrt(m_weights[s][i]);
+#endif
     
     // we have tables for this
     m_unweighted[s] = m_unweighted[s] && (m_count[s] == 16);
@@ -356,10 +368,12 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	  }
 	}
       }
-
+      
+#ifdef FEATURE_WEIGHTS_ROOTED
       // square root the weights
       for (int i = 0; i < m_count[a]; ++i)
 	m_weights[a][i] = math::sqrt(m_weights[a][i]);
+#endif
       
       // we have tables for this
       m_unweighted[a] = m_unweighted[a] && (m_count[a] == 16);
