@@ -44,6 +44,10 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   // set the iteration count
   m_iterationCount = (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
@@ -60,8 +64,14 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
 
     // we don't do this for sparse sets
     if (count != 1) {
+      Sym3x3 covariance;
+      Vec4 centroid;
+
       // get the covariance matrix
-      Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
+      if (m_palette->IsUnweighted(s))
+	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
+      else
+	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
 
       // compute the principle component
       GetPrincipleComponent(covariance, m_principle[s]);
@@ -139,6 +149,8 @@ Scr4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
+
+  assume((count > 0) && (count <= 16));
 
   // match each point to the closest code
   int besti = 0, bestj = 0, bestk = 0;
@@ -325,6 +337,8 @@ Scr4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
 
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
+
+  assume((count > 0) && (count <= 16));
 
   // match each point to the closest code
   int besti = 0, bestj = 0, bestk = 0;
@@ -551,6 +565,8 @@ Scr4 PaletteClusterFit::ClusterSearch8(u8 (&closest)[4][16], int count, int set,
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
   Vec4 const zero = VEC4_CONST(0.0f);
+
+  assume((count > 0) && (count <= 16));
 
   // match each point to the closest code
   int besti = 0, bestj = 0, bestk = 0;
@@ -1035,6 +1051,8 @@ Scr4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
   Vec4 const half = VEC4_CONST(0.5f);
   Vec4 const zero = VEC4_CONST(0.0f);
 
+  assume((count > 0) && (count <= 16));
+
   // match each point to the closest code
   int besti = 0, bestj = 0, bestk = 0;
   int bestl = 0, bestm = 0, bestn = 0;
@@ -1260,6 +1278,12 @@ Scr4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
   return besterror;
 }
 
+#ifdef	FEATURE_METRIC_SQUARED
+#define CMetric(m)  m * m
+#else
+#define CMetric(m)  m
+#endif
+
 void PaletteClusterFit::CompressS23(void* block, int mode)
 {
   int ib = GetIndexBits(mode);
@@ -1278,6 +1302,10 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   // create a codebook
   Vec4 codes[1 << 4];
@@ -1323,7 +1351,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
     }
     else {
       // metric is squared as well
-      Vec4 cmetric = metric * metric;
+      Vec4 cmetric = CMetric(metric);
       Scr4 cerror = Scr4(0.0f);
 
 #if defined(TRACK_STATISTICS)
