@@ -244,18 +244,22 @@ private:
 namespace squish {
 
 #if	!defined(SQUISH_USE_PRE)
-Sym3x3 ComputeWeightedCovariance3(int n, Vec3 const* points, float const* weights);
-Sym2x2 ComputeWeightedCovariance2(int n, Vec4 const* points, float const* weights);
-Sym3x3 ComputeWeightedCovariance3(int n, Vec4 const* points, float const* weights);
-Sym4x4 ComputeWeightedCovariance4(int n, Vec4 const* points, float const* weights);
-void   ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
-void   ComputePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
-void   ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
-void   ComputePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
-void   EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
-void   EstimatePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
-void   EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
-void   EstimatePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric);
+void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric);
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric);
+void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric);
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric, float const* weights);
+void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights);
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights);
+void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights);
+void  ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
+void  ComputePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
+void  ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
+void  ComputePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
+void EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
+void EstimatePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
+void EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
+void EstimatePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
 
 #ifdef FEATURE_POWERESTIMATE
 #define GetPrincipleComponent(covariance, m_principle)	EstimatePrincipleComponent(covariance, m_principle)
@@ -280,7 +284,7 @@ float3 ComputePrincipleComponent(tile_barrier barrier, const int thread, Sym3x3r
 
 /* -------------------------------------------------------------------------- */
 
-#undef	OLD_QUANTIZER
+#define	OLD_QUANTIZER
 
 template<const int rb, const int gb, const int bb>
 class cQuantizer3 {
@@ -372,6 +376,8 @@ public:
   }
 #endif
 };
+
+#undef	OLD_QUANTIZER
 
 class vQuantizer {
 
