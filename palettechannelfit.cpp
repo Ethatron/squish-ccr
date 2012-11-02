@@ -41,6 +41,10 @@ PaletteChannelFit::PaletteChannelFit(PaletteSet const* palette, int flags, int s
 {
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   for (int a = isets; a < (isets + asets); a++) {
     // cache some values
