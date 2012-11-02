@@ -59,17 +59,66 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   Vec3 const* values = m_colours->GetPoints();
   float const* weights = m_colours->GetWeights();
 
-  // get the covariance smatrix
-  Sym3x3 covariance = ComputeWeightedCovariance3(count, values, weights);
+  Sym3x3 covariance;
+  Vec3 centroid; 
+  Vec3 principle; 
+  
+  // get the covariance matrix
+  if (m_colours->IsUnweighted())
+    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric);
+  else
+    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric, weights);
 
   // compute the principle component
-  Vec3 principle; GetPrincipleComponent(covariance, principle);
+  GetPrincipleComponent(covariance, principle);
 
   // get the min and max range as the codebook endpoints
   Vec3 start(0.0f);
   Vec3 end(0.0f);
 
   if (count > 0) {
+#ifdef	FEATURE_PROJECT_FAST
+    Scr3 div = Reciprocal(Dot(principle, principle));
+    Scr3 len, min, max;
+    Vec3 chk;
+
+    // compute the projection
+    min = max = Dot(values[0] - centroid, principle);
+
+    for (int i = 1; i < count; ++i) {
+      len = Dot(values[i] - centroid, principle);
+      min = Min(min, len);
+      max = Max(max, len);
+    }
+    
+    start = centroid + principle * min * div;
+    end   = centroid + principle * max * div;
+
+    // intersect with negative axis-plane, clamp to 0.0
+    chk = start;
+    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
+      Vec3 fct = chk * Reciprocal(principle);
+      Vec3 min = Select(fct, chk, HorizontalMin(chk));
+      
+      start -= principle * min;
+      chk = start;
+    }
+    
+    // intersect with positive axis-plane, clamp to 1.0
+    chk = end - Vec3(1.0f);
+    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
+      Vec3 fct = chk * Reciprocal(principle);
+      Vec3 max = Select(fct, chk, HorizontalMax(chk));
+      
+      end -= principle * max;
+      chk = end - Vec3(1.0f);
+    }
+
+    assert(HorizontalMin(start).X() > -0.0001);
+    assert(HorizontalMin(end  ).X() > -0.0001);
+    assert(HorizontalMax(start).X() <  1.0001);
+    assert(HorizontalMax(end  ).X() <  1.0001);
+#else
     Scr3 min, max;
 
     // compute the range
@@ -88,11 +137,8 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
 	max = val;
       }
     }
+#endif
   }
-
-  // clamp the output to [0, 1]
-  start = start.Clamp();
-  end   = end.Clamp();
 
   // snap floating-point-values to the integer-lattice and save
   m_start = q.SnapToLattice(start);
