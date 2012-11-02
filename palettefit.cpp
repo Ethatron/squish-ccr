@@ -228,6 +228,10 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Scr4 &error) {
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   // create a codebook
   Vec4 codes[1 << 4];
@@ -278,6 +282,10 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  
+  assume((isets >  0) && (isets <= 3));
+  assume((asets >= 0) && (asets <= 3));
+  assume(((isets    +    asets) <= 3));
 
   // create a codebook
   int codes[1 << 4];
