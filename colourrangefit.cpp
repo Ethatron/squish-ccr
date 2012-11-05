@@ -79,6 +79,7 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   if (count > 0) {
 #ifdef	FEATURE_PROJECT_FAST
     Scr3 div = Reciprocal(Dot(principle, principle));
+    Vec3 rec = Reciprocal(    principle            );
     Scr3 len, min, max;
     Vec3 chk;
 
@@ -94,20 +95,40 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
     start = centroid + principle * min * div;
     end   = centroid + principle * max * div;
 
-    // intersect with negative axis-plane, clamp to 0.0
+    // intersect negative undershoot with axis-plane(s), clamp to 0.0
     chk = start;
     while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
-      Vec3 fct = chk * Reciprocal(principle);
+      Vec3 fct = chk * rec;
       Vec3 min = Select(fct, chk, HorizontalMin(chk));
       
       start -= principle * min;
       chk = start;
     }
     
-    // intersect with positive axis-plane, clamp to 1.0
+    // intersect negative undershoot with axis-plane(s), clamp to 0.0
+    chk = end;
+    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
+      Vec3 fct = chk * rec;
+      Vec3 min = Select(fct, chk, HorizontalMin(chk));
+      
+      end -= principle * min;
+      chk = end;
+    }
+    
+    // intersect positive overshoot with axis-plane(s), clamp to 1.0
+    chk = start - Vec3(1.0f);
+    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
+      Vec3 fct = chk * rec;
+      Vec3 max = Select(fct, chk, HorizontalMax(chk));
+      
+      start -= principle * max;
+      chk = start - Vec3(1.0f);
+    }
+    
+    // intersect positive overshoot with axis-plane(s), clamp to 1.0
     chk = end - Vec3(1.0f);
     while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
-      Vec3 fct = chk * Reciprocal(principle);
+      Vec3 fct = chk * rec;
       Vec3 max = Select(fct, chk, HorizontalMax(chk));
       
       end -= principle * max;
