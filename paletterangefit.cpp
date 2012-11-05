@@ -75,6 +75,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
       if (count > 0) {
 #ifdef	FEATURE_PROJECT_FAST
 	Scr4 div = Reciprocal(Dot(principle, principle));
+	Vec4 rec = Reciprocal(    principle            );
 	Scr4 len, min, max;
 	Vec4 chk;
 
@@ -93,17 +94,37 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 	// intersect with negative axis-plane, clamp to 0.0
 	chk = start;
 	while (CompareAnyLessThan(chk, Vec4(-1.0f / 65536))) {
-	  Vec4 fct = chk * Reciprocal(principle);
+	  Vec4 fct = chk * rec;
 	  Vec4 min = Select(fct, chk, HorizontalMin(chk));
       
 	  start -= principle * min;
 	  chk = start;
 	}
     
-	// intersect with positive axis-plane, clamp to 1.0
+	// intersect negative undershoot with axis-plane(s), clamp to 0.0
+	chk = end;
+	while (CompareAnyLessThan(chk, Vec4(-1.0f / 65536))) {
+	  Vec4 fct = chk * rec;
+	  Vec4 min = Select(fct, chk, HorizontalMin(chk));
+      
+	  end -= principle * min;
+	  chk = end;
+	}
+    
+	// intersect positive overshoot with axis-plane(s), clamp to 1.0
+	chk = start - Vec4(1.0f);
+	while (CompareAnyGreaterThan(chk, Vec4(1.0f / 65536))) {
+	  Vec4 fct = chk * rec;
+	  Vec4 max = Select(fct, chk, HorizontalMax(chk));
+      
+	  start -= principle * max;
+	  chk = start - Vec4(1.0f);
+	}
+    
+	// intersect positive overshoot with axis-plane(s), clamp to 1.0
 	chk = end - Vec4(1.0f);
 	while (CompareAnyGreaterThan(chk, Vec4(1.0f / 65536))) {
-	  Vec4 fct = chk * Reciprocal(principle);
+	  Vec4 fct = chk * rec;
 	  Vec4 max = Select(fct, chk, HorizontalMax(chk));
       
 	  end -= principle * max;
