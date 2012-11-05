@@ -62,10 +62,17 @@ static doinline int passreg FloatToInt(float a, int limit) ccr_restricted
 static doinline int passreg FloatTo565(Vec3::Arg colour) ccr_restricted
 {
   // get the components in the correct range
-  int r = FloatToInt(31.0f * colour.X(), 31);
-  int g = FloatToInt(63.0f * colour.Y(), 63);
-  int b = FloatToInt(31.0f * colour.Z(), 31);
+  cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
+  Col3 rgb = q.LatticeToIntClamped(colour);
+  
+  int r = rgb.R();
+  int g = rgb.G();
+  int b = rgb.B();
 
+  assert(r == FloatToInt(31.0f * colour.X(), 31));
+  assert(g == FloatToInt(63.0f * colour.Y(), 63));
+  assert(b == FloatToInt(31.0f * colour.Z(), 31));
+  
   // pack into a single value
   return (r << 11) | (g << 5) | b;
 }
