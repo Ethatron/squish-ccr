@@ -679,6 +679,7 @@ public:
 	explicit Col4( float s ) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
 
 	Col4( int r, int g, int b, int a ) : m_v( _mm_setr_epi32( r, g, b, a ) ) {}
+	Col4( int r, int g, int b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
 	Col4( Col3 &v, int w ) : m_v( v.m_v ) { m_v.m128i_i32[3] = w; }
 
 	explicit Col4( unsigned int s ) : m_v( _mm_set1_epi32( s ) ) {}
