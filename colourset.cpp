@@ -35,36 +35,13 @@ namespace squish {
 ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   : m_count(0), m_unweighted(true), m_transparent(false)
 {
-  /*
-  static const float dw[] = {
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5),
-
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
-
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
-
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5)
-  };
-  */
+  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
 
   // check the compression mode for dxt1
-  bool isBtc1        = ((flags & kBtc1                   ) != 0);
-  bool clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
-  bool weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
-  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
-  
+  bool const isBtc1        = ((flags & kBtc1                   ) != 0);
+  bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
+
 #ifdef	FEATURE_TEST_LINES
   Scr3 angl, epsl = Scr3(1.0f - (1.0f / 256));
   Vec3 chkl, line;
@@ -73,6 +50,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   // build mapped data
   u8 clra = clearAlpha || !isBtc1 ? 0xFF : 0x00;
   u8 wgta = weightByAlpha         ? 0x00 : 0xFF;
+
   u8 rgbx[4 * 16];
   u8 ___a[1 * 16];
 
@@ -114,7 +92,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
     // ensure there is always non-zero weight even for zero alpha
     u8    w = rgba[4 * i + 3] | wgta;
     float W = (float)(w + 1) / 256.0f;
-    
+
     // loop over previous points for a match
     u8 *rgbvalue = &rgbx[4 * i + 0];
     for (int j = 0;; ++j) {
@@ -129,14 +107,13 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
 	// add the point
 	m_remap[i] = m_count;
-    assert((m_remap[i] == -1) || (m_remap[i] < 16));
 	m_points[m_count] = Vec3(r, g, b);
 	m_weights[m_count] = W;
 	m_unweighted = m_unweighted && !(u8)(~w);
 #ifdef	FEATURE_EXACT_ERROR
 	m_frequencies[m_count] = 1;
 #endif
-	
+
 #ifdef	FEATURE_TEST_LINES
         // straight line test
 	if (m_count >= 2) {
@@ -171,7 +148,6 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
 	// map to this point and increase the weight
 	m_remap[i] = index;
-    assert((m_remap[i] == -1) || (m_remap[i] < 16));
 	m_weights[index] += W;
 	m_unweighted = false;
 #ifdef	FEATURE_EXACT_ERROR
@@ -187,7 +163,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   for (int i = 0; i < m_count; ++i)
     m_weights[i] = math::sqrt(m_weights[i]);
 #endif
-  
+
   // clear if we're suppose to throw alway alpha
   m_transparent = m_transparent && !clearAlpha;
 
