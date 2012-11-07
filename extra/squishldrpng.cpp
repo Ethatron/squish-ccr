@@ -430,19 +430,20 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
 	}
       }
 #endif
+
       if ( (flags & kBtc7) && paint ) {
 	// draw the mode
 	if ( paint == 2 ) {
 	  unsigned long btcvalue = *((int *)targetBlock);
-	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue); btcmode += 1;
 
-	  fprintf(stderr, "%1ud", btcmode);
+	  fprintf(stderr, "%1u", btcmode);
 	}
 	// draw the pattern
 	else if ( paint == 1 ) {
 	  char *patchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzµß";
 	  unsigned long btcvalue = *((int *)targetBlock);
-	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue); btcmode += 1;
 	  unsigned long btcpat = (btcmode == 5 || btcmode == 6 || btcmode == 7 ? 0 : (btcmode == 1 ? (1 << 4) - 1 : (1 << 6) - 1));
 
 	  fprintf(stderr, "%c", patchar[(btcvalue >> btcmode) & btcpat]);
@@ -575,15 +576,15 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 	// draw the mode
 	if ( paint == 2 ) {
 	  unsigned long btcvalue = *((int *)sourceBlock);
-	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue); btcmode += 1;
 
-	  fprintf(stderr, "%1ud", btcmode);
+	  fprintf(stderr, "%1u", btcmode);
 	}
 	// draw the pattern
 	else if ( paint == 1 ) {
 	  char *patchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzµß";
 	  unsigned long btcvalue = *((int *)sourceBlock);
-	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue);
+	  unsigned long btcmode; _BitScanForward(&btcmode, btcvalue); btcmode += 1;
 	  unsigned long btcpat = (btcmode == 5 || btcmode == 6 || btcmode == 7 ? 0 : (btcmode == 1 ? (1 << 4) - 1 : (1 << 6) - 1));
 
 	  fprintf(stderr, "%c", patchar[(btcvalue >> btcmode) & btcpat]);
