@@ -79,8 +79,8 @@ public:
 		return *this;
 	}
 
-	explicit Col3( int s ) : m_v( _mm_set1_epi32( s ) ) {}
-	explicit Col3( float s ) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
+	explicit Col3(int s) : m_v( _mm_set1_epi32( s ) ) {}
+	explicit Col3(float s) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
 
 	Col3( int r, int g, int b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
 
@@ -473,7 +473,7 @@ public:
 		return Col3( res );
 #else
 		__m128i res = a.m_v;
-		
+
 		res = _mm_and_si128( res , _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) );
 		res = _mm_add_epi32( res, _mm_shuffle_epi32( res, SQUISH_SSE_SWAP64() ) );
 		res = _mm_add_epi32( res, _mm_shuffle_epi32( res, SQUISH_SSE_SWAP32() ) );
@@ -675,8 +675,8 @@ public:
 		return *this;
 	}
 
-	explicit Col4( int s ) : m_v( _mm_set1_epi32( s ) ) {}
-	explicit Col4( float s ) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
+	explicit Col4(int s) : m_v( _mm_set1_epi32( s ) ) {}
+	explicit Col4(float s) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
 
 	Col4( int r, int g, int b, int a ) : m_v( _mm_setr_epi32( r, g, b, a ) ) {}
 	Col4( int r, int g, int b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
@@ -1308,8 +1308,13 @@ public:
 		return *this;
 	}
 
-	explicit Vec3( float s ) : m_v( _mm_set1_ps( s ) ) {}
-	explicit Vec3( int s ) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
+	explicit Vec3(float s) : m_v( _mm_set1_ps( s ) ) {}
+	explicit Vec3(int s) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
+	
+	Vec3( const float *x, const float *y, const float *z ) {
+	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
+	  m_v = _mm_movelh_ps(m_v, _mm_load_ss(z));
+	}
 
 	Vec3( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec3( Vec3 x, Vec3 y, Vec3 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), y.m_v ) ) {}
@@ -1385,23 +1390,28 @@ public:
 		*this *= Reciprocal( Vec3( v ) );
 		return *this;
 	}
-	
+
 	Vec3& operator/=( int v )
 	{
 		*this *= Reciprocal( Vec3( v ) );
 		return *this;
 	}
-	
+
 	friend int operator<( Vec3::Arg left, Vec3::Arg right  )
 	{
 		return CompareFirstLessThan(left, right);
 	}
-	
+
 	friend int operator>( Vec3::Arg left, Vec3::Arg right  )
 	{
 		return CompareFirstGreaterThan(left, right);
 	}
-
+	
+	friend int operator==( Vec3::Arg left, Vec3::Arg right  )
+	{
+		return CompareFirstEqualTo(left, right);
+	}
+	
 	friend Vec3 operator&( Vec3::Arg left, Vec3::Arg right  )
 	{
 		return Vec3( _mm_and_ps( left.m_v, right.m_v ) );
@@ -1441,7 +1451,7 @@ public:
 	{
 		return left * Reciprocal( Vec3( right ) );
 	}
-	
+
 	friend Vec3 operator*( Vec3::Arg left, int right  )
 	{
 #if ( SQUISH_USE_SSE == 1 )
@@ -1495,7 +1505,7 @@ public:
 	{
 #if ( SQUISH_USE_SSE >= 3 )
 		__m128 res = a.m_v;
-		
+
 		res = _mm_and_ps( res , _mm_castsi128_ps( _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) ) );
 		res = _mm_hadd_ps( res, res );
 		res = _mm_hadd_ps( res, res );
@@ -1503,7 +1513,7 @@ public:
 		return Vec3( res );
 #else
 		__m128 res = a.m_v;
-		
+
 		res = _mm_and_ps( res , _mm_castsi128_ps( _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) ) );
 		res = _mm_add_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SWAP64() ) );
 		res = _mm_add_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SWAP32() ) );
@@ -1534,14 +1544,14 @@ public:
 		return Vec3( resc );
 #endif
 	}
-	
+
 	friend Vec3 Select( Arg a, Arg b, Arg c )
 	{
 #if 0
 		__m128 res;
 		__m128 bits = _mm_cmpeq_ps( b.m_v, c.m_v );
 		int mask = _mm_movemask_ps( bits );
-		
+
 		/* (1 >> 1) = 0
 		 * (2 >> 1) = 1
 		 * (4 >> 1) = 2
@@ -1571,7 +1581,7 @@ public:
 		return Vec3(res);
 #endif
 	}
-	
+
 	friend Vec3 HorizontalMin( Arg a )
 	{
 		__m128 res = a.m_v;
@@ -1581,7 +1591,7 @@ public:
 
 		return Vec3( res );
 	}
-	
+
 	friend Vec3 HorizontalMax( Arg a )
 	{
 		__m128 res = a.m_v;
@@ -1591,7 +1601,7 @@ public:
 
 		return Vec3( res );
 	}
-	
+
 	friend Vec3 Reciprocal( Vec3::Arg v )
 	{
 		// get the reciprocal estimate
@@ -1612,6 +1622,11 @@ public:
 		return Vec3( _mm_mul_ps( _mm_mul_ps( diff, _mm_set1_ps( 0.5f ) ), estimate ) );
 	}
 
+	friend Vec3 Sqrt( Vec3::Arg v )
+	{
+		return Vec3( _mm_sqrt_ps( v.m_v ) );
+	}
+
 	friend Vec3 Length( Arg left )
 	{
 		Vec3 sum = HorizontalAdd( Vec3( _mm_mul_ps( left.m_v, left.m_v ) ) );
@@ -1619,7 +1634,7 @@ public:
 
 		return sqt;
 	}
-	
+
 	friend Vec3 ReciprocalLength( Arg left )
 	{
 		Vec3 sum = HorizontalAdd( Vec3( _mm_mul_ps( left.m_v, left.m_v ) ) );
@@ -1627,7 +1642,7 @@ public:
 
 		return rsq;
 	}
-	
+
 	friend Vec3 Normalize( Arg left )
 	{
 		return left * ReciprocalLength(left);
@@ -1649,7 +1664,7 @@ public:
 	{
 		return Vec3( _mm_and_ps( a.m_v, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) ) );
 	}
-	
+
 	friend Vec3 Min( Vec3::Arg left, Vec3::Arg right )
 	{
 		return Vec3( _mm_min_ps( left.m_v, right.m_v ) );
@@ -1702,7 +1717,7 @@ public:
 		return Vec3( _mm_cvtepi32_ps( _mm_cvttps_epi32( v.m_v ) ) );
 #endif
 	}
-	
+
 	friend Vec3 AbsoluteDifference( Vec3::Arg left, Vec3::Arg right )
 	{
 		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
@@ -1726,7 +1741,7 @@ public:
 		int value = _mm_movemask_ps( bits );
 		return (value & 0x7) != 0x0;
 	}
-	
+
 	friend bool CompareAnyGreaterThan( Vec3::Arg left, Vec3::Arg right )
 	{
 		__m128 bits = _mm_cmpgt_ps( left.m_v, right.m_v );
@@ -1749,6 +1764,11 @@ public:
 	friend int CompareFirstGreaterThan( Vec3::Arg left, Vec3::Arg right )
 	{
 		return _mm_comigt_ss( left.m_v, right.m_v );
+	}
+	
+	friend int CompareFirstEqualTo( Vec3::Arg left, Vec3::Arg right )
+	{
+		return _mm_comieq_ss( left.m_v, right.m_v );
 	}
 
 	Vec3 IsOne( ) const
@@ -1792,9 +1812,22 @@ public:
 		return *this;
 	}
 
-	explicit Vec4( float s ) : m_v( _mm_set1_ps( s ) ) {}
-	explicit Vec4( int s ) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
-
+	explicit Vec4(float s) : m_v( _mm_set1_ps( s ) ) {}
+	explicit Vec4(int   s) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
+	
+	Vec4( const float *x, const float *y, const float *z, const float *w ) {
+	  __m128 m_w;
+	  
+	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
+	  m_w = _mm_unpacklo_ps(_mm_load_ss(z), _mm_load_ss(w));
+	  m_v = _mm_movelh_ps(m_v, m_w);
+	}
+	
+	Vec4( const float *x, const float *y, const float *z ) {
+	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
+	  m_v = _mm_movelh_ps(m_v, _mm_load_ss(z));
+	}
+	
 	Vec4( float x, float y, float z, float w ) : m_v( _mm_setr_ps( x, y, z, w ) ) {}
 	Vec4( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec4( Vec3::Arg &v, float w ) : m_v( v.m_v ) { m_v = _mm_or_ps( _mm_and_ps( m_v, _mm_castsi128_ps( _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) ) ),  _mm_setr_ps( 0.0f, 0.0f, 0.0f, w ) ); }
@@ -1818,7 +1851,7 @@ public:
 	float &GetW() { return ((float *)&m_v)[3]; }
 	// let the compiler figure this one out, probably spills to memory
 	float &GetO(int o) { return ((float *)&m_v)[o]; }
-	
+
 	Vec4 Swap  () const { return Vec4( _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SWAP64() ) ); }
 	Vec4 SplatX() const { return Vec4( _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 0 ) ) ); }
 	Vec4 SplatY() const { return Vec4( _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 1 ) ) ); }
@@ -1859,6 +1892,26 @@ public:
 
 		m_v = _mm_castsi128_ps( v );
 	}
+	
+	template<const int p>
+	void Set( const float val )
+	{
+		__m128 mask = _mm_castsi128_ps ( _mm_setr_epi32(
+		  p != 0 ? ~0 : 0,
+		  p != 1 ? ~0 : 0,
+		  p != 2 ? ~0 : 0,
+		  p != 3 ? ~0 : 0
+		) );
+
+		__m128 fill = _mm_setr_ps(
+		  p != 0 ? 0.0f : val,
+		  p != 1 ? 0.0f : val,
+		  p != 2 ? 0.0f : val,
+		  p != 3 ? 0.0f : val
+		);
+
+		m_v = _mm_or_ps( _mm_and_ps( m_v, mask ), fill );
+	}
 
 	Vec4& operator+=( Arg v )
 	{
@@ -1877,29 +1930,40 @@ public:
 		m_v = _mm_mul_ps( m_v, v.m_v );
 		return *this;
 	}
+	
+	Vec4& operator/=( Vec4 v )
+	{
+		*this *= Reciprocal( v );
+		return *this;
+	}
 
 	Vec4& operator/=( float v )
 	{
 		*this *= Reciprocal( Vec4( v ) );
 		return *this;
 	}
-	
+
 	Vec4& operator/=( int v )
 	{
 		*this *= Reciprocal( Vec4( v ) );
 		return *this;
 	}
-	
+
 	friend int operator<( Vec4::Arg left, Vec4::Arg right  )
 	{
 		return CompareFirstLessThan(left, right);
 	}
-	
+
 	friend int operator>( Vec4::Arg left, Vec4::Arg right  )
 	{
 		return CompareFirstGreaterThan(left, right);
 	}
-
+	
+	friend int operator==( Vec4::Arg left, Vec4::Arg right  )
+	{
+		return CompareFirstEqualTo(left, right);
+	}
+	
 	friend Vec4 operator&( Vec4::Arg left, Vec4::Arg right  )
 	{
 		return Vec4( _mm_and_ps( left.m_v, right.m_v ) );
@@ -1988,14 +2052,14 @@ public:
 			(t == 3 ? f : (f == 3 ? t : 3))
 		) ) ) );
 	}
-	
+
 	friend Vec4 Select( Arg a, Arg b, Arg c )
 	{
 #if 0
 		__m128 res;
 		__m128 bits = _mm_cmpeq_ps( b.m_v, c.m_v );
 		int mask = _mm_movemask_ps( bits );
-		
+
 		/* (1 >> 1) = 0
 		 * (2 >> 1) = 1
 		 * (4 >> 1) = 2
@@ -2028,7 +2092,7 @@ public:
 		return Vec4(res);
 #endif
 	}
-	
+
 	friend Vec4 HorizontalAdd( Arg a )
 	{
 #if ( SQUISH_USE_SSE >= 3 )
@@ -2078,7 +2142,7 @@ public:
 
 		return Vec4( res );
 	}
-	
+
 	friend Vec4 HorizontalMax( Arg a )
 	{
 		__m128 res = a.m_v;
@@ -2109,6 +2173,11 @@ public:
 		return Vec4( _mm_mul_ps( _mm_mul_ps( diff, _mm_set1_ps( 0.5f ) ), estimate ) );
 	}
 
+	friend Vec4 Sqrt( Vec4::Arg v )
+	{
+		return Vec4( _mm_sqrt_ps( v.m_v ) );
+	}
+
 	friend Vec4 Normalize( Arg left )
 	{
 		Vec4 sum = HorizontalAdd( Vec4( _mm_mul_ps( left.m_v, left.m_v ) ) );
@@ -2128,12 +2197,12 @@ public:
 
 		_mm_store_ss( r, res.m_v );
 	}
-	
+
 	friend Vec4 Abs( Vec4::Arg a )
 	{
 		return Vec4( _mm_and_ps( a.m_v, _mm_castsi128_ps( _mm_set1_epi32( 0x7FFFFFFF ) ) ) );
 	}
-	
+
 	friend Vec4 Min( Vec4::Arg left, Vec4::Arg right )
 	{
 		return Vec4( _mm_min_ps( left.m_v, right.m_v ) );
@@ -2186,7 +2255,7 @@ public:
 		return Vec4( _mm_cvtepi32_ps( _mm_cvttps_epi32( v.m_v ) ) );
 #endif
 	}
-	
+
 	friend Vec4 AbsoluteDifference( Vec4::Arg left, Vec4::Arg right )
 	{
 		__m128 diff = _mm_sub_ps( left.m_v, right.m_v );
@@ -2203,7 +2272,7 @@ public:
 	{
 		return HorizontalMax( AbsoluteDifference( left, right ) );
 	}
-	
+
 	friend int CompareEqualTo( Vec4::Arg left, Vec4::Arg right )
 	{
 		return _mm_movemask_ps( _mm_cmpeq_ps( left.m_v, right.m_v ) );
@@ -2215,7 +2284,7 @@ public:
 		int value = _mm_movemask_ps( bits );
 		return value != 0;
 	}
-	
+
 	friend bool CompareAnyGreaterThan( Vec4::Arg left, Vec4::Arg right )
 	{
 		__m128 bits = _mm_cmpgt_ps( left.m_v, right.m_v );
@@ -2231,6 +2300,11 @@ public:
 	friend int CompareFirstGreaterThan( Vec4::Arg left, Vec4::Arg right )
 	{
 		return _mm_comigt_ss( left.m_v, right.m_v );
+	}
+	
+	friend int CompareFirstEqualTo( Vec4::Arg left, Vec4::Arg right )
+	{
+		return _mm_comieq_ss( left.m_v, right.m_v );
 	}
 
 	Vec4 IsOne( ) const
@@ -2269,7 +2343,7 @@ public:
 	{
 		return Vec4( _mm_and_ps( left.m_v, _mm_castsi128_ps ( _mm_setr_epi32(  0,  0,  0, ~0 ) ) ) );
 	}
-
+	
 	void SwapXYZW( Vec4 &with )
 	{
 		/* inplace swap based on xors */
