@@ -251,9 +251,9 @@ void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 
 void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric);
 void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric);
 void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric, float const* weights);
-void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights);
-void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights);
-void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, float const* weights);
+void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, Vec4 const* weights);
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, Vec4 const* weights);
+void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, Vec4 const* weights);
 void  ComputePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
 void  ComputePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
 void  ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
@@ -288,26 +288,21 @@ float3 ComputePrincipleComponent(tile_barrier barrier, const int thread, Sym3x3r
 
 #undef	OLD_QUANTIZER
 
-extern const a16 float qLUT_1[2];
-extern const a16 float qLUT_2[4];
-extern const a16 float qLUT_3[8];
-extern const a16 float qLUT_4[16];
-extern const a16 float qLUT_5[32];
-extern const a16 float qLUT_6[64];
-extern const a16 float qLUT_7[128];
-extern const a16 float qLUT_8[256];
+extern const a16 float qLUT_1all[  2], qLUT_1clr[  2], qLUT_1set[  2];
+extern const a16 float qLUT_2all[  4], qLUT_2clr[  4], qLUT_2set[  4];
+extern const a16 float qLUT_3all[  8], qLUT_3clr[  8], qLUT_3set[  8];
+extern const a16 float qLUT_4all[ 16], qLUT_4clr[ 16], qLUT_4set[ 16];
+extern const a16 float qLUT_5all[ 32], qLUT_5clr[ 32], qLUT_5set[ 32];
+extern const a16 float qLUT_6all[ 64], qLUT_6clr[ 64], qLUT_6set[ 64];
+extern const a16 float qLUT_7all[128], qLUT_7clr[128], qLUT_7set[128];
+extern const a16 float qLUT_8all[256], qLUT_8clr[256], qLUT_8set[256];
 
+static const a16 float *qLUT_a[9] = {
+  NULL, qLUT_1all, qLUT_2all, qLUT_3all, qLUT_4all, qLUT_5all, qLUT_6all, qLUT_7all, qLUT_8all };
+static const a16 float *qLUT_c[9] = {
+  NULL, qLUT_1clr, qLUT_2clr, qLUT_3clr, qLUT_4clr, qLUT_5clr, qLUT_6clr, qLUT_7clr, qLUT_8clr };
 static const a16 float *qLUT_s[9] = {
-  NULL,
-  qLUT_1,
-  qLUT_2,
-  qLUT_3,
-  qLUT_4,
-  qLUT_5,
-  qLUT_6,
-  qLUT_7,
-  qLUT_8,
-};
+  NULL, qLUT_1set, qLUT_2set, qLUT_3set, qLUT_4set, qLUT_5set, qLUT_6set, qLUT_7set, qLUT_8set };
 
 template<const int rb, const int gb, const int bb>
 class cQuantizer3 {
@@ -367,7 +362,7 @@ public:
   static const int rr = (1 << (8 - rb));
   static const int gr = (1 << (8 - gb));
   static const int br = (1 << (8 - bb));
-  
+
   /* half remainders
   static const float rh = 0.5f * (1 << (8 - rb)) * (rm / 255.0f);
   static const float gh = 0.5f * (1 << (8 - gb)) * (gm / 255.0f);
@@ -392,15 +387,16 @@ public:
 #endif
 
     // exact nearest least-error quantization values
-    Vec3 r = Vec3(qLUT_s[rb][p.R() & rm]);
-    Vec3 g = Vec3(qLUT_s[gb][p.G() & gm]);
-    Vec3 b = Vec3(qLUT_s[bb][p.B() & bm]);
-    
-    assert(((int)(r.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(g.X() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(b.X() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+    Vec3 rgb = Vec3(
+      &qLUT_a[rb][p.R() & rm],
+      &qLUT_a[gb][p.G() & gm],
+      &qLUT_a[bb][p.B() & bm]);
 
-    return Vec3(r, g, b);
+    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+
+    return rgb;
   }
 
   doinline Vec3 SnapToLatticeClamped(Vec3 const &val) {
@@ -408,17 +404,18 @@ public:
 #ifndef NDEBUG
     int lu; PackBytes(p, lu);
 #endif
-    
-    // exact nearest least-error quantization values
-    Vec3 r = Vec3(qLUT_s[rb][p.R() & rm]);
-    Vec3 g = Vec3(qLUT_s[gb][p.G() & gm]);
-    Vec3 b = Vec3(qLUT_s[bb][p.B() & bm]);
-    
-    assert(((int)(r.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(g.X() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(b.X() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
 
-    return Vec3(r, g, b);
+    // exact nearest least-error quantization values
+    Vec3 rgb = Vec3(
+      &qLUT_a[rb][p.R() & rm],
+      &qLUT_a[gb][p.G() & gm],
+      &qLUT_a[bb][p.B() & bm]);
+
+    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+
+    return rgb;
   }
 
   doinline Col3 QuantizeToInt(Vec3 const &val) {
@@ -487,7 +484,7 @@ public:
   static const int rr = (1 << (8 - rb));
   static const int gr = (1 << (8 - gb));
   static const int br = (1 << (8 - bb));
-  
+
   /* half remainders
   static const float rh = 0.5f * (1 << (8 - rb)) * (rm / 255.0f);
   static const float gh = 0.5f * (1 << (8 - gb)) * (gm / 255.0f);
@@ -510,17 +507,18 @@ public:
 #ifndef NDEBUG
     int lu; PackBytes(p, lu);
 #endif
-    
-    // exact nearest least-error quantization values
-    Vec4 r = Vec4(qLUT_s[rb][p.R() & rm]);
-    Vec4 g = Vec4(qLUT_s[gb][p.G() & gm]);
-    Vec4 b = Vec4(qLUT_s[bb][p.B() & bm]);
-    
-    assert(((int)(r.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(g.X() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(b.X() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
 
-    return Vec4(r, g, b);
+    // exact nearest least-error quantization values
+    Vec4 rgb = Vec4(
+      &qLUT_a[rb][p.R() & rm],
+      &qLUT_a[gb][p.G() & gm],
+      &qLUT_a[bb][p.B() & bm]);
+
+    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+
+    return rgb;
   }
 
   doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
@@ -528,17 +526,18 @@ public:
 #ifndef NDEBUG
     int lu; PackBytes(p, lu);
 #endif
-    
-    // exact nearest least-error quantization values
-    Vec4 r = Vec4(qLUT_s[rb][p.R() & rm]);
-    Vec4 g = Vec4(qLUT_s[gb][p.G() & gm]);
-    Vec4 b = Vec4(qLUT_s[bb][p.B() & bm]);
-    
-    assert(((int)(r.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(g.X() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(b.X() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
 
-    return Vec4(r, g, b);
+    // exact nearest least-error quantization values
+    Vec4 rgb = Vec4(
+      &qLUT_a[rb][p.R() & rm],
+      &qLUT_a[gb][p.G() & gm],
+      &qLUT_a[bb][p.B() & bm]);
+
+    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+
+    return rgb;
   }
 
   doinline Col4 QuantizeToInt(Vec4 const &val) {
@@ -546,7 +545,7 @@ public:
     Vec4 Qf = SnapToLattice(val);
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
   doinline Col4 QuantizeToIntClamped(Vec4 const &val) {
@@ -554,7 +553,7 @@ public:
     Vec4 Qf = SnapToLatticeClamped(val);
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
   doinline Col4 LatticeToInt(Vec4 const &val) {
@@ -562,7 +561,7 @@ public:
     Vec4 Qf = val.Clamp();
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
   doinline Col4 LatticeToIntClamped(Vec4 const &val) {
@@ -570,7 +569,7 @@ public:
     Vec4 Qf = val;
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 #endif
 };
@@ -605,6 +604,15 @@ public:
     gridrcp = Reciprocal(grid);
     gridoff = Vec4(0.5f);
   }
+  
+  doinline Vec4 LookUpLattice(int r, int g, int b, int a) {
+    // exact nearest least-error quantization values
+    return Vec4(
+      r,
+      g,
+      b,
+      a) * gridrcp;
+  }
 
   doinline Vec4 SnapToLattice(Vec4 const &val, int bitset = 0, int bittest = 0) {
     return Truncate(MultiplyAdd(grid, val.Clamp(), gridoff)) * gridrcp;
@@ -629,38 +637,39 @@ public:
   static const int gr = (1 << (8 - gb));
   static const int br = (1 << (8 - bb));
   static const int ar = (1 << (8 - ab));
-  
+
   // half remainders
   static const float rh = 0.5f * (1 << (8 - rb)) * (rm / 255.0f);
   static const float gh = 0.5f * (1 << (8 - gb)) * (gm / 255.0f);
   static const float bh = 0.5f * (1 << (8 - bb)) * (bm / 255.0f);
   static const float ah = 0.5f * (1 << (8 - ab)) * (am / 255.0f); */
 
-  const a16 float *qLUT_rgba[4];
+  const a16 float *qLUT_t[12];
 
-  Vec4 gridrcp;
   Vec4 grid;
   Vec4 gridgap;
   Col4 gridinv;
 
-#ifdef FEATURE_SHAREDBITS_TRIALS
-  Vec4 gridhlf;		// grid * 0.5f
-  Vec4 griddbl;		// gridrcp * 2.0f
-#endif
-  
   vQuantizer(const int rb, const int gb, const int bb, const int ab, const int sb = 0)/* :
     rm(1 << rb), gm(1 << gb), bm(1 << bb), am(1 << ab),
     gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, ab ? 1.0f / am : 1.0f ),
     grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, ab ? 1.0f + am : 1.0f )*/ {
-    qLUT_rgba[0] = qLUT_s[rb];
-    qLUT_rgba[1] = qLUT_s[gb];
-    qLUT_rgba[2] = qLUT_s[bb];
-    qLUT_rgba[3] = qLUT_s[ab];
-      
+    qLUT_t[0] = qLUT_a[rb];
+    qLUT_t[1] = qLUT_a[gb];
+    qLUT_t[2] = qLUT_a[bb];
+    qLUT_t[3] = qLUT_a[ab];
+
+#ifdef FEATURE_SHAREDBITS_TRIALS
+    qLUT_t[4] = qLUT_c[rb]; qLUT_t[ 8] = qLUT_s[rb];
+    qLUT_t[5] = qLUT_c[gb]; qLUT_t[ 9] = qLUT_s[gb];
+    qLUT_t[6] = qLUT_c[bb]; qLUT_t[10] = qLUT_s[bb];
+    qLUT_t[7] = qLUT_c[ab]; qLUT_t[11] = qLUT_s[ab];
+#endif
+
     gridgap.SetXYZWpow2<8>(rb, gb, bb, ab);
     gridinv.SetRGBApow2<0>(rb, gb, bb, ab);
     grid.SetXYZWpow2<0>(rb, gb, bb, ab);
-    
+
     // set inactive channels to 255.0 (Truncate will preserve the channel)
     Vec4 tff = Vec4(255.0f) & grid.IsOne();
     Vec4 one = Vec4(  1.0f);
@@ -670,46 +679,41 @@ public:
     grid -= one;
     grid += tff;
     gridgap *= grid;
-    gridrcp = Reciprocal(grid);
     gridgap *= Vec4(0.5f / 255.0f);
-    grid += one;
 
-#ifdef FEATURE_SHAREDBITS_TRIALS
-    // get a bit more off when truncating
-    gridhlf = grid;
-    griddbl = gridrcp;
-    if (sb) {
-      gridhlf *= Vec4(0.5f);
-      griddbl *= Vec4(2.0f);
-    }
-#else
     // silence the compiler
     bool hb = !!sb; hb = false;
-#endif
+  }
+  
+  doinline Vec4 LookUpLattice(int r, int g, int b, int a) {
+    // exact nearest least-error quantization values
+    return Vec4(
+      &qLUT_t[0][r],
+      &qLUT_t[1][g],
+      &qLUT_t[2][b],
+      &qLUT_t[3][a]);
   }
 
   doinline Vec4 SnapToLattice(Vec4 const &val) {
     Col4 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
-    
-    // exact nearest least-error quantization values
-    Vec4 r = Vec4(qLUT_rgba[0][p.R() & 0xFF]);
-    Vec4 g = Vec4(qLUT_rgba[1][p.G() & 0xFF]);
-    Vec4 b = Vec4(qLUT_rgba[2][p.B() & 0xFF]);
-    Vec4 a = Vec4(qLUT_rgba[3][p.A() & 0xFF]);
 
-    return Vec4(r, g, b, a);
+    // exact nearest least-error quantization values
+    return LookUpLattice(
+      p.R() & 0xFF,
+      p.G() & 0xFF,
+      p.B() & 0xFF,
+      p.A() & 0xFF);
   }
 
   doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
     Col4 p = FloatToInt<false>((grid * val) + gridgap);
-    
-    // exact nearest least-error quantization values
-    Vec4 r = Vec4(qLUT_rgba[0][p.R() & 0xFF]);
-    Vec4 g = Vec4(qLUT_rgba[1][p.G() & 0xFF]);
-    Vec4 b = Vec4(qLUT_rgba[2][p.B() & 0xFF]);
-    Vec4 a = Vec4(qLUT_rgba[3][p.A() & 0xFF]);
 
-    return Vec4(r, g, b, a);
+    // exact nearest least-error quantization values
+    return LookUpLattice(
+      p.R() & 0xFF,
+      p.G() & 0xFF,
+      p.B() & 0xFF,
+      p.A() & 0xFF);
   }
 
   doinline Col4 QuantizeToInt(Vec4 const &val) {
@@ -717,7 +721,7 @@ public:
     Vec4 Qf = SnapToLattice(val);
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
   doinline Col4 QuantizeToIntClamped(Vec4 const &val) {
@@ -725,58 +729,60 @@ public:
     Vec4 Qf = SnapToLatticeClamped(val);
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
-#ifndef FEATURE_SHAREDBITS_TRIALS
-#define gridhlf	grid
-#define griddbl	gridrcp
-#define bitrial	bittest && 0	// silence compiler
+#if	!defined(FEATURE_SHAREDBITS_TRIALS)
+#define bitrial	(bittest && 0)	// silence compiler
+#elif	(FEATURE_SHAREDBITS_TRIALS == 0)
+#define bitrial	(~bitset)	// allow bailout if whole == -1
 #else
-#define bitrial	1
+#define bitrial	(1)		// no bailouts happen here
 #endif
 
   // if "bitset & bittest" is a compiler constant it becomes 0 penalty
   // no-op vs. the regular version (no additional instructions)
 
   doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest) {
-    // truncate the last valid bit (half multiplier)
-    Vec4 Qf = Truncate(val * gridhlf);
+    Col4 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
 
-    // add it in if wanted (half 1.0f)
-    if (bitrial && (bitset & bittest))
-      Qf += Vec4(0.5f);
+    // exact nearest least-error quantization values
+    Vec4 rgba = Vec4(
+      &qLUT_t[0 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.R() & 0xFF],
+      &qLUT_t[1 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.G() & 0xFF],
+      &qLUT_t[2 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.B() & 0xFF],
+      &qLUT_t[3 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.A() & 0xFF]);
 
-    // get the bit back in (double multiplier)
-    return (Qf * griddbl).Clamp();
+    return Vec4(rgba);
   }
 
   doinline Vec4 SnapToLatticeClamped(Vec4 const &val, int bitset, int bittest) {
-    // truncate the last valid bit (half multiplier)
-    Vec4 Qf = Truncate(val * gridhlf);
+    Col4 p = FloatToInt<false>((grid * val) + gridgap);
 
-    // add it in if wanted (half 1.0f)
-    if (bitrial && (bitset & bittest))
-       Qf += Vec4(0.5f);
+    // exact nearest least-error quantization values
+    Vec4 rgba = Vec4(
+      &qLUT_t[0 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.R() & 0xFF],
+      &qLUT_t[1 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.G() & 0xFF],
+      &qLUT_t[2 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.B() & 0xFF],
+      &qLUT_t[3 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.A() & 0xFF]);
 
-    // get the bit back in (double multiplier)
-    return Min(Qf * griddbl, Vec4(1.0f));
+    return Vec4(rgba);
   }
 
   doinline Col4 QuantizeToInt(Vec4 const &val, int bitset, int bittest) {
     // [0,255]
-    Vec4 Qf = SnapToLattice(val, bitset, bittest) * Vec4(255.0f);
+    Vec4 Qf = SnapToLattice(val, bitset, bittest);
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf) * gridinv) >> 8;
   }
 
   doinline Col4 QuantizeToIntClamped(Vec4 const &val, int bitset, int bittest) {
     // [0,255]
-    Vec4 Qf = SnapToLatticeClamped(val, bitset, bittest) * Vec4(255.0f);
+    Vec4 Qf = SnapToLatticeClamped(val, bitset, bittest);
 
     // [0,1<<b-1]
-    return (FloatToInt<true>(Qf) * gridinv) >> 8;
+    return (FloatToInt<false>(Qf) * gridinv) >> 8;
   }
 
 #if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 3)
@@ -802,6 +808,8 @@ public:
     return (Qf * griddbl).Clamp();
   }
 #endif
+
+#undef qLUT_t
 #endif
 };
 
