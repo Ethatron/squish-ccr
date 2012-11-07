@@ -44,7 +44,8 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  
+//bool const trns = m_palette->IsMergedAlpha();
+
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
   assume(((isets    +    asets) <= 3));
@@ -60,21 +61,25 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
     // cache some values
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    float const* weights = m_palette->GetWeights(s);
+    Vec4 const* weights = m_palette->GetWeights(s);
 
     // we don't do this for sparse sets
     if (count != 1) {
-      Sym3x3 covariance;
       Vec4 centroid;
 
-      // get the covariance matrix
-      if (m_palette->IsUnweighted(s))
-	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
-      else
-	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
+      // no or separate alpha
+      assert(!m_palette->IsMergedAlpha()); {
+        Sym3x3 covariance;
 
-      // compute the principle component
-      GetPrincipleComponent(covariance, m_principle[s]);
+        // get the covariance matrix
+        if (m_palette->IsUnweighted(s))
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
+        else
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
+
+	// compute the principle component
+	GetPrincipleComponent(covariance, m_principle[s]);
+      }
     }
   }
 
@@ -115,7 +120,7 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
 
   // copy the ordering and weight all the points
   Vec4 const* unweighted = m_palette->GetPoints(set);
-  float const* weights = m_palette->GetWeights(set);
+  Vec4 const* weights = m_palette->GetWeights(set);
 
   m_xsum_wsum[set] = VEC4_CONST(0.0f);
 //m_xxsum_wwsum[set] = VEC4_CONST(0.0f);
@@ -356,7 +361,7 @@ Scr4 PaletteClusterFit::ClusterSearch4Constant(u8 (&closest)[4][16], int count, 
   for (int iterationIndex = 0;;) {
     // cache some values
     Vec4 const xsum_wsum = m_xsum_wsum[set];
-    
+
     // constants if weights == 1
     Vec4 alphabeta_dltas = *((Vec4 *)part2delta[0]);
     Vec4 *alphabeta_inits = (Vec4 *)part2inits[0];
@@ -1292,8 +1297,8 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   int ab = cb >> 16; cb = cb & 0xFF;
   int zb = GetSharedBits();
 
-  vQuantizer c = vQuantizer(cb, cb, cb, ab, zb);
-  vQuantizer a = vQuantizer(ab, ab, ab, ab, zb);
+  vQuantizer qc = vQuantizer(cb, cb, cb, ab, zb);
+  vQuantizer qa = vQuantizer(ab, ab, ab, ab, zb);
 
   // match each point to the closest code
   a16 u8 closest[4][16];
@@ -1302,6 +1307,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  u8  const tmask = m_palette->IsMergedAlpha() ? 0xFF : 0x00;
 
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -1314,10 +1320,10 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = (zb ? m_sharedbits >> s : 0);
+    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // the separate alpha-channel is splatted into the rgb channels
-    vQuantizer &q = (s < isets ? c : a);
+    vQuantizer &q = (s < isets ? qc : qa);
 
     // declare variables
     int const count = m_palette->GetCount(s);
@@ -1329,7 +1335,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
     if (count == 1) {
       // clear alpha-weight if alpha is disabled
       // in case of separate alpha the colors of the alpha-set have all been set to alpha
-      u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
+      u8 mask = ((s < isets) ? 0x7 : 0x8) | tmask;
 
       // find the closest code
       Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
@@ -1405,10 +1411,10 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
   if (!m_palette->IsTransparent()) {
     switch (m_palette->GetRotation()) {
-      case 0: for (int a = 0; a < isets + asets; a++) m_start[a].GetW() = m_end[a].GetW() = 1.0f; break;
-      case 1: for (int a = 0; a <         isets; a++) m_start[a].GetX() = m_end[a].GetX() = 1.0f; break;
-      case 2: for (int a = 0; a <         isets; a++) m_start[a].GetY() = m_end[a].GetY() = 1.0f; break;
-      case 3: for (int a = 0; a <         isets; a++) m_start[a].GetZ() = m_end[a].GetZ() = 1.0f; break;
+      default: for (int a = 0; a < isets + asets; a++) m_start[a].Set<3>(1.0f), m_end[a].Set<3>(1.0f); break;
+      case  1: for (int a = 0; a <         isets; a++) m_start[a].Set<0>(1.0f), m_end[a].Set<0>(1.0f); break;
+      case  2: for (int a = 0; a <         isets; a++) m_start[a].Set<1>(1.0f), m_end[a].Set<1>(1.0f); break;
+      case  3: for (int a = 0; a <         isets; a++) m_start[a].Set<2>(1.0f), m_end[a].Set<2>(1.0f); break;
     }
   }
 
@@ -1461,7 +1467,6 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
 }
 
 void PaletteClusterFit::Compress(void* block, int mode) {
-  // TODO: cluster-fit of 8 points doesn't work at all yet
   switch (mode) {
 #if (CLUSTERINDICES >= 2)
     case 2: /*2*/ CompressS23(block, mode); break;
