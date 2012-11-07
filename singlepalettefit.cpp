@@ -66,21 +66,9 @@ SinglePaletteFit::SinglePaletteFit(PaletteSet const* palette, int flags, int swa
 
 Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask)
 {
-#ifdef FEATURE_SHAREDBITS_TRIALS
-  // merge start and end shared bits
-  sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
-
-#define sp_lookup_5u1_4_sb_    sp_lookup_5u1_4[sb]
-#define sp_lookup_7u1_4_sb_    sp_lookup_7u1_4[sb]
-#define sp_lookup_4u1_8_sb_    sp_lookup_4u1_8[sb]
-#define sp_lookup_6s1_8_sb_    sp_lookup_6s1_8[sb&1]
-#define sp_lookup_7u1_16_sb_   sp_lookup_7u1_16[sb]
-
-#define sp_lookup_5u1_4_ck_    (GetSharedBits() ? sp_lookup_5u1_4_sb_ : sp_lookup_6_4)
-#define sp_lookup_4u1_8_ck_    (GetSharedBits() ? sp_lookup_4u1_8_sb_ : sp_lookup_5_8)
-#else
-    // silence the compiler
-    bool hb = !!sb; hb = false;
+#if	!defined(FEATURE_SHAREDBITS_TRIALS)
+  // silence the compiler
+  bool hb = !!sb; hb = false;
 
 #define sp_lookup_5u1_4_sb_    sp_lookup_6_4
 #define sp_lookup_7u1_4_sb_    sp_lookup_8_4
@@ -90,6 +78,32 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
 #define sp_lookup_5u1_4_ck_    sp_lookup_6_4
 #define sp_lookup_4u1_8_ck_    sp_lookup_5_8
+#elif	(FEATURE_SHAREDBITS_TRIALS == 0)
+  // merge start and end shared bits
+  sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
+  
+  // allow bailout if whole == -1
+#define sp_lookup_5u1_4_sb_    (SK(sb) ? sp_lookup_6_4  : sp_lookup_5u1_4[sb])
+#define sp_lookup_7u1_4_sb_    (SK(sb) ? sp_lookup_8_4  : sp_lookup_7u1_4[sb])
+#define sp_lookup_4u1_8_sb_    (SK(sb) ? sp_lookup_5_8  : sp_lookup_4u1_8[sb])
+#define sp_lookup_6s1_8_sb_    (SK(sb) ? sp_lookup_7_8  : sp_lookup_6s1_8[sb&1])
+#define sp_lookup_7u1_16_sb_   (SK(sb) ? sp_lookup_8_16 : sp_lookup_7u1_16[sb])
+
+#define sp_lookup_5u1_4_ck_    (GetSharedBits() ? sp_lookup_5u1_4_sb_ : sp_lookup_6_4)
+#define sp_lookup_4u1_8_ck_    (GetSharedBits() ? sp_lookup_4u1_8_sb_ : sp_lookup_5_8)
+#else	
+  // merge start and end shared bits
+  sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
+  
+  // no bailouts happen here
+#define sp_lookup_5u1_4_sb_    sp_lookup_5u1_4[sb]
+#define sp_lookup_7u1_4_sb_    sp_lookup_7u1_4[sb]
+#define sp_lookup_4u1_8_sb_    sp_lookup_4u1_8[sb]
+#define sp_lookup_6s1_8_sb_    sp_lookup_6s1_8[sb&1]
+#define sp_lookup_7u1_16_sb_   sp_lookup_7u1_16[sb]
+
+#define sp_lookup_5u1_4_ck_    (GetSharedBits() ? sp_lookup_5u1_4_sb_ : sp_lookup_6_4)
+#define sp_lookup_4u1_8_ck_    (GetSharedBits() ? sp_lookup_4u1_8_sb_ : sp_lookup_5_8)
 #endif
 
   assume(ib >= 2 && ib <= 4);
@@ -177,14 +191,16 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
+  int AxFF = q.gridinv.A() - 1;
 
-  /// TODO: vectorize
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  m_entry[set][0] = (u8)FloatToInt(255.0f * values->X(), 255);
-  m_entry[set][1] = (u8)FloatToInt(255.0f * values->Y(), 255);
-  m_entry[set][2] = (u8)FloatToInt(255.0f * values->Z(), 255);
-  m_entry[set][3] = (u8)FloatToInt(255.0f * values->W(), 255);
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
+
+  assert(m_entry[set][0] == (u8)FloatToInt(255.0f * values->X(), 255));
+  assert(m_entry[set][1] == (u8)FloatToInt(255.0f * values->Y(), 255));
+  assert(m_entry[set][2] == (u8)FloatToInt(255.0f * values->Z(), 255));
+  assert(m_entry[set][3] == (u8)FloatToInt(255.0f * values->W(), 255));
 
   for (int index = 0; index < 2; ++index) {
     // check the error for this codebook index
@@ -213,20 +229,17 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
     if (error < besterror) {
       // save the error
       besterror = error;
-
-      m_start[set] = Vec4(
-	sources[0] ? (float)sources[0]->start : 0.0f,
-	sources[1] ? (float)sources[1]->start : 0.0f,
-	sources[2] ? (float)sources[2]->start : 0.0f,
-	sources[3] ? (float)sources[3]->start : 255.0f
-      ) * q.gridrcp;
-
-      m_end[set] = Vec4(
-	sources[0] ? (float)sources[0]->end : 0.0f,
-	sources[1] ? (float)sources[1]->end : 0.0f,
-	sources[2] ? (float)sources[2]->end : 0.0f,
-	sources[3] ? (float)sources[3]->end : 255.0f
-      ) * q.gridrcp;
+      
+      m_start[set] = q.LookUpLattice(
+	sources[0] ? sources[0]->start : 0x00,
+	sources[1] ? sources[1]->start : 0x00,
+	sources[2] ? sources[2]->start : 0x00,
+	sources[3] ? sources[3]->start : AxFF);
+      m_end[set] = q.LookUpLattice(
+	sources[0] ? sources[0]->end   : 0x00,
+	sources[1] ? sources[1]->end   : 0x00,
+	sources[2] ? sources[2]->end   : 0x00,
+	sources[3] ? sources[3]->end   : AxFF);
 
       m_index = (u8)(1 * index);
 
@@ -247,14 +260,16 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
+  int AxFF = q.gridinv.A() - 1;
 
-  /// TODO: vectorize
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  m_entry[set][0] = (u8)FloatToInt(255.0f * values->X(), 255);
-  m_entry[set][1] = (u8)FloatToInt(255.0f * values->Y(), 255);
-  m_entry[set][2] = (u8)FloatToInt(255.0f * values->Z(), 255);
-  m_entry[set][3] = (u8)FloatToInt(255.0f * values->W(), 255);
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
+
+  assert(m_entry[set][0] == (u8)FloatToInt(255.0f * values->X(), 255));
+  assert(m_entry[set][1] == (u8)FloatToInt(255.0f * values->Y(), 255));
+  assert(m_entry[set][2] == (u8)FloatToInt(255.0f * values->Z(), 255));
+  assert(m_entry[set][3] == (u8)FloatToInt(255.0f * values->W(), 255));
 
   for (int index = 0; index < 4; ++index) {
     // check the error for this codebook index
@@ -282,20 +297,17 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
     // keep it if the error is lower
     if (error < besterror) {
       besterror = error;
-
-      m_start[set] = Vec4(
-	sources[0] ? (float)sources[0]->start : 0.0f,
-	sources[1] ? (float)sources[1]->start : 0.0f,
-	sources[2] ? (float)sources[2]->start : 0.0f,
-	sources[3] ? (float)sources[3]->start : 255.0f
-      ) * q.gridrcp;
-
-      m_end[set] = Vec4(
-	sources[0] ? (float)sources[0]->end : 0.0f,
-	sources[1] ? (float)sources[1]->end : 0.0f,
-	sources[2] ? (float)sources[2]->end : 0.0f,
-	sources[3] ? (float)sources[3]->end : 255.0f
-      ) * q.gridrcp;
+      
+      m_start[set] = q.LookUpLattice(
+	sources[0] ? sources[0]->start : 0x00,
+	sources[1] ? sources[1]->start : 0x00,
+	sources[2] ? sources[2]->start : 0x00,
+	sources[3] ? sources[3]->start : AxFF);
+      m_end[set] = q.LookUpLattice(
+	sources[0] ? sources[0]->end   : 0x00,
+	sources[1] ? sources[1]->end   : 0x00,
+	sources[2] ? sources[2]->end   : 0x00,
+	sources[3] ? sources[3]->end   : AxFF);
 
       m_index = (u8)(1 * index);
 
@@ -316,14 +328,16 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
+  int AxFF = q.gridinv.A() - 1;
 
-  /// TODO: vectorize
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  m_entry[set][0] = (u8)FloatToInt(255.0f * values->X(), 255);
-  m_entry[set][1] = (u8)FloatToInt(255.0f * values->Y(), 255);
-  m_entry[set][2] = (u8)FloatToInt(255.0f * values->Z(), 255);
-  m_entry[set][3] = (u8)FloatToInt(255.0f * values->W(), 255);
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
+
+  assert(m_entry[set][0] == (u8)FloatToInt(255.0f * values->X(), 255));
+  assert(m_entry[set][1] == (u8)FloatToInt(255.0f * values->Y(), 255));
+  assert(m_entry[set][2] == (u8)FloatToInt(255.0f * values->Z(), 255));
+  assert(m_entry[set][3] == (u8)FloatToInt(255.0f * values->W(), 255));
 
   for (int index = 0; index < 8; ++index) {
     // check the error for this codebook index
@@ -351,20 +365,17 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
     // keep it if the error is lower
     if (error < besterror) {
       besterror = error;
-
-      m_start[set] = Vec4(
-	sources[0] ? (float)sources[0]->start : 0.0f,
-	sources[1] ? (float)sources[1]->start : 0.0f,
-	sources[2] ? (float)sources[2]->start : 0.0f,
-	sources[3] ? (float)sources[3]->start : 255.0f
-      ) * q.gridrcp;
-
-      m_end[set] = Vec4(
-	sources[0] ? (float)sources[0]->end : 0.0f,
-	sources[1] ? (float)sources[1]->end : 0.0f,
-	sources[2] ? (float)sources[2]->end : 0.0f,
-	sources[3] ? (float)sources[3]->end : 255.0f
-      ) * q.gridrcp;
+      
+      m_start[set] = q.LookUpLattice(
+	sources[0] ? sources[0]->start : 0x00,
+	sources[1] ? sources[1]->start : 0x00,
+	sources[2] ? sources[2]->start : 0x00,
+	sources[3] ? sources[3]->start : AxFF);
+      m_end[set] = q.LookUpLattice(
+	sources[0] ? sources[0]->end   : 0x00,
+	sources[1] ? sources[1]->end   : 0x00,
+	sources[2] ? sources[2]->end   : 0x00,
+	sources[3] ? sources[3]->end   : AxFF);
 
       m_index = (u8)(1 * index);
 
