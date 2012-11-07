@@ -649,7 +649,7 @@ void WritePaletteBlock3_m1(int partition, Vec4 const (&start)[3], Vec4 const (&e
   RemapPaletteBlock<3>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 1)
   FloatTo<4,4,4,0,1,0>(s, a, sharedbits >> SBSTART);
   FloatTo<4,4,4,0,1,0>(e, b, sharedbits >> SBEND);
 #else
@@ -720,7 +720,7 @@ void WritePaletteBlock3_m2(int partition, Vec4 const (&start)[2], Vec4 const (&e
   RemapPaletteBlock<3>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 1)
   FloatTo<6,6,6,0,0,1>(s, a, sharedbits >> SBSTART);
   FloatTo<6,6,6,0,0,1>(e, b, sharedbits >> SBSTART);
 #else
@@ -785,7 +785,7 @@ void WritePaletteBlock3_m3(int partition, Vec4 const (&start)[3], Vec4 const (&e
   RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 1)
   FloatTo<5,5,5,0,0,0>(s, a, 0);
   FloatTo<5,5,5,0,0,0>(e, b, 0);
 #else
@@ -848,7 +848,7 @@ void WritePaletteBlock3_m4(int partition, Vec4 const (&start)[2], Vec4 const (&e
   RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 1)
   FloatTo<7,7,7,0,1,0>(s, a, sharedbits >> SBSTART);
   FloatTo<7,7,7,0,1,0>(e, b, sharedbits >> SBEND);
 #else
@@ -918,7 +918,7 @@ void WritePaletteBlock4_m5(int r, int ix, Vec4 const (&start)[1], Vec4 const (&e
     RemapPaletteBlock<3,2>(0, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 1)
   FloatTo<5,5,5,6,0,0>(s, a, 0);
   FloatTo<5,5,5,6,0,0>(e, b, 0);
 #else
@@ -986,7 +986,7 @@ void WritePaletteBlock4_m6(int rotation, Vec4 const (&start)[1], Vec4 const (&en
   RemapPaletteBlock<2,2>(0, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 1)
   FloatTo<7,7,7,8,0,0>(s, a, 0);
   FloatTo<7,7,7,8,0,0>(e, b, 0);
 #else
@@ -1050,14 +1050,18 @@ void WritePaletteBlock4_m7(int partition, Vec4 const (&start)[1], Vec4 const (&e
   RemapPaletteBlock<4>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
-  FloatTo<7,7,7,7,1,0>(s, a, sharedbits >> SBSTART);
-  FloatTo<7,7,7,7,1,0>(e, b, sharedbits >> SBEND);
-#else
-  FloatTo<7,7,7,7,1,0>(s, a);
-  FloatTo<7,7,7,7,1,0>(e, b);
-  FloatTo<7,7,7,7,1,0>(a, b);		// rounded shared bits
+#if	defined(FEATURE_SHAREDBITS_TRIALS)
+  if (FEATURE_SHAREDBITS_TRIALS || (~sharedbits)) {
+    FloatTo<7,7,7,7,1,0>(s, a, sharedbits >> SBSTART);
+    FloatTo<7,7,7,7,1,0>(e, b, sharedbits >> SBEND);
+  }
+  else
 #endif
+  {
+    FloatTo<7,7,7,7,1,0>(s, a);
+    FloatTo<7,7,7,7,1,0>(e, b);
+    FloatTo<7,7,7,7,1,0>(a, b);		// rounded shared bits
+  }
 
   // 7 bits set 1 red/green/blue/alpha start/stop
   a[0][C] |= (b[0][C] <<= 7);
@@ -1102,8 +1106,8 @@ void WritePaletteBlock4_m7(int partition, Vec4 const (&start)[1], Vec4 const (&e
 
 void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&end)[2], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
-  Vec4 s[2] = {start[0]};
-  Vec4 e[2] = {end  [0]};
+  Vec4 s[2] = {start[0], start[1]};
+  Vec4 e[2] = {end  [0], end  [1]};
   Col4 a[2][FIELDN];
   Col4 b[2][FIELDN];
   Col4 blkl, blkh;
@@ -1113,14 +1117,18 @@ void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&e
   RemapPaletteBlock<2>(partition, s, e, sharedbits, idxs, indices);
 
   // get the packed values
-#ifdef FEATURE_SHAREDBITS_TRIALS
-  FloatTo<5,5,5,5,1,0>(s, a, sharedbits >> SBSTART);
-  FloatTo<5,5,5,5,1,0>(e, b, sharedbits >> SBEND);
-#else
-  FloatTo<5,5,5,5,1,0>(s, a);
-  FloatTo<5,5,5,5,1,0>(e, b);
-  FloatTo<5,5,5,5,1,0>(a, b);		// rounded shared bits
+#if	defined(FEATURE_SHAREDBITS_TRIALS)
+  if (FEATURE_SHAREDBITS_TRIALS || (~sharedbits)) {
+    FloatTo<5,5,5,5,1,0>(s, a, sharedbits >> SBSTART);
+    FloatTo<5,5,5,5,1,0>(e, b, sharedbits >> SBEND);
+  }
+  else
 #endif
+  {
+    FloatTo<5,5,5,5,1,0>(s, a);
+    FloatTo<5,5,5,5,1,0>(e, b);
+    FloatTo<5,5,5,5,1,0>(a, b);		// rounded shared bits
+  }
 
   // 5 bits set 1/2 red/green/blue/alpha start/stop
   a[0][C] |= (b[0][C] <<=  5);
@@ -2147,8 +2155,8 @@ void ReadPaletteBlock4_m6(u8* rgba, void const* block) {
   	ExtrBits< 7, 29 -  0>(blkl, b[0][C]);	// 7 bits set 1 alpha stop
   	ExtrBits< 7, 22 -  0>(blkl, a[0][C]);	// 7 bits set 1 alpha start
 
-  	ExtrBits< 7, 43 -  0>(blkl, b[0][C]);	// 7 bits set 1 blue stop
-  	ExtrBits< 7, 36 -  0>(blkl, a[0][C]);	// 7 bits set 1 blue start
+  	ConcBits< 7, 43 -  0>(blkl, b[0][C]);	// 7 bits set 1 blue stop
+  	ConcBits< 7, 36 -  0>(blkl, a[0][C]);	// 7 bits set 1 blue start
 
 	b[0][C] = ShiftLeft<32>(b[0][C]);	// 7 bits set 1 green stop
 	a[0][C] = ShiftLeft<32>(a[0][C]);	// 7 bits set 1 green start
