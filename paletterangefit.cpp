@@ -42,7 +42,8 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  
+  bool const trns = m_palette->IsMergedAlpha();
+
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
   assume(((isets    +    asets) <= 3));
@@ -51,22 +52,39 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
     // cache some values
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    float const* weights = m_palette->GetWeights(s);
+    Vec4 const* weights = m_palette->GetWeights(s);
 
     // we don't do this for sparse sets
     if (count != 1) {
-      Sym3x3 covariance;
       Vec4 centroid;
       Vec4 principle;
-      
-      // get the covariance matrix
-      if (m_palette->IsUnweighted(s))
-	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
-      else
-	ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
 
-      // compute the principle component
-      GetPrincipleComponent(covariance, principle);
+      // combined alpha
+      if (trns) {
+        Sym4x4 covariance;
+
+        // get the covariance matrix
+        if (m_palette->IsUnweighted(s))
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s]);
+        else
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s], weights);
+
+	// compute the principle component
+	GetPrincipleComponent(covariance, principle);
+      }
+      // no or separate alpha
+      else {
+        Sym3x3 covariance;
+
+        // get the covariance matrix
+        if (m_palette->IsUnweighted(s))
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
+        else
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
+
+	// compute the principle component
+	GetPrincipleComponent(covariance, principle);
+      }
 
       // get the min and max range as the codebook endpoints
       Vec4 start(0.0f);
@@ -87,7 +105,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 	  min = Min(min, len);
 	  max = Max(max, len);
 	}
-    
+
 	start = centroid + principle * min * div;
 	end   = centroid + principle * max * div;
 
@@ -95,48 +113,48 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 	chk = start;
 	while (CompareAnyLessThan(chk, Vec4(-1.0f / 65536))) {
 	  Vec4 fct = chk * rec;
-	  Vec4 min = Select(fct, chk, HorizontalMin(chk));
-      
-	  start -= principle * min;
+	  Vec4 hin = Select(fct, chk, HorizontalMin(chk));
+
+	  start -= principle * hin;
 	  chk = start;
 	}
-    
+
 	// intersect negative undershoot with axis-plane(s), clamp to 0.0
 	chk = end;
 	while (CompareAnyLessThan(chk, Vec4(-1.0f / 65536))) {
 	  Vec4 fct = chk * rec;
-	  Vec4 min = Select(fct, chk, HorizontalMin(chk));
-      
-	  end -= principle * min;
+	  Vec4 hin = Select(fct, chk, HorizontalMin(chk));
+
+	  end -= principle * hin;
 	  chk = end;
 	}
-    
+
 	// intersect positive overshoot with axis-plane(s), clamp to 1.0
 	chk = start - Vec4(1.0f);
 	while (CompareAnyGreaterThan(chk, Vec4(1.0f / 65536))) {
 	  Vec4 fct = chk * rec;
-	  Vec4 max = Select(fct, chk, HorizontalMax(chk));
-      
-	  start -= principle * max;
+	  Vec4 hax = Select(fct, chk, HorizontalMax(chk));
+
+	  start -= principle * hax;
 	  chk = start - Vec4(1.0f);
 	}
-    
+
 	// intersect positive overshoot with axis-plane(s), clamp to 1.0
 	chk = end - Vec4(1.0f);
 	while (CompareAnyGreaterThan(chk, Vec4(1.0f / 65536))) {
 	  Vec4 fct = chk * rec;
-	  Vec4 max = Select(fct, chk, HorizontalMax(chk));
-      
-	  end -= principle * max;
+	  Vec4 hax = Select(fct, chk, HorizontalMax(chk));
+
+	  end -= principle * hax;
 	  chk = end - Vec4(1.0f);
 	}
 
-	assert(HorizontalMin(start).X() > -0.0001);
+/*	assert(HorizontalMin(start).X() > -0.0001);
 	assert(HorizontalMin(end  ).X() > -0.0001);
 	assert(HorizontalMax(start).X() <  1.0001);
-	assert(HorizontalMax(end  ).X() <  1.0001);
+	assert(HorizontalMax(end  ).X() <  1.0001);  */
 #else
-	Scr4 min, max; 
+	Scr4 min, max;
 
 	// compute the range
 	start = end = values[0];
@@ -217,7 +235,8 @@ void PaletteRangeFit::Compress(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  
+  u8  const tmask = m_palette->IsMergedAlpha() ? 0xFF : 0x00;
+
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
   assume(((isets    +    asets) <= 3));
@@ -229,7 +248,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = (zb ? m_sharedbits >> s : 0);
+    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // cache some values
     int const count = m_palette->GetCount(s);
@@ -243,7 +262,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
     if (count == 1) {
       // clear alpha-weight if alpha is disabled
       // in case of separate alpha the colors of the alpha-set have all been set to alpha
-      u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
+      u8 mask = ((s < isets) ? 0x7 : 0x8) | tmask;
 
       // find the closest code
       Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
@@ -284,12 +303,28 @@ void PaletteRangeFit::Compress(void* block, int mode)
 	Scr4 dist = Scr4(FLT_MAX);
 	int idx = 0;
 
-	for (int j = 0; j < ccs; ++j) {
-	  Scr4 d = LengthSquared(metric * (values[i] - codes[j]));
-	  if (d < dist) {
-	    dist = d;
-	    idx = j;
-	  }
+	for (int j = 0; j < ccs; j += 0) {
+	  Vec4 t0 = metric * (values[i] - codes[j + 0]);
+	  Vec4 t1 = metric * (values[i] - codes[j + 1]);
+	  Vec4 t2 = metric * (values[i] - codes[j + 2]);
+	  Vec4 t3 = metric * (values[i] - codes[j + 3]);
+	  
+	  Scr4 d0 = LengthSquared(t0);
+	  Scr4 d1 = LengthSquared(t1);
+	  Scr4 d2 = LengthSquared(t2);
+	  Scr4 d3 = LengthSquared(t3);
+
+	  // encourage OoO
+	  Scr4 da = Min(d0, d1);
+	  Scr4 db = Min(d2, d3);
+	  dist = Min(da, dist);
+	  dist = Min(db, dist);
+
+	  // will cause VS to make them all cmovs
+	  if (d0 == dist) { idx = j; } j++;
+	  if (d1 == dist) { idx = j; } j++;
+	  if (d2 == dist) { idx = j; } j++;
+	  if (d3 == dist) { idx = j; } j++;
 	}
 
 	// save the index
@@ -373,10 +408,10 @@ void PaletteRangeFit::Compress(void* block, int mode)
   // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
   if (!m_palette->IsTransparent()) {
     switch (m_palette->GetRotation()) {
-      case 0: for (int a = 0; a < isets + asets; a++) m_start[a].GetW() = m_end[a].GetW() = 1.0f; break;
-      case 1: for (int a = 0; a <         isets; a++) m_start[a].GetX() = m_end[a].GetX() = 1.0f; break;
-      case 2: for (int a = 0; a <         isets; a++) m_start[a].GetY() = m_end[a].GetY() = 1.0f; break;
-      case 3: for (int a = 0; a <         isets; a++) m_start[a].GetZ() = m_end[a].GetZ() = 1.0f; break;
+      default: for (int a = 0; a < isets + asets; a++) m_start[a].Set<3>(1.0f), m_end[a].Set<3>(1.0f); break;
+      case  1: for (int a = 0; a <         isets; a++) m_start[a].Set<0>(1.0f), m_end[a].Set<0>(1.0f); break;
+      case  2: for (int a = 0; a <         isets; a++) m_start[a].Set<1>(1.0f), m_end[a].Set<1>(1.0f); break;
+      case  3: for (int a = 0; a <         isets; a++) m_start[a].Set<2>(1.0f), m_end[a].Set<2>(1.0f); break;
     }
   }
 
