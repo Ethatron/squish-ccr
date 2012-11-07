@@ -54,6 +54,8 @@ public:
 #define SBEND	3
 #define SB	1
 #define SR(s)	(s < 0 ? s : s ^ (s << SBEND))
+#define SBSKIP	-1
+#define SK(s)	(!(~s))
 
 public:
   PaletteFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
