@@ -86,9 +86,10 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   Vec4 cend   = q.SnapToLattice(m_end_candidate  [set], sb, 1 << SBEND);
 
   // the lattice to walk over
+  Vec4 gridrcp = Reciprocal(q.grid + Vec4(1.0f));
   Vec4 wstart;
   Vec4 wend;
-  Vec4 wdelta = q.gridrcp; if (sb) wdelta *= Vec4(2.0f);
+  Vec4 wdelta = gridrcp; if (sb) wdelta *= Vec4(2.0f);
 
   // lower the lower by 1 and raise the higher by 1
   // compensates a bit the rounding error of the end-points
