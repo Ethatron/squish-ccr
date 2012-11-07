@@ -46,12 +46,21 @@ public:
 #define	PS_MAX	4
 
 public:
-  // constructor for regular operation
+  // constructor for regular operation (with and without initial partition/rotation)
+  PaletteSet(u8 const* rgba, int mask, int flags);
   PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation);
-  // constructors for managing backups of palette-sets
-  PaletteSet() {};
-  PaletteSet(PaletteSet const &palette) { memcpy(this, &palette, sizeof(this)); };
 
+  // constructors for managing backups and permutations of palette-sets
+  PaletteSet() {};
+  PaletteSet(PaletteSet const &palette) { memcpy(this, &palette, sizeof(*this)); };
+  PaletteSet(PaletteSet const &palette, int mask, int flags, int partition, int rotation);
+
+private:
+  void BuildSet(u8 const* rgba, int mask, int flags);
+  void BuildSet(PaletteSet const &palette, int mask, int flags);
+  void PermuteSet(PaletteSet const &palette, int mask, int flags);
+
+public:
   // active attributes based the parameters passed on initializaton
   int GetSets() const { return m_numsets; }
   int GetRotation() const { return m_rotid; }
@@ -59,11 +68,12 @@ public:
 
   // information determined when the palette-set has been formed
   bool IsSeperateAlpha() const { return /*m_transparent &&*/ m_seperatealpha; }
+  bool IsMergedAlpha() const { return /*m_transparent &&*/ m_mergedalpha; }
   bool IsTransparent() const { return m_transparent; }
 
   bool IsUnweighted(int idx) const { return m_unweighted[idx]; }
   Vec4 const* GetPoints(int idx) const { return m_points[idx]; }
-  float const* GetWeights(int idx) const { return m_weights[idx]; }
+  Vec4 const* GetWeights(int idx) const { return m_weights[idx]; }
   int GetCount(int idx) const { return m_count[idx]; }
   int GetCount() const {
     return             m_count[0]      +
@@ -81,13 +91,14 @@ private:
   int   m_partid;
   int   m_partmask;
   bool  m_seperatealpha;
+  bool  m_mergedalpha;
 
   bool  m_transparent;
   bool  m_unweighted[4];
   int   m_mask[4];
   int   m_count[4];
   Vec4  m_points[4][16];
-  float m_weights[4][16];
+  Vec4  m_weights[4][16];
   int   m_remap[4][16];
 
 #ifdef	FEATURE_EXACT_ERROR
