@@ -111,12 +111,44 @@ void PaletteSet::GetMasks(int flags, int partition, int (&masks)[4]) {
     masks[2] = ( 0xFFFFFFFF & 0xFFFF) & ( partmask >> 16);
 }
 
-PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation)
-  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF), m_seperatealpha(false), m_transparent(false)
+PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
 {
-  m_count     [0] = m_count     [1] = m_count     [2] = m_count     [3] = 0;
-  m_unweighted[0] = m_unweighted[1] = m_unweighted[2] = m_unweighted[3] = true;
+  /* build a single set only, we permute that later for specific partitions,
+   * separate alpha is an exception as that is fixed for each mode
+   */
+  if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode4) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode8))
+    m_numsets = 2, m_partmask = 0xFFFFFFFF, m_partid = 0;
+  if (((flags & kVariableCodingModes) == kVariableCodingMode1) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode3))
+    m_numsets = 3, m_partmask = 0xFFFFFFFF, m_partid = 0;
+  if (((flags & kVariableCodingModes) == kVariableCodingMode5) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode6))
+    m_seperatealpha = true, m_rotid = 0;
+  if (((flags & kVariableCodingModes) == kVariableCodingMode7) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode8))
+    m_mergedalpha = true;
 
+  // partition_1 mask is: bit cleared -> set 1, bit set -> set 2
+  // partition_2 mask is: bit cleared -> set 1, bit set -> set 2, hi bit set -> set 3
+  if (1)
+    m_mask[0] = 0xFFFF,	// color-set
+    m_mask[1] = 0xFFFF,	// alpha-set
+    m_mask[2] = 0;
+  if (m_numsets > 1)
+    m_numsets = 1, flags &= ~kExcludeAlphaFromPalette;
+
+  // make the set (if succesive partition permutation, preserve alpha)
+  BuildSet(rgba, mask, flags);
+}
+
+PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
+{
   /* determine the number of sets and select the partition
   if ((0))
     m_numsets = 1, m_partmask = partitionmasks_1[m_partid = 0]; */
@@ -130,6 +162,9 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
   if (((flags & kVariableCodingModes) == kVariableCodingMode5) ||
       ((flags & kVariableCodingModes) == kVariableCodingMode6))
     m_seperatealpha = true, m_rotid = rotation;
+  if (((flags & kVariableCodingModes) == kVariableCodingMode7) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode8))
+    m_mergedalpha = true;
 
   // partition_1 mask is: bit cleared -> set 1, bit set -> set 2
   // partition_2 mask is: bit cleared -> set 1, bit set -> set 2, hi bit set -> set 3
@@ -146,52 +181,90 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
     m_mask[1] = ( m_partmask & 0xFFFF) & (~m_partmask >> 16),
     m_mask[2] = ( 0xFFFFFFFF & 0xFFFF) & ( m_partmask >> 16);
 
-  /*
-  static const float dw[] = {
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5),
+  // make the set
+  BuildSet(rgba, mask, flags);
+}
 
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
+PaletteSet::PaletteSet(PaletteSet const &palette, int mask, int flags, int partition, int rotation)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
+{
+  /* determine the number of sets and select the partition
+  if ((0))
+    m_numsets = 1, m_partmask = partitionmasks_1[m_partid = 0]; */
+  if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode4) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode8))
+    m_numsets = 2, m_partmask = partitionmasks_2[m_partid = partition];
+  if (((flags & kVariableCodingModes) == kVariableCodingMode1) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode3))
+    m_numsets = 3, m_partmask = partitionmasks_3[m_partid = partition];
+  if (((flags & kVariableCodingModes) == kVariableCodingMode5) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode6))
+    m_seperatealpha = true, m_rotid = rotation;
+  if (((flags & kVariableCodingModes) == kVariableCodingMode7) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode8))
+    m_mergedalpha = true;
 
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 0.5 * 0.5),
-    sqrtf(0.5 * 0.5 + 1.5 * 1.5),
+  // partition_1 mask is: bit cleared -> set 1, bit set -> set 2
+  // partition_2 mask is: bit cleared -> set 1, bit set -> set 2, hi bit set -> set 3
+  if (m_numsets == 1)
+    m_mask[0] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// color-set
+    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// alpha-set
+    m_mask[2] = 0;
+  if (m_numsets == 2)
+    m_mask[0] = (~m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
+    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
+    m_mask[2] = 0;
+  if (m_numsets == 3)
+    m_mask[0] = (~m_partmask & 0xFFFF) & (~m_partmask >> 16),
+    m_mask[1] = ( m_partmask & 0xFFFF) & (~m_partmask >> 16),
+    m_mask[2] = ( 0xFFFFFFFF & 0xFFFF) & ( m_partmask >> 16);
 
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 0.5 * 0.5),
-    sqrtf(1.5 * 1.5 + 1.5 * 1.5)
-  };
-  */
+  // make the new set
+  if (m_rotid)
+    BuildSet(palette, mask, flags);		// unpermutable
+  else if (m_numsets > 1)
+    PermuteSet(palette, mask, flags);		// permutable
+  else
+    memcpy(this, &palette, sizeof(*this));	// identical
+}
 
-  // check the compression mode for btc
-  bool clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
-//bool indexAlpha    = ((flags & kExcludeAlphaFromPalette) == 0) && !m_seperatealpha;
-  bool seperateAlpha = ((flags & kExcludeAlphaFromPalette) == 0) &&  m_seperatealpha;
-  bool weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
+void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
   const float *aLUT   = ComputeGammaLUT(false);
 
-  // swap: ra, ga, ba
-  int rot[4] = {0,1,2,3};
-  switch (m_rotid) {
-    case 1: rot[0] = 3; rot[3] = 0; break;
-    case 2: rot[1] = 3; rot[3] = 1; break;
-    case 3: rot[2] = 3; rot[3] = 2; break;
-  }
+  // check the compression mode for btc
+  bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
+  bool const seperateAlpha = ((flags & kExcludeAlphaFromPalette) == 0) &&  m_seperatealpha;
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0) && !m_mergedalpha;
 
   // build mapped data
-  u8 mska = !seperateAlpha ? 0xFF : 0x00;
-  u8 clra = !clearAlpha    ? 0x00 : 0xFF;
-  u8 wgta =  weightByAlpha ? 0x00 : 0xFF;
-  u8 rgbx[4 * 16];
-  u8 ___a[1 * 16];
+  u8 const mska = !seperateAlpha ? 0xFF : 0x00;
+  u8 const clra = !clearAlpha    ? 0x00 : 0xFF;
+  u8 const wgta =  weightByAlpha ? 0x00 : 0xFF;
+
+  u8 rgbx[4 * 16], wgtx = wgta;
+  u8 ___a[1 * 16], ___w = 0xFF;
+
+  /* Apply the component rotation, while preserving semantics:
+   * - swap: aa, ra, ga, ba
+   * - LUTs: always pull from the right transform
+   * - weights: never make alpha weighted by itself
+   *   TODO: as we have no separate component weighting currently we
+   *         have to turn alpha-weighting off to allow the cluster-fit
+   *         to work (same weight for a AGB-point fe., R-point is ok)
+   */
+  int rot[4] = {0,1,2,3};
+  const float *caLUTs[] = {
+    rgbLUT, rgbLUT, rgbLUT, aLUT};
+
+  switch (m_rotid) {
+    case 1:  rot[0] = 3; rot[3] = 0; caLUTs[0] = aLUT; caLUTs[3] = rgbLUT; wgtx = 0xFF; ___w = wgta; break;
+    case 2:  rot[1] = 3; rot[3] = 1; caLUTs[1] = aLUT; caLUTs[3] = rgbLUT; wgtx = 0xFF; ___w = wgta; break;
+    case 3:  rot[2] = 3; rot[3] = 2; caLUTs[2] = aLUT; caLUTs[3] = rgbLUT; wgtx = 0xFF; ___w = wgta; break;
+//  default: rot[3] = 3; rot[3] = 3; caLUTs[3] = aLUT; caLUTs[3] =   aLUT; wgtx = wgta; ___w = 0xFF; break;
+  }
 
   for (int i = 0; i < 16; ++i) {
     u8 temp[4];
@@ -214,6 +287,12 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
     // check for transparency (after blanking out)
     m_transparent = m_transparent || (temp[3] < 255);
   }
+  
+  // clean initial state
+  m_count     [0] = m_count     [1] =
+  m_count     [2] = m_count     [3] = 0;
+  m_unweighted[0] = m_unweighted[1] =
+  m_unweighted[2] = m_unweighted[3] = true;
 
   for (int s = 0; s < m_numsets; s++) {
     // combined exclusion and selection mask
@@ -231,9 +310,9 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
       }
 
       // ensure there is always non-zero weight even for zero alpha
-      u8    w = rgba[4 * i + 3] | wgta;
+      u8    w = rgba[4 * i + 3] | wgtx;
       float W = (float)(w + 1) / 256.0f;
-      
+
 #ifdef FEATURE_IGNORE_ALPHA0
       /* check for blanked out pixels when weighting
        */
@@ -254,16 +333,16 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	  int index = m_count[s]++;
 
 	  // normalize coordinates to [0,1]
-	  float r = rgbLUT[rgbvalue[0]];
-	  float g = rgbLUT[rgbvalue[1]];
-	  float b = rgbLUT[rgbvalue[2]];
-	  float a =   aLUT[rgbvalue[3]];
+	  float r = caLUTs[0][rgbvalue[0]];
+	  float g = caLUTs[1][rgbvalue[1]];
+	  float b = caLUTs[2][rgbvalue[2]];
+	  float a = caLUTs[3][rgbvalue[3]];
 
 	  // add the point
 	  m_remap[s][i] = index;
 	  m_points[s][index] = Vec4(r, g, b, a);
-	  m_weights[s][index] = W;
-	  m_unweighted[s] = m_unweighted && !(u8)(~w);
+	  m_weights[s][index] = Vec4(W);
+	  m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][index] = 1;
 #endif
@@ -287,7 +366,7 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 
 	  // map to this point and increase the weight
 	  m_remap[s][i] = index;
-	  m_weights[s][index] += W;
+	  m_weights[s][index] += Vec4(W);
 	  m_unweighted[s] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][index] += 1;
@@ -296,13 +375,13 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	}
       }
     }
-    
+
 #ifdef FEATURE_WEIGHTS_ROOTED
     // square root the weights
     for (int i = 0; i < m_count[s]; ++i)
-      m_weights[s][i] = math::sqrt(m_weights[s][i]);
+      m_weights[s][i] = Sqrt(m_weights[s][i]);
 #endif
-    
+
     // we have tables for this
     m_unweighted[s] = m_unweighted[s] && (m_count[s] == 16);
 
@@ -318,11 +397,22 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	if ((pmask & bit) == 0) {
 	  if ((mask & bit) == 0)
 	    m_remap[a][i] = -1;
+
 	  continue;
 	}
 
-	// ensure there is always non-zero weight even for zero alpha
-	float W = (float)(rgba[4 * i + 3] + 1) / 256.0f;
+        // ensure there is always non-zero weight even for zero alpha
+        u8    w = rgba[4 * i + 3] | ___w;
+        float W = (float)(w + 1) / 256.0f;
+
+#ifdef FEATURE_IGNORE_ALPHA0
+        /* check for blanked out pixels when weighting
+         */
+        if (!w) {
+	  m_remap[a][i] = -1;
+	  continue;
+        }
+#endif
 
 	// loop over previous points for a match
 	u8 *avalue = &___a[1 * i + 0];
@@ -335,13 +425,13 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	    int index = m_count[a]++;
 
 	    // normalize coordinates to [0,1]
-	    float w = aLUT[avalue[0]];
+	    float c = caLUTs[3][avalue[0]];
 
 	    // add the point
 	    m_remap[a][i] = index;
-	    m_points[a][index] = Vec4(w);
-	    m_weights[a][index] = (weightByAlpha ? W : 1.0f);
-	    m_unweighted[a] = m_unweighted && (!weightByAlpha || !(u8)(~avalue[0]));
+	    m_points[a][index] = Vec4(c);
+	    m_weights[a][index] = Vec4(W);
+	    m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] = 1;
 #endif
@@ -359,7 +449,7 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 
 	    // map to this point and increase the weight
 	    m_remap[a][i] = index;
-	    m_weights[a][index] += (weightByAlpha ? W : 1.0f);
+	    m_weights[a][index] += Vec4(W);
 	    m_unweighted[a] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] += 1;
@@ -368,13 +458,13 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 	  }
 	}
       }
-      
+
 #ifdef FEATURE_WEIGHTS_ROOTED
       // square root the weights
       for (int i = 0; i < m_count[a]; ++i)
-	m_weights[a][i] = math::sqrt(m_weights[a][i]);
+	m_weights[a][i] = Sqrt(m_weights[a][i]);
 #endif
-      
+
       // we have tables for this
       m_unweighted[a] = m_unweighted[a] && (m_count[a] == 16);
     }
@@ -382,6 +472,234 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int r
 
   // clear if we're suppose to throw alway alpha
   m_transparent = m_transparent && !clearAlpha;
+}
+
+void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
+  // can't be permuted
+  assert(m_seperatealpha == true);
+
+  // check the compression mode for btc
+  bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
+
+  // build mapped data
+  Vec4 const clra = !clearAlpha    ? Vec4(0.0f) : Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+  Vec4 const wgta =  weightByAlpha ? Vec4(0.0f) : Vec4(1.0f);
+  
+  Vec4 wgtx = wgta;
+  Vec4 ___w = Vec4(1.0f);
+
+  // clean initial state
+  m_count     [0] = m_count     [1] =
+  m_count     [2] = m_count     [3] = 0;
+  m_unweighted[0] = m_unweighted[1] =
+  m_unweighted[2] = m_unweighted[3] = true;
+  
+  // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
+  int s = 0;
+  int a = 1; {
+    // create the minimal set
+    for (int i = 0; i < 16; ++i) {
+      // copy "unset"
+      int cindex = palette.m_remap[0][i];
+      int aindex = palette.m_remap[1][i];
+
+      if ((cindex == -1) && (aindex == -1)) {
+      	m_remap[s][i] = -1;
+	continue;
+      }
+      
+      // TODO: kill off alpha will kill the weighting
+      // TODO: select the most probable instead
+      Vec4 rgbx = palette.m_points[0][cindex >= 0 ? cindex : 0];
+      Vec4 ___a = palette.m_points[1][aindex >= 0 ? aindex : 0];
+      Vec4 rgba = TransferW(rgbx, ___a);
+      
+      // kill off alpha if necessary
+      rgba = Max(rgba, clra);
+
+      switch (m_rotid) {
+	case 1:  rgba = Exchange<0, 3>(rgba); wgtx = Vec4(1.0f); ___w = wgta; break;
+	case 2:  rgba = Exchange<1, 3>(rgba); wgtx = Vec4(1.0f); ___w = wgta; break;
+	case 3:  rgba = Exchange<2, 3>(rgba); wgtx = Vec4(1.0f); ___w = wgta; break;
+//	default: rgba = Exchange<3, 3>(rgba); wgtx = wgta; ___w = Vec4(1.0f); break;
+      }
+      
+      // ensure there is always non-zero weight even for zero alpha
+      Vec4 
+	A = ((___a * Vec4(255.0f)) + Vec4(1.0f)) * Vec4(1.0f / (255.0f + 1.0f)),
+        W = Max(A, wgtx).SplatW();
+	
+      // loop over previous points for a match
+      for (int j = 0;; ++j) {
+	// allocate a new point
+	if (j == i) {
+	  // get the index of the match and advance
+	  int index = m_count[s]++;
+
+	  // add the point
+	  m_remap[s][i] = index;
+	  m_points[s][index] = Vec4(KillW(rgba));
+	  m_weights[s][index] = Vec4(W);
+	  m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][index] = 1;
+#endif
+	  break;
+	}
+
+	if (CompareAllEqualTo(rgba.GetVec3(), m_points[s][j].GetVec3())) {
+	  // get the index of the match
+	  int const index = m_remap[s][j];
+	  assume (index >= 0 && index < 16);
+
+	  // map to this point and increase the weight
+	  m_remap[s][i] = index;
+	  m_weights[s][index] += Vec4(W);
+	  m_unweighted[s] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][index] += 1;
+#endif
+	  break;
+	}
+      }
+
+      {
+        W = Max(A, ___w).SplatW();
+
+	// loop over previous points for a match
+	for (int j = 0;; ++j) {
+	  // allocate a new point
+	  if (j == i) {
+	    // get the index of the match and advance
+	    int index = m_count[a]++;
+
+	    // add the point
+	    m_remap[a][i] = index;
+	    m_points[a][index] = Vec4(rgba.SplatW());
+	    m_weights[a][index] = Vec4(W);
+	    m_unweighted[a] = m_unweighted[a] && !CompareFirstLessThan(W, Vec4(1.0f));
+#ifdef	FEATURE_EXACT_ERROR
+	    m_frequencies[a][index] = 1;
+#endif
+	    break;
+	  }
+	  
+	  if (CompareAllEqualTo(rgba.GetVec3(), m_points[a][j].GetVec3())) {
+	    // get the index of the match
+	    int index = m_remap[a][j];
+
+	    // map to this point and increase the weight
+	    m_remap[a][i] = index;
+	    m_weights[a][index] += Vec4(W);
+	    m_unweighted[a] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	    m_frequencies[a][index] += 1;
+#endif
+	    break;
+	  }
+	}
+      }
+    }
+
+#ifdef FEATURE_WEIGHTS_ROOTED
+      // square root the weights
+    for (int i = 0; i < m_count[s]; ++i)
+      m_weights[s][i] = Sqrt(m_weights[s][i]);
+    for (int i = 0; i < m_count[a]; ++i)
+      m_weights[a][i] = Sqrt(m_weights[a][i]);
+#endif
+    
+    // we have tables for this
+    m_unweighted[s] = m_unweighted[s] && (m_count[s] == 16);
+    m_unweighted[a] = m_unweighted[a] && (m_count[a] == 16);
+  }
+
+  // clear if we're suppose to throw alway alpha
+  m_transparent = palette.m_transparent && !clearAlpha;
+}
+
+void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
+  // can't be permuted
+  assert(m_seperatealpha == false);
+
+  // check the compression mode for btc
+  bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0) && !m_mergedalpha;
+
+  // build mapped data
+  Vec4 const clra = !clearAlpha    ? Vec4(0.0f) : Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+  Vec4 const wgta =  weightByAlpha ? Vec4(0.0f) : Vec4(1.0f);
+
+  // clean initial state
+  m_count     [0] = m_count     [1] =
+  m_count     [2] = m_count     [3] = 0;
+  m_unweighted[0] = m_unweighted[1] =
+  m_unweighted[2] = m_unweighted[3] = true;
+
+  for (int s = 0; s < m_numsets; s++) {
+    // selection mask
+    int pmask = mask & m_mask[s];
+    
+    // record mappings (multi-assignment possible)
+    a16 char gotcha[16]; memset(gotcha, -1, sizeof(gotcha));
+
+    // create the minimal set
+    for (int i = 0; i < 16; ++i) {
+      // check this pixel is enabled
+      int bit = 1 << i;
+      if ((pmask & bit) == 0)
+	continue;
+
+      // copy "unset"
+      int uindex = palette.m_remap[0][i];
+      if (uindex == -1) {
+      	m_remap[s][i] = -1;
+	continue;
+      }
+
+      // TODO: kill off alpha will kill the weighting
+      Vec4 rgba = palette.m_points[0][uindex];
+
+      // ensure there is always non-zero weight even for zero alpha
+      Vec4 
+	W = ((rgba * Vec4(255.0f)) + Vec4(1.0f)) * Vec4(1.0f / (255.0f + 1.0f));
+        W = Max(W, wgta).SplatW();
+	
+      // kill off alpha if necessary
+      rgba = Max(rgba, clra);
+
+      int index;
+      if ((index = gotcha[uindex]) < 0) {
+	// get the index of the match and advance
+	index = gotcha[uindex] = (char)(m_count[s]++);
+
+	// add the point
+	m_remap[s][i] = index;
+	m_points[s][index] = rgba;
+	m_weights[s][index] = Vec4(W);
+	m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
+#ifdef	FEATURE_EXACT_ERROR
+	m_frequencies[s][index] = 1;
+#endif
+      }
+      else {
+	// get the index of the match
+	assume (index >= 0 && index < 16);
+
+	// map to this point and increase the weight
+	m_remap[s][i] = index;
+	m_weights[s][index] += Vec4(W);
+	m_unweighted[s] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	m_frequencies[s][index] += 1;
+#endif
+      }
+    }
+  }
+
+  // clear if we're suppose to throw alway alpha
+  m_transparent = palette.m_transparent && !clearAlpha;
 }
 
 void PaletteSet::RemapIndices(u8 const* source, u8* target, int set) const
