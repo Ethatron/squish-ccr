@@ -60,9 +60,9 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   float const* weights = m_colours->GetWeights();
 
   Sym3x3 covariance;
-  Vec3 centroid; 
-  Vec3 principle; 
-  
+  Vec3 centroid;
+  Vec3 principle;
+
   // get the covariance matrix
   if (m_colours->IsUnweighted())
     ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric);
@@ -91,7 +91,7 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
       min = Min(min, len);
       max = Max(max, len);
     }
-    
+
     start = centroid + principle * min * div;
     end   = centroid + principle * max * div;
 
@@ -99,46 +99,46 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
     chk = start;
     while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
       Vec3 fct = chk * rec;
-      Vec3 min = Select(fct, chk, HorizontalMin(chk));
-      
-      start -= principle * min;
+      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
+
+      start -= principle * hin;
       chk = start;
     }
-    
+
     // intersect negative undershoot with axis-plane(s), clamp to 0.0
     chk = end;
     while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
       Vec3 fct = chk * rec;
-      Vec3 min = Select(fct, chk, HorizontalMin(chk));
-      
-      end -= principle * min;
+      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
+
+      end -= principle * hin;
       chk = end;
     }
-    
+
     // intersect positive overshoot with axis-plane(s), clamp to 1.0
     chk = start - Vec3(1.0f);
     while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
       Vec3 fct = chk * rec;
-      Vec3 max = Select(fct, chk, HorizontalMax(chk));
-      
-      start -= principle * max;
+      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
+
+      start -= principle * hax;
       chk = start - Vec3(1.0f);
     }
-    
+
     // intersect positive overshoot with axis-plane(s), clamp to 1.0
     chk = end - Vec3(1.0f);
     while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
       Vec3 fct = chk * rec;
-      Vec3 max = Select(fct, chk, HorizontalMax(chk));
-      
-      end -= principle * max;
+      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
+
+      end -= principle * hax;
       chk = end - Vec3(1.0f);
     }
 
-    assert(HorizontalMin(start).X() > -0.0001);
+/*  assert(HorizontalMin(start).X() > -0.0001);
     assert(HorizontalMin(end  ).X() > -0.0001);
     assert(HorizontalMax(start).X() <  1.0001);
-    assert(HorizontalMax(end  ).X() <  1.0001);
+    assert(HorizontalMax(end  ).X() <  1.0001);	 */
 #else
     Scr3 min, max;
 
@@ -183,14 +183,27 @@ void ColourRangeFit::Compress3(void* block)
   for (int i = 0; i < count; ++i) {
     // find the closest code
     Scr3 dist = Scr3(FLT_MAX);
-
     int idx = 0;
-    for (int j = 0; j < 3; ++j) {
-      Scr3 d = LengthSquared(m_metric * (values[i] - codes[j]));
-      if (dist > d) {
-	dist = d;
-	idx = j;
-      }
+
+    {
+      Vec3 t0 = m_metric * (values[i] - codes[0]);
+      Vec3 t1 = m_metric * (values[i] - codes[1]);
+      Vec3 t2 = m_metric * (values[i] - codes[2]);
+
+      Scr3 d0 = LengthSquared(t0);
+      Scr3 d1 = LengthSquared(t1);
+      Scr3 d2 = LengthSquared(t2);
+
+      // encourage OoO
+      Scr3 da = Min(d0, d1);
+      Scr3 db =    (d2    );
+      dist = Min(da, dist);
+      dist = Min(db, dist);
+
+      // will cause VS to make them all cmovs
+      if (d0 == dist) { idx = 0; }
+      if (d1 == dist) { idx = 1; }
+      if (d2 == dist) { idx = 2; }
     }
 
     // save the index
@@ -234,12 +247,28 @@ void ColourRangeFit::Compress4(void* block)
     Scr3 dist = Scr3(FLT_MAX);
     int idx = 0;
 
-    for (int j = 0; j < 4; ++j) {
-      Scr3 d = LengthSquared(m_metric * (values[i] - codes[j]));
-      if (dist > d) {
-	dist = d;
-	idx = j;
-      }
+    {
+      Vec3 t0 = m_metric * (values[i] - codes[0]);
+      Vec3 t1 = m_metric * (values[i] - codes[1]);
+      Vec3 t2 = m_metric * (values[i] - codes[2]);
+      Vec3 t3 = m_metric * (values[i] - codes[3]);
+
+      Scr3 d0 = LengthSquared(t0);
+      Scr3 d1 = LengthSquared(t1);
+      Scr3 d2 = LengthSquared(t2);
+      Scr3 d3 = LengthSquared(t3);
+
+      // encourage OoO
+      Scr3 da = Min(d0, d1);
+      Scr3 db = Min(d2, d3);
+      dist = Min(da, dist);
+      dist = Min(db, dist);
+
+      // will cause VS to make them all cmovs
+      if (d0 == dist) { idx = 0; }
+      if (d1 == dist) { idx = 1; }
+      if (d2 == dist) { idx = 2; }
+      if (d3 == dist) { idx = 3; }
     }
 
     // save the index
