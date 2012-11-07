@@ -541,7 +541,8 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	else if (merr == error3) s -= r;	// range dn
 
 	// lossless
-	if (!(error0 = merr))
+	error0 = merr;
+	if (!error0)
 	  break;
       }
 
@@ -627,7 +628,8 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	else if (merr == error3) s -= r;	// range dn
 
 	// lossless
-	if (!(error0 = merr))
+	error0 = merr;
+	if (!error0)
 	  break;
       }
 
