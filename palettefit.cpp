@@ -240,7 +240,7 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Scr4 &error) {
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = (zb ? m_sharedbits >> s : 0);
+    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
     Vec4 metric = m_metric[s < isets ? 0 : 1];
@@ -294,7 +294,7 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = (zb ? m_sharedbits >> s : 0);
+    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
     int mk = !asets ? 0xFFFFFFFF : (s < isets ? 0x00FFFFFF : 0xFF000000);
 
     // old original quantizer
@@ -357,10 +357,10 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
     // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
     if (!m_palette->IsTransparent()) {
       switch (m_palette->GetRotation()) {
-	case 0: if (s < isets + asets) fstart.GetW() = fend.GetW() = 1.0f; break;
-	case 1: if (s <         isets) fstart.GetX() = fend.GetX() = 1.0f; break;
-	case 2: if (s <         isets) fstart.GetY() = fend.GetY() = 1.0f; break;
-	case 3: if (s <         isets) fstart.GetZ() = fend.GetZ() = 1.0f; break;
+	default: if (s < isets + asets) fstart.Set<3>(1.0f), fend.Set<3>(1.0f); break;
+	case  1: if (s <         isets) fstart.Set<0>(1.0f), fend.Set<0>(1.0f); break;
+	case  2: if (s <         isets) fstart.Set<1>(1.0f), fend.Set<1>(1.0f); break;
+	case  3: if (s <         isets) fstart.Set<2>(1.0f), fend.Set<2>(1.0f); break;
       }
     }
 
@@ -378,22 +378,15 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
   }
 
   switch (m_palette->GetRotation()) {
-    case 1:
-      for (int i = 0; i < 16; ++i)
-	std::swap(rgba[4 * i + 0], rgba[4 * i + 3]);
-      break;
-    case 2:
-      for (int i = 0; i < 16; ++i)
-	std::swap(rgba[4 * i + 1], rgba[4 * i + 3]);
-      break;
-    case 3:
-      for (int i = 0; i < 16; ++i)
-	std::swap(rgba[4 * i + 2], rgba[4 * i + 3]);
-      break;
+    case 1: for (int i = 0; i < 16; ++i) std::swap(rgba[4 * i + 0], rgba[4 * i + 3]); break;
+    case 2: for (int i = 0; i < 16; ++i) std::swap(rgba[4 * i + 1], rgba[4 * i + 3]); break;
+    case 3: for (int i = 0; i < 16; ++i) std::swap(rgba[4 * i + 2], rgba[4 * i + 3]); break;
   }
-
-  for (int i = 0; i < 16; ++i) {
-    assert(rgba[4 * i + 3] == 0xFF);
+  
+  if (!m_palette->IsTransparent()) {
+    for (int i = 0; i < 16; ++i) {
+      assert(rgba[4 * i + 3] == 0xFF);
+    }
   }
 }
 #endif
