@@ -414,6 +414,143 @@ int main(int argc, char **argv) {
   }
 #endif
 
+#if 1
+  float qLUT[3][9][256];
+
+  // checking out the quantizer
+  for (int b = 1; b <= 8; b++) {
+#if 0
+    for (int i = 0; i < (1 << b); i++) {
+      int j = ((i + 0) << (8 - b)); j |= (j >> (b)); j |= (j >> (2 * b)); j |= (j >> (3 * b));
+      int k = ((i + 1) << (8 - b)); k |= (k >> (b)); k |= (k >> (2 * b)); k |= (k >> (3 * b));
+
+      printf(" %3d [%2x, %3d]\n", i, j, k - j);
+    }
+#endif
+
+    for (int i = 0; i <= 255; i++) {
+      // half of a bin
+      int   h =  (1 << (8 - b)) >> 1;
+      float f = ((1 << (8 - b)) >> 1) / 255.0f;
+      // range
+      float r = (1 << b) - 1;
+      float w =   1.0f / 255.0f;
+      float fw = (((1 << (8 - b)) >> 1) - 1) / 255.0f;
+      float fw_ = (((1 << (8 - b)) >> 1) - 1);
+      float u =   1.0f / (1 <<      b );
+      float v = 255.0f / (1 <<      b );
+      float s =   1.0f / (1 << (8 - b));
+      float z = 255.0f / (1 << (8 - b));
+      float o = 127.0f / (255.0f * 255.0f);
+      float x = f * s + o * s;
+      float y = s - s * s;
+      float mul  = ((float)(1 << (8 - b)) / (1 << (0 * b)));
+            mul += ((float)(1 << (8 - b)) / (1 << (1 * b)));
+            mul += ((float)(1 << (8 - b)) / (1 << (2 * b)));
+            mul += ((float)(1 << (8 - b)) / (1 << (3 * b)));
+
+      // truncating quantizer
+      int j = (i >> (8 - b));
+      int k = (j << (8 - b)); k |= (k >> (b)); k |= (k >> (2 * b)); k |= (k >> (3 * b));
+      // nearest rounding quantizer
+//    int l = ((i + (h - j) - 1 + (i >> 7)) >> (8 - b));
+//    int l = ((i + (h - (i >> b)) - 1 + (i >> 7)) >> (8 - b));
+      int l = ((i + (h - (i >> b))) >> (8 - b));
+//    int l = ((i + (((h << b) - i - 1 + (1 << (b - 1))) >> b) - 0 + (0 >> 7)) >> (8 - b));
+      int m = (l << (8 - b)); m |= (m >> (b)); m |= (m >> (2 * b)); m |= (m >> (3 * b));
+
+      float val = i / 255.0f;
+
+//    float p = (i + (h - (i >> b)) - 1 + (i >> 7)) >> (8 - b);
+//    float p = (i + (h - (i >> b)) - 1 + (i >> 7)) * s;
+//    float p = (i + (h - (i / (1 << b))) - 1 + (i >> 7)) * s;
+//    float p = (i + (h - floor(i * u)) - 1 + (i >> 7)) * s;
+//    float p = (i + (h - floor(val * v)) - 1 + (i / 127.5f)) * s;
+//    float p = (i + (i / 128.0f) + (h - floor(val * v)) - 1) * s;
+//    float q = floor(p) / r;
+//    float q = (127.5f - (127.5f - floor(p)) * 1.001f) / r;	???
+//    float q = floor(p * mul) / 255.0f;
+
+//    float p = (i/255.0f + (i/255.0f / 128.0f) + (h/255.0f - floor(val * v)/255.0f) - 1/255.0f) * s;
+//    float p = (val + (val / 128.0f) + (f - floor(val * v) / 255.0f) - w) * s;
+//    float p = ((val * 129.0f) / 128.0f + (f - floor(val * v) / 255.0f) - w) * s;
+//    float p = (val * (129.0f / 128.0f) + (f - floor(val * v) / 255.0f) - w) * s;
+//    float p = (val * (129.0f / 128.0f) + fw - floor(val * v) / 255.0f) * s;
+//    float p = (val + fw / (128.0f / 127.0f) - floor(val * v) / 255.0f / (128.0f / 127.0f)) * s * (128.0f / 127.0f);
+//    float p = (val * (129.0f / 128.0f) * 255.0f + fw_ - floor(val * v)) * s;
+//    float p = (val * 257.0f + fw_ - floor(val * v)) * s;
+//    float q = floor(p) / r;
+//    float q = floor(floor(p) * mul) / 255.0f;
+
+      float newrange = (1 << b) - 1;
+      float generalhalf = (0.5f * (1 << (8 - b))) * newrange / 255.0f;
+      float p = val * newrange + generalhalf;
+      float q = floor(p) / newrange;
+//    float r = floor(floor(p * newrange) * (255.0f / newrange));
+
+//    float p = (i/255.0f + (h/255.0f - (val * z)/255.0f) + (127.0f / 255.0f)/255.0f) * s;
+//    float p = (val + (f - (val * s)) + o) * s;
+//    float p = (val * (1.0f - s) + f + o) * s;
+//    float p = val * y + x;
+//    float q = floor(p * 255.0f) / r;
+
+//    int t = (int)floor(p * 255.0f);
+      int t = (int)floor(q * 255.0f) >> (8 - b);
+      int d = (t << (8 - b)); d |= (d >> (1 * b)); d |= (d >> (2 * b)); d |= (d >> (3 * b));
+
+      printf("%3d %.8f [%2x, %3d] [%2x, %3d] %.8f %3d %.8f\n", i, val, k, i - k, m, i - m, q, t, d / 255.0f);
+
+      int lval = (int)floor(p);
+
+      int _b = b - 1;
+      float _newrange = (1 << _b) - 1;
+      float _generalhalf = (0.5f * (1 << (8 - _b))) * _newrange / 255.0f;
+      float _p = val * _newrange + _generalhalf;
+      float _q = floor(_p) / _newrange;
+
+      int _t = (int)floor(_q * 255.0f) >> (8 - _b);
+      int dc = (_t << (8 - _b)); dc |= 0 << (8 - b); dc |= (dc >> (1 * b)); dc |= (dc >> (2 * b)); dc |= (dc >> (3 * b));
+      int ds = (_t << (8 - _b)); ds |= 1 << (8 - b); ds |= (ds >> (1 * b)); ds |= (ds >> (2 * b)); ds |= (ds >> (3 * b));
+      int distc = (i - dc); if (distc < 0) distc = -distc;
+      int dists = (i - ds); if (dists < 0) dists = -dists;
+
+      for (int j = (lval & (~1)) - 1; j <= (lval | ( 1)); j++) {
+        int __t = lval >> 1;//j >> (8 - _b);
+        int _dc = (__t << (8 - _b)); _dc |= 0 << (8 - b); _dc |= (_dc >> (1 * b)); _dc |= (_dc >> (2 * b)); _dc |= (_dc >> (3 * b));
+        int _ds = (__t << (8 - _b)); _ds |= 1 << (8 - b); _ds |= (_ds >> (1 * b)); _ds |= (_ds >> (2 * b)); _ds |= (_ds >> (3 * b));
+
+        int _distc = (i - _dc); if (_distc < 0) _distc = -_distc;
+        int _dists = (i - _ds); if (_dists < 0) _dists = -_dists;
+
+        if (distc > _distc) { distc = _distc; dc = _dc; }
+        if (dists > _dists) { dists = _dists; ds = _ds; }
+      }
+
+      qLUT[0][b][lval] = d;
+      qLUT[1][b][lval] = dc;
+      qLUT[2][b][lval] = ds;
+    }
+
+//  printf("\n");
+  }
+
+  // checking out the quantizer
+  for (int b = 1; b <= 8; b++) {
+  for (int r = 0; r <= 2; r++) {
+    printf("const a16 float qLUT_%d%s[%d] = {\n", b, r == 0 ? "all" : (r == 1 ? "clr" : "set"), 1 << b);
+    for (int i = 0, j = 0; i < (1 << b); i++, j++) {
+      if (j == 0)
+        printf(" ");
+      printf(" %3d.0f / 255.0f,", (int)qLUT[r][b][i]);
+      if (j == 7)
+        printf("\n"), j = -1;
+    }
+    printf("};\n\n", b);
+  }
+    printf("/* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . */\n", b);
+  }
+#endif
+
 #if 0
   // checking out the odd-test for fp
   float check = 1.0f;
@@ -522,7 +659,7 @@ int main(int argc, char **argv) {
   printf("alpha7: %d codebooks\n", trial7.size());
 #endif
 
-#if 1
+#if 0
   int vmin = 0xFF, vmax = 0x00;
   int vals[16];
   for (int v = 0; v < 16; v++) {
