@@ -51,7 +51,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
     // cache some values
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    float const* weights = m_palette->GetWeights(s);
+    Vec4 const* weights = m_palette->GetWeights(s);
 
     // we don't do this for sparse sets
     if (count != 1) {
@@ -152,6 +152,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  u8  const tmask = m_palette->IsMergedAlpha() ? 0xFF : 0x00;
   
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -164,7 +165,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
   for (int s = 0; s < (isets + asets); s++) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = (zb ? m_sharedbits >> s : 0);
+    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // cache some values
     int const count = m_palette->GetCount(s);
@@ -178,7 +179,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
     if (count == 1) {
       // clear alpha-weight if alpha is disabled
       // in case of separate alpha the colors of the alpha-set have all been set to alpha
-      u8 mask = (ab ? ((s < isets) ? 0xF : 0x8) : 0x7);
+      u8 mask = ((s < isets) ? 0x7 : 0x8) | tmask;
 
       // find the closest code
       Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
@@ -231,10 +232,10 @@ void PaletteNormalFit::Compress(void* block, int mode)
   // because the original alpha-channel's weight was killed it is completely random and need to be set to 1.0f
   if (!m_palette->IsTransparent()) {
     switch (m_palette->GetRotation()) {
-      case 0: for (int a = 0; a < isets + asets; a++) m_start[a].GetW() = m_end[a].GetW() = 1.0f; break;
-      case 1: for (int a = 0; a <         isets; a++) m_start[a].GetX() = m_end[a].GetX() = 1.0f; break;
-      case 2: for (int a = 0; a <         isets; a++) m_start[a].GetY() = m_end[a].GetY() = 1.0f; break;
-      case 3: for (int a = 0; a <         isets; a++) m_start[a].GetZ() = m_end[a].GetZ() = 1.0f; break;
+      default: for (int a = 0; a < isets + asets; a++) m_start[a].Set<3>(1.0f), m_end[a].Set<3>(1.0f); break;
+      case  1: for (int a = 0; a <         isets; a++) m_start[a].Set<0>(1.0f), m_end[a].Set<0>(1.0f); break;
+      case  2: for (int a = 0; a <         isets; a++) m_start[a].Set<1>(1.0f), m_end[a].Set<1>(1.0f); break;
+      case  3: for (int a = 0; a <         isets; a++) m_start[a].Set<2>(1.0f), m_end[a].Set<2>(1.0f); break;
     }
   }
 
