@@ -168,7 +168,9 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
     if (!ab) {
       rcomplete[0] = Shuffle<1, 3>(rcomplete[0]);
     }
+#if 0
     else {
+      // TODO: this doesn't consider rotations!
       Col4 z0 = IsNotZero(rcomplete[0]).SplatA();
       Col4 o0 = IsOne    (rcomplete[0]).SplatA();
 
@@ -178,6 +180,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
       /* if alpha is white the shared bit must be 1 */
       rcomplete[0] |= o0 >> (32 - (eb + sb));
     }
+#endif
 
     if (eb) {
       // get the components in the unique range
@@ -287,7 +290,9 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
       rcomplete[0] = Shuffle<1, 3>(rcomplete[0]);
       rcomplete[1] = Shuffle<1, 3>(rcomplete[1]);
     }
+#if 0
     else {
+      // TODO: this doesn't consider rotations!
       Col4 z0 = IsNotZero(rcomplete[0]).SplatA();
       Col4 z1 = IsNotZero(rcomplete[1]).SplatA();
       Col4 o0 = IsOne    (rcomplete[0]).SplatA();
@@ -301,6 +306,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
       rcomplete[0] |= o0 >> (32 - (eb + sb));
       rcomplete[1] |= o1 >> (32 - (eb + sb));
     }
+#endif
 
     if (eb) {
       // get the components in the unique range
@@ -424,7 +430,9 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
       rcomplete[1] = Shuffle<1, 3>(rcomplete[1]);
       rcomplete[2] = Shuffle<1, 3>(rcomplete[2]);
     }
+#if 0
     else {
+      // TODO: this doesn't consider rotations!
       Col4 z0 = IsNotZero(rcomplete[0]).SplatA();
       Col4 z1 = IsNotZero(rcomplete[1]).SplatA();
       Col4 z2 = IsNotZero(rcomplete[2]).SplatA();
@@ -442,6 +450,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
       rcomplete[1] |= o1 >> (32 - (eb + sb));
       rcomplete[2] |= o2 >> (32 - (eb + sb));
     }
+#endif
 
     if (eb) {
       // get the components in the unique range
