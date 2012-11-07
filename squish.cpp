@@ -226,11 +226,11 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 	ex =               (1 << numx) - 1;
     // search through shared bits
 #ifdef FEATURE_SHAREDBITS_TRIALS
-    int sb = (numb > 0   ?               0 : -1),
-	eb = (numb > 0   ?       numb      : -1);
+    int sb = (numb > 0   ?               0 : SBSKIP),
+	eb = (numb > 0   ?       numb      : SBSKIP);
 #else
-    int sb = (numb > 0   ?              -1 : -1),
-	eb = (numb > 0   ?              -1 : -1);
+    int sb = (numb > 0   ?          SBSKIP : SBSKIP),
+	eb = (numb > 0   ?          SBSKIP : SBSKIP);
 #endif
 
 #if !defined(NDEBUG) && defined(DEBUG_SETTING)
@@ -244,12 +244,32 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
     sx = ex = DEBUG_SELECTION;
 //  sb = eb = DEBUG_SHAREDBIT;
 #endif
-
+    
+    // create the initial point set
+    PaletteSet initial(rgba, mask, flags | mode);
+    
     // signal if we do we have anything better this iteration of the search
     bool better = false;
     // check if we can do a cascade with the cluster-fit
     bool cluster = ((flags & kColourRangeFit) == 0) && (((numi >> 0) & 0xFF) <= CLUSTERINDICES)
                  && (mode != kVariableCodingMode8) && (((numi >> 16) & 0xFF) <= CLUSTERINDICES);
+
+    // if we see we have transparent values, back up from trying to test non-alpha only modes
+    if (initial.IsTransparent())
+      om = 2, em = 4;
+
+#if	defined(FEATURE_SHAREDBITS_TRIALS)
+    // if we see we have no transparent values, force the shared stop alpha-bit to 1 (stop is max and maps to 1.0f)
+    // the all transparent case isn't so crucial, when we use IGNORE_ALPHA0 it's redundant to force 0 anyway
+    if (!initial.IsTransparent() && initial.IsMergedAlpha()) {
+      // either force unique end to 1 or shared ends after (NOTE: no s-bit possible in merged alpha BC7-codings) 
+      sb |= eb >> (SBEND - SBSTART);
+      assert(eb >> (SBEND - SBSTART));
+    }
+    // otherwise just use the most occurring bit (parity) for all other cases
+    else if (!FEATURE_SHAREDBITS_TRIALS)
+      sb = eb = SBSKIP;
+#endif
 
     // TODO: partition & rotation are mutual exclusive
 
@@ -258,7 +278,11 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
       // search for the best rotation
       for (int r = sr; r <= er; r++) {
 	// create the minimal point set
-	PaletteSet palette(rgba, mask, flags | mode, p, r);
+	PaletteSet palette(initial, mask, flags | mode, p, r);
+	
+	// if we see we have less colors than sets, back up from trying to test with more sets or even other partitions
+	if (palette.GetCount() <= nums)
+	  lmtp = p, lmts = nums;
 
 #if defined(TRACK_STATISTICS)
 	for (int xu = 0; xu < nums; xu++) {
@@ -278,12 +302,11 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 	// search for the best swap
 	for (int x = sx; x <= ex; x++) {
 	  fit.ChangeSwap(x);
-
 	  // search for the best shared bit
 	  for (int b = sb; b <= eb; b++) {
 	    fit.ChangeShared(b);
-
-	    // update with old best error (reset isbest)
+	    
+	    // update with old best error (reset IsBest)
 	    fit.SetError(error);
 	    fit.Compress(block, mnum);
 
@@ -303,32 +326,43 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 	    }
 	  }
 	}
-
-	// if we see we have transparent values, back up from trying to test non-alpha only modes
-	if (palette.IsTransparent() && (om == 1))
-	  om = 2, em = 4;
-	// if we see we have less colors than sets, back up from trying to test with more sets or even other partitions
-	if (palette.GetCount() <= nums)
-	  lmtp = p, lmts = nums;
       }
     }
 
     // check the compression type and compress palette of the chosen partition even better
     if (better && cluster) {
+      int degree = flags & (kColourClusterFit * 15);
+
       // default to a cluster fit (could be iterative or not)
-      PaletteClusterFit fit(&bestpal, flags | mode, bestswp, bestbit);
+      PaletteClusterFit fit(&bestpal, flags | mode);
+      
+      // we want the whole shebang, this takes looong!
+      if (degree < (kColourClusterFit * 15))
+	sb = eb = bestbit;
+      if (degree < (kColourClusterFit * 14))
+	sb = eb = bestbit, sx = ex = bestswp;
 
-      fit.SetError(error);
-      fit.Compress(block, mnum);
+      // search for the best swap
+      for (int x = sx; x <= ex; x++) {
+	fit.ChangeSwap(x);
+	// search for the best shared bit
+	for (int b = sb; b <= eb; b++) {
+	  fit.ChangeShared(b);
+	    
+	  // update with old best error (reset IsBest)
+	  fit.SetError(error);
+	  fit.Compress(block, mnum);
 
-      // we could code it lossless, no point in trying any further at all
-      if (fit.Lossless())
-	return;
-      if (fit.IsBest()) {
-	error = fit.GetError();
+	  // we could code it lossless, no point in trying any further at all
+	  if (fit.Lossless())
+	    return;
+	  if (fit.IsBest()) {
+	    error = fit.GetError();
 
-	if (cluster || 1)
-	  besttyp = 1;
+	    if (cluster || 1)
+	      besttyp = 1;
+	  }
+	}
       }
     }
 
