@@ -644,26 +644,31 @@ public:
   static const float bh = 0.5f * (1 << (8 - bb)) * (bm / 255.0f);
   static const float ah = 0.5f * (1 << (8 - ab)) * (am / 255.0f); */
 
-  const a16 float *qLUT_t[12];
+  const a16 float *qLUT_t[8];
 
   Vec4 grid;
   Vec4 gridgap;
+  Vec4 gridint;
   Col4 gridinv;
 
-  vQuantizer(const int rb, const int gb, const int bb, const int ab, const int sb = 0)/* :
+  vQuantizer(const int rb, const int gb, const int bb, const int ab, const int sb = -1)/* :
     rm(1 << rb), gm(1 << gb), bm(1 << bb), am(1 << ab),
     gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, ab ? 1.0f / am : 1.0f ),
     grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, ab ? 1.0f + am : 1.0f )*/ {
+
     qLUT_t[0] = qLUT_a[rb];
     qLUT_t[1] = qLUT_a[gb];
     qLUT_t[2] = qLUT_a[bb];
     qLUT_t[3] = qLUT_a[ab];
 
 #ifdef FEATURE_SHAREDBITS_TRIALS
-    qLUT_t[4] = qLUT_c[rb]; qLUT_t[ 8] = qLUT_s[rb];
-    qLUT_t[5] = qLUT_c[gb]; qLUT_t[ 9] = qLUT_s[gb];
-    qLUT_t[6] = qLUT_c[bb]; qLUT_t[10] = qLUT_s[bb];
-    qLUT_t[7] = qLUT_c[ab]; qLUT_t[11] = qLUT_s[ab];
+    // allow bailout if whole == -1 (bit-test always succeeds)
+    if ((FEATURE_SHAREDBITS_TRIALS >= SHAREDBITS_TRIAL_ALL) || (~sb)) {
+      qLUT_t[0] = qLUT_s[rb]; qLUT_t[4] = qLUT_c[rb]; 
+      qLUT_t[1] = qLUT_s[gb]; qLUT_t[5] = qLUT_c[gb]; 
+      qLUT_t[2] = qLUT_s[bb]; qLUT_t[6] = qLUT_c[bb]; 
+      qLUT_t[3] = qLUT_s[ab]; qLUT_t[7] = qLUT_c[ab];
+    }
 #endif
 
     gridgap.SetXYZWpow2<8>(rb, gb, bb, ab);
@@ -673,6 +678,10 @@ public:
     // set inactive channels to 255.0 (Truncate will preserve the channel)
     Vec4 tff = Vec4(255.0f) & grid.IsOne();
     Vec4 one = Vec4(  1.0f);
+    
+    // merge "(FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8"
+    gridint  = grid;
+    gridint *= Vec4(255.0f / 256.0f);
 
     // if a value has zero bits, to prevent
     // the singularity we set rcp to 1 as well
@@ -720,24 +729,26 @@ public:
     // [0,255]
     Vec4 Qf = SnapToLattice(val);
 
+    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
+
     // [0,1<<b-1]
-    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return FloatToInt<false>(Qf * gridint);
   }
 
   doinline Col4 QuantizeToIntClamped(Vec4 const &val) {
     // [0,255]
     Vec4 Qf = SnapToLatticeClamped(val);
+    
+    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
 
     // [0,1<<b-1]
-    return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
+    return FloatToInt<false>(Qf * gridint);
   }
 
 #if	!defined(FEATURE_SHAREDBITS_TRIALS)
-#define bitrial	(bittest && 0)	// silence compiler
-#elif	(FEATURE_SHAREDBITS_TRIALS == 0)
-#define bitrial	(~bitset)	// allow bailout if whole == -1
+#define bitrial	(bittest || bitset || 1)	// silence compiler
 #else
-#define bitrial	(1)		// no bailouts happen here
+#define bitrial	(bittest & bitset)
 #endif
 
   // if "bitset & bittest" is a compiler constant it becomes 0 penalty
@@ -747,42 +758,42 @@ public:
     Col4 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
 
     // exact nearest least-error quantization values
-    Vec4 rgba = Vec4(
-      &qLUT_t[0 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.R() & 0xFF],
-      &qLUT_t[1 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.G() & 0xFF],
-      &qLUT_t[2 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.B() & 0xFF],
-      &qLUT_t[3 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.A() & 0xFF]);
-
-    return Vec4(rgba);
+    return Vec4(
+      &qLUT_t[0 + (bitrial ? 0 : 4)][p.R() & 0xFF],
+      &qLUT_t[1 + (bitrial ? 0 : 4)][p.G() & 0xFF],
+      &qLUT_t[2 + (bitrial ? 0 : 4)][p.B() & 0xFF],
+      &qLUT_t[3 + (bitrial ? 0 : 4)][p.A() & 0xFF]);
   }
 
   doinline Vec4 SnapToLatticeClamped(Vec4 const &val, int bitset, int bittest) {
     Col4 p = FloatToInt<false>((grid * val) + gridgap);
 
     // exact nearest least-error quantization values
-    Vec4 rgba = Vec4(
-      &qLUT_t[0 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.R() & 0xFF],
-      &qLUT_t[1 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.G() & 0xFF],
-      &qLUT_t[2 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.B() & 0xFF],
-      &qLUT_t[3 + (!bitrial ? 0 : (bitset & bittest) ? 4 : 8)][p.A() & 0xFF]);
-
-    return Vec4(rgba);
+    return Vec4(
+      &qLUT_t[0 + (bitrial ? 0 : 4)][p.R() & 0xFF],
+      &qLUT_t[1 + (bitrial ? 0 : 4)][p.G() & 0xFF],
+      &qLUT_t[2 + (bitrial ? 0 : 4)][p.B() & 0xFF],
+      &qLUT_t[3 + (bitrial ? 0 : 4)][p.A() & 0xFF]);
   }
 
   doinline Col4 QuantizeToInt(Vec4 const &val, int bitset, int bittest) {
     // [0,255]
     Vec4 Qf = SnapToLattice(val, bitset, bittest);
+    
+    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
 
     // [0,1<<b-1]
-    return (FloatToInt<false>(Qf) * gridinv) >> 8;
+    return FloatToInt<false>(Qf * gridint);
   }
 
   doinline Col4 QuantizeToIntClamped(Vec4 const &val, int bitset, int bittest) {
     // [0,255]
     Vec4 Qf = SnapToLatticeClamped(val, bitset, bittest);
+    
+    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
 
     // [0,1<<b-1]
-    return (FloatToInt<false>(Qf) * gridinv) >> 8;
+    return FloatToInt<false>(Qf * gridint);
   }
 
 #if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 3)
