@@ -91,15 +91,19 @@
 
 /* brute force search for the shared bits with the lowest error
  *
- * 0) preserve shared bit of 1 for opaque only
- * 1) don't care about the start/end point skew
+ * 0) trial shared bit of 1 for opaque merged-alpha cases only (01/11)
+ * 1) also trial all cases when block is transparent
  * 2) if start is lower and goes down, make stop go up and vice versa (heuristic)
  * 3) check all start/stop up/down combinations (*256 tries), incomplete implementation!
  *
  * normally this is not worth it in the current state
  */
-#define	FEATURE_SHAREDBITS_TRIALS	0
-#define	SHAREDBITS_TRIAL_ONLYOPAQUE	0
+#define	SHAREDBITS_TRIAL_ALPHAONLYOPAQUE	0
+#define	SHAREDBITS_TRIAL_ALPHAONLY		1
+#define	SHAREDBITS_TRIAL_LOWPRC			2
+#define	SHAREDBITS_TRIAL_ALL			2
+
+#define	FEATURE_SHAREDBITS_TRIALS		SHAREDBITS_TRIAL_ALPHAONLY
 
 #undef	FEATURE_TEST_LINES
 
@@ -112,7 +116,7 @@
 // throw the quantized rgba values back into the input.image
 #undef	VERIFY_QUANTIZER
 // throw the decoded rgba values back into the input-image
-#define	VERIFY_ENCODER
+#undef	VERIFY_ENCODER
 
 // print out lots of information about the algorithm behaviour
 #undef	TRACK_STATISTICS
