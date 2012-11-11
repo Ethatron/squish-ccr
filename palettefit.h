@@ -46,6 +46,9 @@ public:
   static int GetSharedBits(int mode);
   static int GetPrecisionBits(int mode);
 
+  static const int *GetSharedMap(int mode);
+  static int GetSharedSkip(int mode);
+
   // rotate shared bit definition: 0=0 (-), 1=3 (s), 2=2 (u), 3=1 (u)
   // unique p-bit permutations: upper bit start bit set, lower bit stop bit set
   // shared p-bit permutations: upper & lower bit start & stop bit set
@@ -53,7 +56,7 @@ public:
 #define SBSTART	0
 #define SBEND	3
 #define SB	1
-#define SR(s)	(s < 0 ? s : s ^ (s << SBEND))
+#define SR(s)	(s < 0 ? s : m_sharedmap[s])
 #define SBSKIP	-1
 #define SK(s)	(!(~s))
 
@@ -71,7 +74,7 @@ public:
   PaletteSet const* GetPalette() const { return m_palette; }
   int GetFlags() const { return m_flags; }
   int GetSwap() const { return m_swapindex; }
-  int GetSharedBits() const { return m_sharedbits + 1; }
+  int GetSharedField() const { return m_sharedbits; }
 
   // error management
   void SetError(Scr4 &error) { m_besterror = error; m_best = false; }
@@ -90,6 +93,7 @@ public:
 
 protected:
   PaletteSet const* m_palette;
+  const int *m_sharedmap;
   int m_flags;
   int m_mode;
   int m_swapindex;
