@@ -224,7 +224,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
-  int zb = GetSharedBits();
+  int zb = GetSharedField();
 
   vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
 
@@ -245,10 +245,9 @@ void PaletteRangeFit::Compress(void* block, int mode)
   Vec4 codes[1 << 4];
 
   // loop over all sets
-  for (int s = 0; s < (isets + asets); s++) {
+  for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // cache some values
     int const count = m_palette->GetCount(s);
@@ -424,11 +423,8 @@ void PaletteRangeFit::Compress(void* block, int mode)
     Scr4 verify_error2 = Scr4(0.0f); SumError(closest, mode, verify_error2);
     abort();
   }
-  if (!(error < m_besterror))
-    return;
-#endif
 
-#if !defined(NDEBUG) && defined(DEBUG_DETAILS)
+#if defined(DEBUG_DETAILS)
   fprintf(stderr, "m: %1d, s: %1d+%1d, n:", mode, isets, asets);
   fprintf(stderr, " %2d", 0 < (isets + asets) ? m_palette->GetCount(0) : 0);
   fprintf(stderr, " %2d", 1 < (isets + asets) ? m_palette->GetCount(1) : 0);
@@ -441,9 +437,52 @@ void PaletteRangeFit::Compress(void* block, int mode)
   else
     fprintf(stderr, ", r: --");
   if (GetSelectionBits(mode) > 0)
-    fprintf(stderr, ", i: %1d,%1d", GetSelection() ? ib : jb, GetSelection() ? jb : ib);
+    fprintf(stderr, ", i: %1d,%1d", !m_swapindex ? ib : jb, !m_swapindex ? jb : ib);
   else
     fprintf(stderr, ", i:  %1d ", ib);
+  
+#if 0
+  // TODO: this is a unit test, put into unit-tests
+  for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
+    Vec4 fstart = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
+    Vec4 fend   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
+    
+    if (~sb) {
+      if (mode == 6) {
+	Vec4 _s[1] = {m_start[s]};
+	Vec4 _e[1] = {m_end  [s]};
+	Col4 _a[1][FIELDN];
+	Col4 _b[1][FIELDN];
+
+	FloatTo<7,7,7,7,1,0>(_s, _a, sb >> SBSTART);
+	FloatTo<7,7,7,7,1,0>(_e, _b, sb >> SBEND);
+	UnpackFrom<7,7,7,7,1,0>(_a);
+	UnpackFrom<7,7,7,7,1,0>(_b);
+	
+	assert(_a[0][0].R() == (int)(fstart.X() * 255.0f));
+	assert(_a[0][0].G() == (int)(fstart.Y() * 255.0f));
+	assert(_a[0][0].B() == (int)(fstart.Z() * 255.0f));
+	assert(_a[0][0].A() == (int)(fstart.W() * 255.0f));
+      }
+      else if (mode == 7) {
+	Vec4 _s[1] = {m_start[s]};
+	Vec4 _e[1] = {m_end  [s]};
+	Col4 _a[1][FIELDN];
+	Col4 _b[1][FIELDN];
+
+	FloatTo<5,5,5,5,1,0>(_s, _a, sb >> SBSTART);
+	FloatTo<5,5,5,5,1,0>(_e, _b, sb >> SBEND);
+	UnpackFrom<5,5,5,5,1,0>(_a);
+	UnpackFrom<5,5,5,5,1,0>(_b);
+	
+	assert(_a[0][0].R() == (int)(fstart.X() * 255.0f));
+	assert(_a[0][0].G() == (int)(fstart.Y() * 255.0f));
+	assert(_a[0][0].B() == (int)(fstart.Z() * 255.0f));
+	assert(_a[0][0].A() == (int)(fstart.W() * 255.0f));
+      }
+    }
+  }
+#endif
 
   if (!(error < m_besterror)) {
     fprintf(stderr, ", e: %.8f (> %.8f)\n", error.X(), m_besterror.X());
@@ -452,6 +491,10 @@ void PaletteRangeFit::Compress(void* block, int mode)
 
   fprintf(stderr, ", e: %.8f (< %.8f)\n", error.X(), m_besterror.X());
 #endif // NDEBUG
+
+  if (!(error < m_besterror))
+    return;
+#endif
 
   // remap the indices
   for (int s = 0;     s <  isets         ; s++)
