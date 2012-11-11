@@ -141,7 +141,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
-  int zb = GetSharedBits();
+  int zb = GetSharedField();
 
   vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
 
@@ -162,10 +162,9 @@ void PaletteNormalFit::Compress(void* block, int mode)
   Vec4 codes[1 << 4];
 
   // loop over all sets
-  for (int s = 0; s < (isets + asets); s++) {
+  for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // cache some values
     int const count = m_palette->GetCount(s);
