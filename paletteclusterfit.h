@@ -57,6 +57,8 @@ private:
   void CompressC4(void* block, int mode);
 
   bool ConstructOrdering(Vec4 const& axis, int iteration, int set);
+  
+  Scr4 ClusterSearch4Alpha(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
 
   Scr4 ClusterSearch4Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
   Scr4 ClusterSearch8Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
@@ -71,9 +73,11 @@ private:
 
   int  m_iterationCount;
   Vec4 m_principle[4];
-  Vec4 m_xsum_wsum[4];
+
+  Vec4 m_xsum_wsum[4 * 2];
 //Vec4 m_xxsum_wwsum[4];
-  Vec4 m_points_weights[4][16];
+  Vec4 m_points_weights[4][16 * 2];
+
   a16 u8 m_order[4][16 * kMaxIterations];
 };
 #endif
