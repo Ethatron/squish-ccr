@@ -36,6 +36,55 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
+static const int skip[2][3] = {
+  {1 /* 1 to 1 */, 3 /* 3 to  3 */,  7 /*  7 to  7 */},
+  {1 /* 1 to 3 */, 7 /* 7 to 15 */, 37 /* 37 to 63 */}
+};
+
+static const int maps[2][64] = {
+  { 0 << SBSTART | 0 << SBEND, 1 << SBSTART | 1 << SBEND, // 000|000 + 001|001
+    2 << SBSTART | 2 << SBEND, 3 << SBSTART | 3 << SBEND, // 010|010 + 011|011
+    4 << SBSTART | 4 << SBEND, 5 << SBSTART | 5 << SBEND, // 100|100 + 101|101
+    6 << SBSTART | 6 << SBEND, 7 << SBSTART | 7 << SBEND} // 110|110 + 111|111
+  ,
+  { 0 << SBSTART | 0 << SBEND, 
+			       1 << SBSTART | 1 << SBEND, 0 << SBSTART | 1 << SBEND, 1 << SBSTART | 0 << SBEND,
+
+    0 << SBSTART | 2 << SBEND, 
+    2 << SBSTART | 0 << SBEND, 
+    2 << SBSTART | 2 << SBEND,
+			       1 << SBSTART | 2 << SBEND, 0 << SBSTART | 3 << SBEND, 1 << SBSTART | 3 << SBEND,
+                               3 << SBSTART | 0 << SBEND, 2 << SBSTART | 1 << SBEND, 3 << SBSTART | 1 << SBEND,
+                               3 << SBSTART | 2 << SBEND, 2 << SBSTART | 3 << SBEND, 3 << SBSTART | 3 << SBEND,
+
+    0 << SBSTART | 4 << SBEND,
+    0 << SBSTART | 6 << SBEND,
+    2 << SBSTART | 4 << SBEND,
+    2 << SBSTART | 6 << SBEND, 
+    4 << SBSTART | 0 << SBEND,
+    4 << SBSTART | 2 << SBEND, 
+    4 << SBSTART | 4 << SBEND,
+    4 << SBSTART | 6 << SBEND, 
+    6 << SBSTART | 0 << SBEND, 
+    6 << SBSTART | 2 << SBEND, 
+    6 << SBSTART | 4 << SBEND, 
+    6 << SBSTART | 6 << SBEND,
+                               5 << SBSTART | 4 << SBEND, 4 << SBSTART | 5 << SBEND, 5 << SBSTART | 5 << SBEND,
+                               5 << SBSTART | 0 << SBEND, 4 << SBSTART | 1 << SBEND, 5 << SBSTART | 1 << SBEND,
+			       1 << SBSTART | 4 << SBEND, 0 << SBSTART | 5 << SBEND, 1 << SBSTART | 5 << SBEND,
+
+                               1 << SBSTART | 6 << SBEND, 0 << SBSTART | 7 << SBEND, 1 << SBSTART | 7 << SBEND,
+
+                               3 << SBSTART | 4 << SBEND, 2 << SBSTART | 5 << SBEND, 3 << SBSTART | 5 << SBEND,
+                               3 << SBSTART | 6 << SBEND, 2 << SBSTART | 7 << SBEND, 3 << SBSTART | 7 << SBEND,
+                               5 << SBSTART | 2 << SBEND, 4 << SBSTART | 3 << SBEND, 5 << SBSTART | 3 << SBEND,
+                               5 << SBSTART | 6 << SBEND, 4 << SBSTART | 7 << SBEND, 5 << SBSTART | 7 << SBEND,
+                               7 << SBSTART | 0 << SBEND, 6 << SBSTART | 1 << SBEND, 7 << SBSTART | 1 << SBEND,
+                               7 << SBSTART | 2 << SBEND, 6 << SBSTART | 3 << SBEND, 7 << SBSTART | 3 << SBEND,
+                               7 << SBSTART | 4 << SBEND, 6 << SBSTART | 5 << SBEND, 7 << SBSTART | 5 << SBEND,
+                               7 << SBSTART | 6 << SBEND, 6 << SBSTART | 7 << SBEND, 7 << SBSTART | 7 << SBEND}
+};
+
 /*  Mode NS PB RB ISB CB AB EPB SPB IB IB2	NS: Number of subsets in each partition
  *  ---- -- -- -- --- -- -- --- --- -- ---	PB: Partition bits
  *  0    3  4  0  0   4  0  1   0   3  0	RB: Rotation bits
@@ -87,10 +136,21 @@ int PaletteFit::GetSelectionBits(int mode) {
 }
 
 int PaletteFit::GetSharedBits(int mode) {
-  return
-    (PBcfg[mode].NS >= 1 ? (PBcfg[mode].EPB << 3) + (PBcfg[mode].SPB << 0) : 0) +
-    (PBcfg[mode].NS >= 2 ? (PBcfg[mode].EPB << 4) + (PBcfg[mode].SPB << 1) : 0) +
-    (PBcfg[mode].NS >= 3 ? (PBcfg[mode].EPB << 5) + (PBcfg[mode].SPB << 2) : 0);
+  if (PBcfg[mode].EPB) return (1 << (PBcfg[mode].NS * PBcfg[mode].EPB * 2)) - 1;
+  if (PBcfg[mode].SPB) return (1 << (PBcfg[mode].NS * PBcfg[mode].SPB * 1)) - 1;
+  return 0;
+}
+
+const int *PaletteFit::GetSharedMap(int mode) {
+  if (PBcfg[mode].EPB) return maps[1];
+  if (PBcfg[mode].SPB) return maps[0];
+  return NULL;
+}
+
+int PaletteFit::GetSharedSkip(int mode) {
+  if (PBcfg[mode].EPB) return skip[1][PBcfg[mode].NS];
+  if (PBcfg[mode].SPB) return skip[0][PBcfg[mode].NS];
+  return NULL;
 }
 
 int PaletteFit::GetPrecisionBits(int mode) {
@@ -147,10 +207,11 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
   // initialize the best error
   m_besterror = Scr4(FLT_MAX);
   m_best = false;
-
+  
+  m_mode = ((m_flags & kVariableCodingModes) >> 24) - 1;
+  m_sharedmap = GetSharedMap(m_mode);
   m_swapindex = swap;
   m_sharedbits = SR(shared);
-  m_mode = ((m_flags & kVariableCodingModes) >> 24) - 1;
 }
 
 void PaletteFit::Compress(void* block)
@@ -221,7 +282,7 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Scr4 &error) {
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
-  int zb = GetSharedBits();
+  int zb = GetSharedField();
 
   vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
 
@@ -237,10 +298,9 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Scr4 &error) {
   Vec4 codes[1 << 4];
 
   // loop over all sets
-  for (int s = 0; s < (isets + asets); s++) {
+  for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
     Vec4 metric = m_metric[s < isets ? 0 : 1];
@@ -269,7 +329,7 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
-  int zb = GetSharedBits();
+  int zb = GetSharedField();
 
   vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
 
@@ -291,10 +351,9 @@ void PaletteFit::Decompress(u8 *rgba, int mode)
   int codes[1 << 4];
 
   // loop over all sets
-  for (int s = 0; s < (isets + asets); s++) {
+  for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
     int mk = !asets ? 0xFFFFFFFF : (s < isets ? 0x00FFFFFF : 0xFF000000);
 
     // old original quantizer
