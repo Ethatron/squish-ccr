@@ -78,7 +78,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 
 #define sp_lookup_5u1_4_ck_    sp_lookup_6_4
 #define sp_lookup_4u1_8_ck_    sp_lookup_5_8
-#elif	(FEATURE_SHAREDBITS_TRIALS == 0)
+#else
   // merge start and end shared bits
   sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
   
@@ -89,21 +89,8 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 #define sp_lookup_6s1_8_sb_    (SK(sb) ? sp_lookup_7_8  : sp_lookup_6s1_8[sb&1])
 #define sp_lookup_7u1_16_sb_   (SK(sb) ? sp_lookup_8_16 : sp_lookup_7u1_16[sb])
 
-#define sp_lookup_5u1_4_ck_    (GetSharedBits() ? sp_lookup_5u1_4_sb_ : sp_lookup_6_4)
-#define sp_lookup_4u1_8_ck_    (GetSharedBits() ? sp_lookup_4u1_8_sb_ : sp_lookup_5_8)
-#else	
-  // merge start and end shared bits
-  sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
-  
-  // no bailouts happen here
-#define sp_lookup_5u1_4_sb_    sp_lookup_5u1_4[sb]
-#define sp_lookup_7u1_4_sb_    sp_lookup_7u1_4[sb]
-#define sp_lookup_4u1_8_sb_    sp_lookup_4u1_8[sb]
-#define sp_lookup_6s1_8_sb_    sp_lookup_6s1_8[sb&1]
-#define sp_lookup_7u1_16_sb_   sp_lookup_7u1_16[sb]
-
-#define sp_lookup_5u1_4_ck_    (GetSharedBits() ? sp_lookup_5u1_4_sb_ : sp_lookup_6_4)
-#define sp_lookup_4u1_8_ck_    (GetSharedBits() ? sp_lookup_4u1_8_sb_ : sp_lookup_5_8)
+#define sp_lookup_5u1_4_ck_    (SK(sb) ? sp_lookup_6_4  : sp_lookup_5u1_4_sb_)
+#define sp_lookup_4u1_8_ck_    (SK(sb) ? sp_lookup_5_8  : sp_lookup_4u1_8_sb_)
 #endif
 
   assume(ib >= 2 && ib <= 4);
