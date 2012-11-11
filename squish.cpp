@@ -114,6 +114,14 @@ struct statistics gstat = {0};
 
 void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 {
+#if !defined(NDEBUG) && defined(DEBUG_SETTING)
+#define DEBUG_MODE	kVariableCodingMode1
+#define DEBUG_FIT	kColourRangeFit   //kColourClusterFit * 15
+
+  flags = (flags & (~kVariableCodingModes)) | (DEBUG_MODE);
+  flags = (flags & (~kColourIterativeClusterFit)) | (DEBUG_FIT);
+#endif
+
   /* we start with 1 set so we get some statistics about the color-
    * palette, based on that we decide if we need to search into higher
    * number of sets
@@ -134,22 +142,11 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
    * rangefit searches for the best configuration (partition/swap/rotation)
    * optionally clusterfit makes the best of that partition
    */
-#if !defined(NDEBUG) && defined(DEBUG_SETTING)
-#define DEBUG_MODE	kVariableCodingMode1
-#define DEBUG_FIT	kColourRangeFit   //kColourClusterFit * 15
-
-  flags = (flags & (~kVariableCodingModes)) | (DEBUG_MODE);
-  flags = (flags & (~kColourIterativeClusterFit)) | (DEBUG_FIT);
-#endif
-
-  int numm = flags &  ( kVariableCodingModes),
-        sm = (numm == 0 ? 1 : numm >> 24),
-	em = (numm == 0 ? 7 : numm >> 24),
-	om = (numm == 0 ? 1 :          0);
-             flags &= (~kVariableCodingModes);
-
   static const int modeorder[3][8] = {
     {
+#define MODEORDER_EXPL	    0
+#define MODEORDER_EXPL_MIN  0
+#define MODEORDER_EXPL_MAX  7
       // order: mode (lo to hi)
       kVariableCodingMode1, //{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 },
       kVariableCodingMode2, //{ 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
@@ -161,6 +158,9 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
       kVariableCodingMode8, //{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 },
     },
     {
+#define MODEORDER_OPAQ	    1
+#define MODEORDER_OPAQ_MIN  0
+#define MODEORDER_OPAQ_MAX  6
       // order: sets (lo to hi), ibs (hi to lo), prc (hi to lo)
       kVariableCodingMode7, //{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
       kVariableCodingMode5, //{ 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
@@ -175,6 +175,9 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
       0,
     },
     {
+#define MODEORDER_TRNS	    2
+#define MODEORDER_TRNS_MIN  0
+#define MODEORDER_TRNS_MAX  3
       // order: sets (lo to hi), ibs (hi to lo), prc (hi to lo)
       kVariableCodingMode7, //{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
       kVariableCodingMode5, //{ 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
@@ -185,6 +188,12 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
       0, 0, 0, 0
     }
   };
+  
+  int numm = flags &  ( kVariableCodingModes),
+        sm = (numm == 0 ? MODEORDER_OPAQ_MIN : (numm >> 24) - 1),
+	em = (numm == 0 ? MODEORDER_OPAQ_MAX :               sm),
+	om = (numm == 0 ? MODEORDER_OPAQ     :   MODEORDER_EXPL);
+             flags &= (~kVariableCodingModes);
 
   // limits sets to 3 and choose the partition freely
   int lmts =  3;
@@ -200,7 +209,7 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
   Scr4 error(FLT_MAX);
 
   for (int m = sm; m <= em; m++) {
-    int mode = modeorder[om][m - 1];
+    int mode = modeorder[om][m];
     int mnum = (mode >> 24) - 1;
 
     // a mode has a specific number of sets, and variable rotations and partitions
@@ -250,27 +259,27 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
     
     // signal if we do we have anything better this iteration of the search
     bool better = false;
-    // check if we can do a cascade with the cluster-fit
-    bool cluster = ((flags & kColourRangeFit) == 0) && (((numi >> 0) & 0xFF) <= CLUSTERINDICES)
-                 && (mode != kVariableCodingMode8) && (((numi >> 16) & 0xFF) <= CLUSTERINDICES);
+    // check if we can do a cascade with the cluster-fit (merged alpha 4 bit is the only exception)
+    bool cluster = ((flags & kColourRangeFit) == 0) && (((numi >>  0) & 0xFF) <= CLUSTERINDICES)
+                                                    && (((numi >> 16) & 0xFF) <= CLUSTERINDICES);
 
     // if we see we have transparent values, back up from trying to test non-alpha only modes
+    // this will affect only successive trials, if an explicit mode is requested it's a NOP
     if (initial.IsTransparent())
-      om = 2, em = 4;
+      om = MODEORDER_TRNS, em = MODEORDER_TRNS_MAX;
 
 #if	defined(FEATURE_SHAREDBITS_TRIALS)
-    // if we see we have no transparent values, force the shared stop alpha-bit to 1 (stop is max and maps to 1.0f)
+    // if we see we have no transparent values, force at least one shared bit to 1, can be start or stop
     // the all transparent case isn't so crucial, when we use IGNORE_ALPHA0 it's redundant to force 0 anyway
-    if (!initial.IsTransparent() && initial.IsMergedAlpha()) {
-      // either force unique end to 1 or shared ends after (NOTE: no s-bit possible in merged alpha BC7-codings) 
-      sb |= eb >> (SBEND - SBSTART);
-      assert(eb >> (SBEND - SBSTART));
-    }
+    if (!initial.IsTransparent() && initial.IsMergedAlpha())
+      sb = (~sb ? PaletteFit::GetSharedSkip(mnum) : sb);
     // otherwise just use the most occurring bit (parity) for all other cases
-    else if (!FEATURE_SHAREDBITS_TRIALS)
+    // otherwise just use the most occurring bit (parity) for all non-alpha cases
+    else if (((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLYOPAQUE)) ||
+	     ((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLY) && (mode < kVariableCodingMode5)))
       sb = eb = SBSKIP;
 #endif
-
+    
     // TODO: partition & rotation are mutual exclusive
 
     // search for the best partition
