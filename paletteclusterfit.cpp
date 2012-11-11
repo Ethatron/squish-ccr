@@ -44,7 +44,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-//bool const trns = m_palette->IsMergedAlpha();
+  bool const trns = m_palette->IsMergedAlpha();
 
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -67,8 +67,21 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
     if (count != 1) {
       Vec4 centroid;
 
+      // combined alpha
+      if (trns) {
+        Sym4x4 covariance;
+
+        // get the covariance matrix
+        if (m_palette->IsUnweighted(s))
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s]);
+        else
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s], weights);
+
+	// compute the principle component
+	GetPrincipleComponent(covariance, m_principle[s]);
+      }
       // no or separate alpha
-      assert(!m_palette->IsMergedAlpha()); {
+      else {
         Sym3x3 covariance;
 
         // get the covariance matrix
@@ -121,19 +134,43 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
   // copy the ordering and weight all the points
   Vec4 const* unweighted = m_palette->GetPoints(set);
   Vec4 const* weights = m_palette->GetWeights(set);
+  bool const trns = m_palette->IsMergedAlpha();
 
-  m_xsum_wsum[set] = VEC4_CONST(0.0f);
-//m_xxsum_wwsum[set] = VEC4_CONST(0.0f);
-  for (int i = 0; i < count; ++i) {
-    int j = order[i];
+  if (trns) {
+    m_xsum_wsum  [(set << 1) + 0] = VEC4_CONST(0.0f);
+    m_xsum_wsum  [(set << 1) + 1] = VEC4_CONST(0.0f);
+//  m_xxsum_wwsum[(set << 1) + 0] = VEC4_CONST(0.0f);
+//  m_xxsum_wwsum[(set << 1) + 1] = VEC4_CONST(0.0f);
+    for (int i = 0; i < count; ++i) {
+      int j = order[i];
 
-    Vec4 p = TransferW(unweighted[j], Vec4(1.0f));
-    Vec4 w(weights[j]);
-    Vec4 x = p * w;
+      Vec4 p = unweighted[j];
+      Vec4 w(weights[j]);
+      Vec4 x = p * w;
 
-    m_points_weights[set][i] = x;
-    m_xsum_wsum     [set]   += x;
-//  m_xxsum_wwsum   [set]   += x * x;
+      m_points_weights[set][(i << 1) + 0] = x;
+      m_points_weights[set][(i << 1) + 1] = w;
+
+      m_xsum_wsum     [(set << 1) + 0]   += x;
+      m_xsum_wsum     [(set << 1) + 1]   += x;
+//    m_xxsum_wwsum   [(set << 1) + 0]   += x * x;
+//    m_xxsum_wwsum   [(set << 1) + 1]   += x * x;
+    }
+  }
+  else {
+    m_xsum_wsum  [set] = VEC4_CONST(0.0f);
+//  m_xxsum_wwsum[set] = VEC4_CONST(0.0f);
+    for (int i = 0; i < count; ++i) {
+      int j = order[i];
+
+      Vec4 p = TransferW(unweighted[j], Vec4(1.0f));
+      Vec4 w(weights[j]);
+      Vec4 x = p * w;
+
+      m_points_weights[set][i] = x;
+      m_xsum_wsum     [set]   += x;
+//    m_xxsum_wwsum   [set]   += x * x;
+    }
   }
 
   return true;
@@ -291,6 +328,153 @@ Scr4 PaletteClusterFit::ClusterSearch4(u8 (&closest)[4][16], int count, int set,
 
       // advance
       part0 += m_points_weights[set][i];
+    }
+
+    // stop if we didn't improve in this iteration
+    if (bestiteration != iterationIndex)
+      break;
+
+    // advance if possible
+    ++iterationIndex;
+    if (iterationIndex == m_iterationCount)
+      break;
+
+    // stop if a new iteration is an ordering that has already been tried
+    Vec4 axis = KillW(bestend - beststart);
+    if (!ConstructOrdering(axis, iterationIndex, set))
+      break;
+  }
+
+  // assign closest points
+  u8 const* order = (u8*)m_order[set] + 16 * bestiteration;
+
+  for (int m =     0; m < besti; ++m)
+    closest[set][order[m]] = 0;
+  for (int m = besti; m < bestj; ++m)
+    closest[set][order[m]] = 1;
+  for (int m = bestj; m < bestk; ++m)
+    closest[set][order[m]] = 2;
+  for (int m = bestk; m < count; ++m)
+    closest[set][order[m]] = 3;
+
+  // copy rgb into the common start/end definition
+  m_start[set] = beststart;
+  m_end  [set] = bestend;
+
+  return besterror;
+}
+
+Scr4 PaletteClusterFit::ClusterSearch4Alpha(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb)
+{
+  /*
+  Vec4 const weight1(21.0f / 64.0f, 21.0f / 64.0f, 21.0f / 64.0f,  441.0f / 4096.0f);
+  Vec4 const weight2(43.0f / 64.0f, 43.0f / 64.0f, 43.0f / 64.0f, 1849.0f / 4096.0f);
+  Vec4 const twonineths                               = VEC4_CONST(882.0f / 4096.0f);
+  */
+  Vec4 const weight1(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
+  Vec4 const weight2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
+  Vec4 const twonineths                        = VEC4_CONST(2.0f / 9.0f);
+  Vec4 const fivenineths                       = VEC4_CONST(5.0f / 9.0f);
+  Vec4 const convnineths                       = VEC4_CONST(2.5f / 1.0f);
+
+  Vec4 const two = VEC4_CONST(2.0f);
+  Vec4 const half = VEC4_CONST(0.5f);
+
+  assume((count > 0) && (count <= 16));
+
+  // match each point to the closest code
+  int besti = 0, bestj = 0, bestk = 0;
+  int bestiteration = 0;
+  Vec4 beststart = VEC4_CONST(0.0f);
+  Vec4 bestend   = VEC4_CONST(0.0f);
+
+  // prepare an ordering using the principle axis
+  ConstructOrdering(m_principle[set], 0, set);
+
+  // check all possible clusters and iterate on the total order
+  Scr4 besterror = Scr4(FLT_MAX);
+
+  // loop over iterations (we avoid the case that all points in first or last cluster)
+  for (int iterationIndex = 0;;) {
+    // cache some values
+    Vec4 const xsum_xsum = m_xsum_wsum[(set << 1) + 0];
+    Vec4 const wsum_wsum = m_xsum_wsum[(set << 1) + 1];
+
+    // first cluster [0,i) is at the start
+    Vec4 part0 = VEC4_CONST(0.0f);
+    Vec4 wgts0 = VEC4_CONST(0.0f);
+    for (int i = 0; i < count; ++i) {
+
+    // second cluster [i,j) is one third along
+    Vec4 part1 = VEC4_CONST(0.0f);
+    Vec4 wgts1 = VEC4_CONST(0.0f);
+    for (int j = i;;) {
+
+    // third cluster [j,k) is two thirds along
+    Vec4 part2 = (j == 0) ? m_points_weights[set][0] : VEC4_CONST(0.0f);
+    Vec4 wgts2 = (j == 0) ? m_points_weights[set][1] : VEC4_CONST(0.0f);
+    int kmin = (j == 0) ? 1 : j;
+    for (int k = kmin;;) {
+
+	  // last cluster [k,count) is at the end
+	  Vec4 part3 = xsum_xsum - part2 - part1 - part0;
+	  Vec4 wgts3 = wsum_wsum - wgts2 - wgts1 - wgts0;
+//	  Vec4 partI = xsum_xsum - part2 - part1;
+//	  Vec4 wgtsI = wsum_wsum - wgts2 - wgts1;
+
+	  // compute least squares terms directly
+	  Vec4 const alphax_sum = MultiplyAdd(part2, weight1, MultiplyAdd(part1, weight2, part0));
+	  Vec4 const  betax_sum = MultiplyAdd(part1, weight1, MultiplyAdd(part2, weight2, part3));
+
+	  Vec4 const alpha2_sum = MultiplyAdd(wgts2, weight1, MultiplyAdd(wgts1, weight2, wgts0));
+	  Vec4 const  beta2_sum = MultiplyAdd(wgts1, weight1, MultiplyAdd(wgts2, weight2, wgts3));
+
+	  Vec4 const alphabeta_sum = twonineths * (wgts1 + wgts2);
+
+	  // compute the least-squares optimal points
+	  Vec4 factor = Reciprocal(NegativeMultiplySubtract(alphabeta_sum, alphabeta_sum, alpha2_sum * beta2_sum));
+	  Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_sum, alphax_sum *  beta2_sum) * factor;
+	  Vec4 b = NegativeMultiplySubtract(alphax_sum, alphabeta_sum,  betax_sum * alpha2_sum) * factor;
+
+	  // snap floating-point-values to the integer-lattice
+	  a = q.SnapToLattice(a, sb, 1 << SBSTART);
+	  b = q.SnapToLattice(b, sb, 1 << SBEND);
+
+	  // compute the error (we skip the constant xxsum)
+	  Vec4 e1 = MultiplyAdd(a * a, alpha2_sum, b * b * beta2_sum);
+	  Vec4 e2 = NegativeMultiplySubtract(a, alphax_sum, a * b * alphabeta_sum);
+	  Vec4 e3 = NegativeMultiplySubtract(b, betax_sum, e2);
+	  Vec4 e4 = MultiplyAdd(two, e3, e1);
+
+	  // apply the metric to the error term
+	  Scr4 eS = Dot(e4, metric);
+
+	  // keep the solution if it wins (error can be negative ...)
+	  if (besterror > eS) {
+	    besterror = eS;
+
+	    beststart = a;
+	    bestend   = b;
+	    bestiteration = iterationIndex;
+
+	    besti = i,
+	    bestj = j,
+	    bestk = k;
+	  }
+
+      // advance
+      if (k == count) break;
+      part2 += m_points_weights[set][(k << 1) + 0];
+      wgts2 += m_points_weights[set][(k << 1) + 1]; ++k; }
+
+      // advance
+      if (j == count) break;
+      part1 += m_points_weights[set][(j << 1) + 0];
+      wgts1 += m_points_weights[set][(j << 1) + 1]; ++j; }
+
+      // advance
+      part0 += m_points_weights[set][(i << 1) + 0];
+      wgts0 += m_points_weights[set][(i << 1) + 1];
     }
 
     // stop if we didn't improve in this iteration
@@ -1295,7 +1479,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   int jb = ib >> 16; ib = ib & 0xFF;
   int cb = GetPrecisionBits(mode);
   int ab = cb >> 16; cb = cb & 0xFF;
-  int zb = GetSharedBits();
+  int zb = GetSharedField();
 
   vQuantizer qc = vQuantizer(cb, cb, cb, ab, zb);
   vQuantizer qa = vQuantizer(ab, ab, ab, ab, zb);
@@ -1317,10 +1501,9 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   Vec4 codes[1 << 4];
 
   // loop over all multi-channel sets
-  for (int s = 0; s < (isets + asets); s++) {
+  for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-    int sb = m_sharedbits >> s; assert(zb || (sb == SBSKIP));
 
     // the separate alpha-channel is splatted into the rgb channels
     vQuantizer &q = (s < isets ? qc : qa);
@@ -1384,7 +1567,9 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
       assume(kb >= 2 && kb <= 3);
       switch(kb) {
         case 2:
-          if (m_palette->IsUnweighted(s))
+          if (m_palette->IsMergedAlpha())
+            cerror = ClusterSearch4Alpha   (closest, count, s, KillW(cmetric), q, sb);
+          else if (m_palette->IsUnweighted(s))
             cerror = ClusterSearch4Constant(closest, count, s, KillW(cmetric), q, sb);
           else
             cerror = ClusterSearch4        (closest, count, s, KillW(cmetric), q, sb);
@@ -1466,22 +1651,30 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   m_best = true;
 }
 
+void PaletteClusterFit::CompressC2(void* block, int mode) {
+  /* 2bit it can be done by CompressS23 as well */
+  CompressS23(block, mode);
+}
+
 void PaletteClusterFit::Compress(void* block, int mode) {
   switch (mode) {
 #if (CLUSTERINDICES >= 2)
-    case 2: /*2*/ CompressS23(block, mode); break;
-    case 3: /*2*/ CompressS23(block, mode); break;
+    case 2: /*2*/  CompressS23(block, mode); break;
+    case 3: /*2*/  CompressS23(block, mode); break;
     case 5: /*22*/ CompressS23(block, mode); break;
+
+    case 7: /*2*/  CompressC2 (block, mode); break;
 #endif
 
 #if (CLUSTERINDICES >= 3)
-    case 0: /*3*/ CompressS23(block, mode); break;
-    case 1: /*3*/ CompressS23(block, mode); break;
+    case 0: /*3*/  CompressS23(block, mode); break;
+    case 1: /*3*/  CompressS23(block, mode); break;
     case 4: /*23*/ CompressS23(block, mode); break;
 #endif
-
+      
+#if (CLUSTERINDICES >= 4)
     case 6: /*CompressC4(block, mode);*/ break;
-    case 7: /*CompressC2(block, mode);*/ break;
+#endif
   }
 }
 #endif
