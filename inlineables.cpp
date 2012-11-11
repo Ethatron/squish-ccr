@@ -109,17 +109,19 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
 {
   /* not both yet */
   assert(!eb || !sb);
+  assert((!eb && !sb && !(~bitset)) || ((eb || sb) && (~bitset)));
 
   // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
   vQuantizer q = vQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
-    ab + eb + sb
+    ab + eb + sb,
+    eb + sb ? 0 : ~0
   );
   
   // pack into a single value
-          field[0][COLORA] = q.QuantizeToInt(colour[0]);
+          field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1);
           field[0][COLORA] = field[0][COLORA] >> (eb + sb);
 
   if (eb) field[0][UNIQUE] = (Col4(bitset) >> 0) & Col4(1);
@@ -224,18 +226,20 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
 {
   /* not both yet */
   assert(!eb || !sb);
+  assert((!eb && !sb && !(~bitset)) || ((eb || sb) && (~bitset)));
 
   // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
   vQuantizer q = vQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
-    ab + eb + sb
+    ab + eb + sb,
+    eb + sb ? 0 : ~0
   );
   
   // pack into a single value
-          field[0][COLORA] = q.QuantizeToInt(colour[0]);
-          field[1][COLORA] = q.QuantizeToInt(colour[1]);
+          field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1);
+          field[1][COLORA] = q.QuantizeToInt(colour[1], bitset, 1);
           field[0][COLORA] = field[0][COLORA] >> (eb + sb);
           field[1][COLORA] = field[1][COLORA] >> (eb + sb);
 
@@ -357,19 +361,21 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
 {
   /* not both yet */
   assert(!eb || !sb);
+  assert((!eb && !sb && !(~bitset)) || ((eb || sb) && (~bitset)));
 
   // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
   vQuantizer q = vQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
-    ab + eb + sb
+    ab + eb + sb,
+    eb + sb ? 0 : ~0
   );
   
   // pack into a single value
-          field[0][COLORA] = q.QuantizeToInt(colour[0]);
-          field[1][COLORA] = q.QuantizeToInt(colour[1]);
-          field[2][COLORA] = q.QuantizeToInt(colour[2]);
+          field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1);
+          field[1][COLORA] = q.QuantizeToInt(colour[1], bitset, 1);
+          field[2][COLORA] = q.QuantizeToInt(colour[2], bitset, 1);
           field[0][COLORA] = field[0][COLORA] >> (eb + sb);
           field[1][COLORA] = field[1][COLORA] >> (eb + sb);
           field[2][COLORA] = field[2][COLORA] >> (eb + sb);
