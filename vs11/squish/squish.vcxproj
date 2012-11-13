@@ -212,6 +212,7 @@
     <ClCompile Include="..\..\paletterangefit.cpp" />
     <ClCompile Include="..\..\paletteset.cpp" />
     <ClCompile Include="..\..\singlecolourfit.cpp" />
+    <ClCompile Include="..\..\singlecoloursnap.cpp" />
     <ClCompile Include="..\..\singlepalettefit.cpp" />
     <ClCompile Include="..\..\squish.cpp" />
   </ItemGroup>
@@ -236,6 +237,7 @@
     <ClInclude Include="..\..\simd_sse.h" />
     <ClInclude Include="..\..\simd_ve.h" />
     <ClInclude Include="..\..\singlecolourfit.h" />
+    <ClInclude Include="..\..\singlecoloursnap.h" />
     <ClInclude Include="..\..\singlepalettefit.h" />
     <ClInclude Include="..\..\squish.h" />
   </ItemGroup>

@@ -47,6 +47,7 @@ struct SingleColourLookup
   SC_SourceBlock sources[2];
 };
 
+#define	SCL_ITERATIVE
 #include "singlecolourlookup.inl"
 
 SingleColourFit::SingleColourFit(ColourSet const* colours, int flags)

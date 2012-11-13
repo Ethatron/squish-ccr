@@ -43,7 +43,7 @@ struct TargetValue
   SourceBlock sources[2];
 };
 
-static void GenerateDataDxt(std::string const& name, int bits, int colours)
+static void GenerateDataDxt(std::string const& name, int bits, int colours, bool direct = false)
 {
   TargetValue values[256];
   int count = ( 1 << bits );
@@ -138,36 +138,74 @@ static void GenerateDataDxt(std::string const& name, int bits, int colours)
       break;
   }
 
-  std::cout << "\nstatic SingleColourLookup" << " const " << name << "[] = \n{\n";
+  if (!direct) {
+    std::cout << "\nstatic SingleColourLookup" << " const sc_" << name << "[] = \n{\n";
 
-  for(int i = 0;;) {
-    std::cout << "  {{";
+    for(int i = 0;;) {
+      std::cout << "  {{";
 
-    for (int j = 0;;) {
-      SourceBlock const& block = values[i].sources[j];
-      if( j < colours )
-	std::cout << "{"
-	<<     (block.start <= 9 ? " " : "") << block.start << ","
-	<<     (block.end   <= 9 ? " " : "") << block.end   << ","
-	<<     (block.error <= 9 ? " " : "") << block.error << "}";
-      else
-	std::cout << "{0,0,0}";
+      for (int j = 0;;) {
+        SourceBlock const& block = values[i].sources[j];
+        if( j < colours )
+	  std::cout << "{"
+	  <<     (block.start <= 9 ? " " : "") << block.start << ","
+	  <<     (block.end   <= 9 ? " " : "") << block.end   << ","
+	  <<     (block.error <= 9 ? " " : "") << block.error << "}";
+        else
+	  std::cout << "{0,0,0}";
 
-      if (++j == indices)
-	break;
+        if (++j == indices)
+	  break;
+        std::cout << ",";
+      }
+
+      std::cout << "}}";
+      if (++i == 256)
+        break;
+
       std::cout << ",";
+      if (!(i & 3))
+        std::cout << "\n";
     }
 
-    std::cout << "}}";
-    if (++i == 256)
-      break;
-
-    std::cout << ",";
-    if (!(i & 3))
-      std::cout << "\n";
+    std::cout << "\n};\n";
   }
+  else {
+    std::cout << "\nstatic SingleColourLookup" << " const sc_" << name << "[] = \n{\n";
 
-  std::cout << "\n};\n";
+    for(int i = 0;;) {
+      std::cout << "  ";
+
+      if (values[i].sources[0].error <
+      	  values[i].sources[1].error) {
+      	fprintf(stderr, "assumption (error0 >= error1) incorrect!\n");
+      }
+
+      for (int j = indices - 1;;) {
+        SourceBlock const& block = values[i].sources[j];
+        if( j < colours )
+	  std::cout << "{"
+	  <<     (block.start <= 9 ? " " : "") << block.start << ","
+	  <<     (block.end   <= 9 ? " " : "") << block.end   << "}";
+        else
+	  std::cout << "{0,0}";
+
+        if (++j == indices)
+	  break;
+        std::cout << ",";
+      }
+
+      std::cout << "";
+      if (++i == 256)
+        break;
+
+      std::cout << ",";
+      if (!(i & 7))
+        std::cout << "\n";
+    }
+
+    std::cout << "\n};\n";
+  }
 }
 
 #include <set>
@@ -754,6 +792,14 @@ int main()
   }
 
   if (1) {
+    // DXT types (with Ryg observation: error0 >= error1 always)
+    GenerateDataDxt( "lookup_5_3",    5,     3 , true);
+    GenerateDataDxt( "lookup_6_3",    6,     3 , true);
+    GenerateDataDxt( "lookup_5_4",    5,     4 , true);
+    GenerateDataDxt( "lookup_6_4",    6,     4 , true);
+  }
+
+  if (0) {
     // BTC types
     GenerateDataBtc( "lookup_5_4",    5, 0,  4 );
     GenerateDataBtc( "lookup_6_4",    6, 0,  4 );
