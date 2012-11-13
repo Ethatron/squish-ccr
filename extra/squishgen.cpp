@@ -216,15 +216,18 @@ struct SSourceBlock
     interleaved = ((255 - std::abs(start - end)) << 0) & 0x0000FFFF;
 
     interleaved = ((start << 8) | (end << 0)) & 0x0000FFFF;
+    interleaved = ((start << 8) | (std::abs(start - end) << 0)) & 0x0000FFFF;
   }
 
   void setValue(int _index, int _error) {
     index = _index;
     error = std::abs(_error);
 
+    /*
     interleaved &= 0x00FFFF00;
     interleaved |= error << 24;
     interleaved |= index <<  0;
+    */
 
     // gear the index towards the higher endpoint
     // random indices
@@ -331,7 +334,8 @@ static void GenerateDataBtc( std::string const& name, int bits, int sharedbits, 
 	  ( casev2 << ( 0 ) );
 
 	// fill in the codebook with the these and intermediates
-	sb.seedValue(s, e);
+//	sb.seedValue(s, e);
+	sb.seedValue(a, b);
 
 	cset.addValue(sb, a, 0);
 
@@ -749,7 +753,7 @@ int main()
     GenerateDataDxt( "lookup_6_4",    6,     4 );
   }
 
-  if (0) {
+  if (1) {
     // BTC types
     GenerateDataBtc( "lookup_5_4",    5, 0,  4 );
     GenerateDataBtc( "lookup_6_4",    6, 0,  4 );
@@ -776,9 +780,9 @@ int main()
     //7,8,  0,0,  2,2       7,8	4,4
   }
 
-  if (1) {
+  if (0) {
     // RTG types
-//  GenerateDataRtg( "lookup_5g_4",    5, 0,  4 );
+    GenerateDataRtg( "lookup_5g_4",    5, 0,  4 );
 //  GenerateDataRtg( "lookup_6g_4",    6, 0,  4 );
 //  GenerateDataRtg( "lookup_7g_4",    6, 0,  4 );
   }

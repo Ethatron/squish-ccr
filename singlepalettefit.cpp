@@ -64,7 +64,7 @@ SinglePaletteFit::SinglePaletteFit(PaletteSet const* palette, int flags, int swa
 {
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, int cb, int ab, int sb, int ib, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask)
 {
 #if	!defined(FEATURE_SHAREDBITS_TRIALS)
   // silence the compiler
@@ -80,14 +80,14 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
 #define sp_lookup_4u1_8_ck_    sp_lookup_5_8
 #else
   // merge start and end shared bits
-  sb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
+  int lb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
   
   // allow bailout if whole == -1
-#define sp_lookup_5u1_4_sb_    (SK(sb) ? sp_lookup_6_4  : sp_lookup_5u1_4[sb])
-#define sp_lookup_7u1_4_sb_    (SK(sb) ? sp_lookup_8_4  : sp_lookup_7u1_4[sb])
-#define sp_lookup_4u1_8_sb_    (SK(sb) ? sp_lookup_5_8  : sp_lookup_4u1_8[sb])
-#define sp_lookup_6s1_8_sb_    (SK(sb) ? sp_lookup_7_8  : sp_lookup_6s1_8[sb&1])
-#define sp_lookup_7u1_16_sb_   (SK(sb) ? sp_lookup_8_16 : sp_lookup_7u1_16[sb])
+#define sp_lookup_5u1_4_sb_    (SK(sb) ? sp_lookup_6_4  : sp_lookup_5u1_4[lb])
+#define sp_lookup_7u1_4_sb_    (SK(sb) ? sp_lookup_8_4  : sp_lookup_7u1_4[lb])
+#define sp_lookup_4u1_8_sb_    (SK(sb) ? sp_lookup_5_8  : sp_lookup_4u1_8[lb])
+#define sp_lookup_6s1_8_sb_    (SK(sb) ? sp_lookup_7_8  : sp_lookup_6s1_8[lb&1])
+#define sp_lookup_7u1_16_sb_   (SK(sb) ? sp_lookup_8_16 : sp_lookup_7u1_16[lb])
 
 #define sp_lookup_5u1_4_ck_    (SK(sb) ? sp_lookup_6_4  : sp_lookup_5u1_4_sb_)
 #define sp_lookup_4u1_8_ck_    (SK(sb) ? sp_lookup_5_8  : sp_lookup_4u1_8_sb_)
@@ -118,7 +118,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       SinglePaletteLookup2 const* const lookups[] =
       { cl, cl, cl, al };
 
-      return ComputeEndPoints(set, metric, q, lookups, cmask);
+      return ComputeEndPoints(set, metric, lookups, cmask);
     } break;
     case 3: {
       SinglePaletteLookup4 const* cl;
@@ -140,7 +140,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       SinglePaletteLookup4 const* const lookups[] =
       { cl, cl, cl, al };
 
-      return ComputeEndPoints(set, metric, q, lookups, cmask);
+      return ComputeEndPoints(set, metric, lookups, cmask);
     } break;
     case 4: {
       SinglePaletteLookup8 const* cl;
@@ -161,7 +161,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
       SinglePaletteLookup8 const* const lookups[] =
       { cl, cl, cl, al };
 
-      return ComputeEndPoints(set, metric, q, lookups, cmask);
+      return ComputeEndPoints(set, metric, lookups, cmask);
     } break;
 
     default:
@@ -170,7 +170,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   }
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup2 const* const* lookups, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup2 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -178,7 +178,6 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
-  int AxFF = q.gridinv.A() - 1;
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
@@ -216,18 +215,21 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
     if (error < besterror) {
       // save the error
       besterror = error;
-      
-      m_start[set] = q.LookUpLattice(
+
+      Col4 s = Col4(
 	sources[0] ? sources[0]->start : 0x00,
 	sources[1] ? sources[1]->start : 0x00,
 	sources[2] ? sources[2]->start : 0x00,
-	sources[3] ? sources[3]->start : AxFF);
-      m_end[set] = q.LookUpLattice(
+	sources[3] ? sources[3]->start : 0xFF);
+      Col4 e = Col4(
 	sources[0] ? sources[0]->end   : 0x00,
 	sources[1] ? sources[1]->end   : 0x00,
 	sources[2] ? sources[2]->end   : 0x00,
-	sources[3] ? sources[3]->end   : AxFF);
+	sources[3] ? sources[3]->end   : 0xFF);
 
+      m_start[set] = Vec4(s) * (1.0f / 255.0f);
+      m_end  [set] = Vec4(e) * (1.0f / 255.0f);
+      
       m_index = (u8)(1 * index);
 
       // early out
@@ -239,7 +241,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   return besterror;
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup4 const* const* lookups, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup4 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -247,7 +249,6 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
-  int AxFF = q.gridinv.A() - 1;
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
@@ -285,17 +286,20 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
     if (error < besterror) {
       besterror = error;
       
-      m_start[set] = q.LookUpLattice(
+      Col4 s = Col4(
 	sources[0] ? sources[0]->start : 0x00,
 	sources[1] ? sources[1]->start : 0x00,
 	sources[2] ? sources[2]->start : 0x00,
-	sources[3] ? sources[3]->start : AxFF);
-      m_end[set] = q.LookUpLattice(
+	sources[3] ? sources[3]->start : 0xFF);
+      Col4 e = Col4(
 	sources[0] ? sources[0]->end   : 0x00,
 	sources[1] ? sources[1]->end   : 0x00,
 	sources[2] ? sources[2]->end   : 0x00,
-	sources[3] ? sources[3]->end   : AxFF);
+	sources[3] ? sources[3]->end   : 0xFF);
 
+      m_start[set] = Vec4(s) * (1.0f / 255.0f);
+      m_end  [set] = Vec4(e) * (1.0f / 255.0f);
+      
       m_index = (u8)(1 * index);
 
       // early out
@@ -307,7 +311,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   return besterror;
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer &q, SinglePaletteLookup8 const* const* lookups, u8 cmask)
+Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup8 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -315,7 +319,6 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
   const float *eLUT = ComputeGammaLUT(false);
-  int AxFF = q.gridinv.A() - 1;
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
@@ -353,17 +356,20 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, vQuantizer 
     if (error < besterror) {
       besterror = error;
       
-      m_start[set] = q.LookUpLattice(
+      Col4 s = Col4(
 	sources[0] ? sources[0]->start : 0x00,
 	sources[1] ? sources[1]->start : 0x00,
 	sources[2] ? sources[2]->start : 0x00,
-	sources[3] ? sources[3]->start : AxFF);
-      m_end[set] = q.LookUpLattice(
+	sources[3] ? sources[3]->start : 0xFF);
+      Col4 e = Col4(
 	sources[0] ? sources[0]->end   : 0x00,
 	sources[1] ? sources[1]->end   : 0x00,
 	sources[2] ? sources[2]->end   : 0x00,
-	sources[3] ? sources[3]->end   : AxFF);
+	sources[3] ? sources[3]->end   : 0xFF);
 
+      m_start[set] = Vec4(s) * (1.0f / 255.0f);
+      m_end  [set] = Vec4(e) * (1.0f / 255.0f);
+      
       m_index = (u8)(1 * index);
 
       // early out

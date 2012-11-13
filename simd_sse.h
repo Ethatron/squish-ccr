@@ -1830,10 +1830,15 @@ public:
 	
 	Vec4( float x, float y, float z, float w ) : m_v( _mm_setr_ps( x, y, z, w ) ) {}
 	Vec4( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
-	Vec4( Vec3::Arg &v, float w ) : m_v( v.m_v ) { m_v = _mm_or_ps( _mm_and_ps( m_v, _mm_castsi128_ps( _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) ) ),  _mm_setr_ps( 0.0f, 0.0f, 0.0f, w ) ); }
+	Vec4( float x, float y ) : m_v( _mm_setr_ps( x, y, 0.0f, 0.0f ) ) {}
+
 	Vec4( Vec4 x, Vec4 y, Vec4 z, Vec4 w ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), _mm_unpacklo_ps( y.m_v, w.m_v ) ) ) {}
 	Vec4( Vec4 x, Vec4 y, Vec4 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), _mm_unpacklo_ps( y.m_v,  _mm_set1_ps( 0.0f ) ) ) ) {}
 	Vec4( Vec4 x, Vec4 y ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_set1_ps( 0.0f ) ) ) {}
+
+	Vec4( Vec3::Arg &v, float w ) : m_v( v.m_v ) { m_v = _mm_or_ps( _mm_and_ps( m_v, _mm_castsi128_ps( _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) ) ),  _mm_setr_ps( 0.0f, 0.0f, 0.0f, w ) ); }
+
+	Vec4( Col4 &c ) : m_v( _mm_cvtepi32_ps( c.m_v ) ) {}
 
 	Vec3 GetVec3() const
 	{

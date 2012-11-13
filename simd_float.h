@@ -990,6 +990,8 @@ public:
     ((int *)destination)[3] = b.a;
   }
 
+  friend class Vec4;
+
 #if	!defined(SQUISH_USE_AMP)
 private:
 #endif
@@ -1410,6 +1412,8 @@ public:
   Vec4(Vec4 _x, Vec4 _y                  ) : x(_x.x), y(_y.x), z(0.0f), w(0.0f) {}
 
   Vec4(Vec3 _v, float _w) : x(_v.x), y(_v.y), z(_v.z), w(_w) {}
+
+  Vec4(Col4 _c) : x(_c.r), y(_c.g), z(_c.b), w(_c.a) {}
 
   Vec3 GetVec3() const
   {
