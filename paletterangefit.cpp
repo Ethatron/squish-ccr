@@ -42,7 +42,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  bool const trns = m_palette->IsMergedAlpha();
+  bool const trns = m_palette->IsMergedAlpha() && m_palette->IsTransparent();
 
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -235,7 +235,8 @@ void PaletteRangeFit::Compress(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  u8  const tmask = m_palette->IsMergedAlpha() ? 0xFF : 0x00;
+  bool const trns = m_palette->IsMergedAlpha() && m_palette->IsTransparent();
+  u8  const tmask = trns ? 0xFF : 0x00;
 
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -247,6 +248,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   // loop over all sets
   for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
+    // swap the code-book when the swap-index bit is set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
 
     // cache some values
@@ -264,7 +266,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
       u8 mask = ((s < isets) ? 0x7 : 0x8) | tmask;
 
       // find the closest code
-      Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
+      Scr4 dist = ComputeEndPoints(s, metric, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
@@ -289,29 +291,25 @@ void PaletteRangeFit::Compress(void* block, int mode)
       }
 #endif
 
-#if	!defined(FEATURE_SHAREDBITS_TRIALS) || (FEATURE_SHAREDBITS_TRIALS < 2)
+#if	!defined(FEATURE_SHAREDBITS_TRIALS) || (FEATURE_SHAREDBITS_TRIALS < SHAREDBITS_TRIAL_PERMUTE)
       // snap floating-point-values to the integer-lattice
       Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
       Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
-
-      // swap the code-book when the swap-index bit is set
-      int ccs = CodebookP(codes, kb, start, end);
+      
+      // resolve "metric * (value - code)" to "metric * value - metric * code"
+      int ccs = CodebookP(codes, kb, metric * start, metric * end);
 
       for (int i = 0; i < count; ++i) {
 	// find the closest code
 	Scr4 dist = Scr4(FLT_MAX);
+	Vec4 value = metric * values[i];
 	int idx = 0;
 
 	for (int j = 0; j < ccs; j += 0) {
-	  Vec4 t0 = metric * (values[i] - codes[j + 0]);
-	  Vec4 t1 = metric * (values[i] - codes[j + 1]);
-	  Vec4 t2 = metric * (values[i] - codes[j + 2]);
-	  Vec4 t3 = metric * (values[i] - codes[j + 3]);
-	  
-	  Scr4 d0 = LengthSquared(t0);
-	  Scr4 d1 = LengthSquared(t1);
-	  Scr4 d2 = LengthSquared(t2);
-	  Scr4 d3 = LengthSquared(t3);
+	  Scr4 d0 = LengthSquared(value - codes[j + 0]);
+	  Scr4 d1 = LengthSquared(value - codes[j + 1]);
+	  Scr4 d2 = LengthSquared(value - codes[j + 2]);
+	  Scr4 d3 = LengthSquared(value - codes[j + 3]);
 
 	  // encourage OoO
 	  Scr4 da = Min(d0, d1);
@@ -332,8 +330,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
 	// accumulate the error
 	error += dist * freq[i];
       }
-#elif	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS == 2)
-#elif	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS == 3)
+#elif	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_PERMUTE)
       // if we have a down-forced bit we need to check 2 versions, the +2bt as well
       // if we have a up-forced bit we need to check 2 versions, the -2bt as well
       // this goes for all component permutations (r+-2,g+-2,...)
@@ -348,15 +345,27 @@ void PaletteRangeFit::Compress(void* block, int mode)
 	// snap floating-point-values to the integer-lattice
 	start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART, om >> 0);
 	end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND  , om >> 1);
-
-	// swap the code-book when the swap-index bit is set
-	int ccs = CodebookP(codes, kb, start, end);
+	
+	// resolve "metric * (value - code)" to "metric * value - metric * code"
+	int ccs = CodebookP(codes, kb, metric * start, metric * end);
 
 	Scr4 lerror = Scr4(0.0f);
 	for (int i = 0; i < count; ++i) {
 	  Scr4 dist = Scr4(FLT_MAX);
-	  for (int j = 0; j < ccs; ++j)
-	    dist = Min(dist, LengthSquared(metric * (values[i] - codes[j])));
+	  Vec4 value = metric * values[i];
+	  
+	  for (int j = 0; j < ccs; j += 4) {
+	    Scr4 d0 = LengthSquared(value - codes[j + 0]);
+	    Scr4 d1 = LengthSquared(value - codes[j + 1]);
+	    Scr4 d2 = LengthSquared(value - codes[j + 2]);
+	    Scr4 d3 = LengthSquared(value - codes[j + 3]);
+
+	    // encourage OoO
+	    Scr4 da = Min(d0, d1);
+	    Scr4 db = Min(d2, d3);
+	    dist = Min(da, dist);
+	    dist = Min(db, dist);
+	  }
 
 	  // accumulate the error
 	  lerror += dist * freq[i];
@@ -371,8 +380,8 @@ void PaletteRangeFit::Compress(void* block, int mode)
       // snap floating-point-values to the integer-lattice with up/down skew
       start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART, bestom >> 0);
       end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND  , bestom >> 1);
-
-      // swap the code-book when the swap-index bit is set
+      
+      // resolve "metric * (value - code)" to "metric * value - metric * code"
       int ccs = CodebookP(codes, kb, start, end);
 
       for (int i = 0; i < count; ++i) {
