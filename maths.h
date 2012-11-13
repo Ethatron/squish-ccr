@@ -298,11 +298,11 @@ extern const a16 float qLUT_7all[128], qLUT_7clr[128], qLUT_7set[128];
 extern const a16 float qLUT_8all[256], qLUT_8clr[256], qLUT_8set[256];
 
 static const a16 float *qLUT_a[9] = {
-  NULL, qLUT_1all, qLUT_2all, qLUT_3all, qLUT_4all, qLUT_5all, qLUT_6all, qLUT_7all, qLUT_8all };
+  qLUT_8all,	qLUT_1all, qLUT_2all, qLUT_3all, qLUT_4all, qLUT_5all, qLUT_6all, qLUT_7all, qLUT_8all };
 static const a16 float *qLUT_c[9] = {
-  NULL, qLUT_1clr, qLUT_2clr, qLUT_3clr, qLUT_4clr, qLUT_5clr, qLUT_6clr, qLUT_7clr, qLUT_8clr };
+  qLUT_8all,	qLUT_1clr, qLUT_2clr, qLUT_3clr, qLUT_4clr, qLUT_5clr, qLUT_6clr, qLUT_7clr, qLUT_8clr };
 static const a16 float *qLUT_s[9] = {
-  NULL, qLUT_1set, qLUT_2set, qLUT_3set, qLUT_4set, qLUT_5set, qLUT_6set, qLUT_7set, qLUT_8set };
+  qLUT_8all,	qLUT_1set, qLUT_2set, qLUT_3set, qLUT_4set, qLUT_5set, qLUT_6set, qLUT_7set, qLUT_8set };
 
 template<const int rb, const int gb, const int bb>
 class cQuantizer3 {
@@ -388,9 +388,9 @@ public:
 
     // exact nearest least-error quantization values
     Vec3 rgb = Vec3(
-      &qLUT_a[rb][p.R() & rm],
-      &qLUT_a[gb][p.G() & gm],
-      &qLUT_a[bb][p.B() & bm]);
+      &qLUT_a[rb][p.R() & 0xFF],
+      &qLUT_a[gb][p.G() & 0xFF],
+      &qLUT_a[bb][p.B() & 0xFF]);
 
     assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
     assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
@@ -407,9 +407,9 @@ public:
 
     // exact nearest least-error quantization values
     Vec3 rgb = Vec3(
-      &qLUT_a[rb][p.R() & rm],
-      &qLUT_a[gb][p.G() & gm],
-      &qLUT_a[bb][p.B() & bm]);
+      &qLUT_a[rb][p.R() & 0xFF],
+      &qLUT_a[gb][p.G() & 0xFF],
+      &qLUT_a[bb][p.B() & 0xFF]);
 
     assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
     assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
@@ -686,9 +686,9 @@ public:
     // if a value has zero bits, to prevent
     // the singularity we set rcp to 1 as well
     grid -= one;
-    grid += tff;
     gridgap *= grid;
     gridgap *= Vec4(0.5f / 255.0f);
+    grid += tff;
 
     // silence the compiler
     bool hb = !!sb; hb = false;
@@ -796,7 +796,7 @@ public:
     return FloatToInt<false>(Qf * gridint);
   }
 
-#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= 3)
+#if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= SHAREDBITS_TRIAL_PERMUTE)
   doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest, int oppose) {
     // truncate the last valid bit (half multiplier)
     Vec4 Qf = Truncate(val * gridhlf);
