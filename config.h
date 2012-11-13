@@ -91,9 +91,9 @@
 
 /* brute force search for the shared bits with the lowest error
  *
- * 0) trial shared bit of 1 for opaque merged-alpha cases only (01/11)
- * 1) also trial all cases when block is transparent
- * 2) if start is lower and goes down, make stop go up and vice versa (heuristic)
+ * 0) ensure shared bit of 1 for opaque merged-alpha cases only (*1)
+ * 1) trial shared bits for all cases when block is transparent (*4,*4*2^6)
+ * 2) trial shared bits for transparent and low-precision cases (*4,*4*2^6,*4^3*2^4)
  * 3) check all start/stop up/down combinations (*256 tries), incomplete implementation!
  *
  * normally this is not worth it in the current state
@@ -101,9 +101,10 @@
 #define	SHAREDBITS_TRIAL_ALPHAONLYOPAQUE	0
 #define	SHAREDBITS_TRIAL_ALPHAONLY		1
 #define	SHAREDBITS_TRIAL_LOWPRC			2
-#define	SHAREDBITS_TRIAL_ALL			2
+#define	SHAREDBITS_TRIAL_ALL			3
+#define	SHAREDBITS_TRIAL_PERMUTE		3
 
-#define	FEATURE_SHAREDBITS_TRIALS		SHAREDBITS_TRIAL_ALPHAONLY
+#define	FEATURE_SHAREDBITS_TRIALS		SHAREDBITS_TRIAL_LOWPRC
 
 #undef	FEATURE_TEST_LINES
 
@@ -118,14 +119,14 @@
 // throw the decoded rgba values back into the input-image
 #undef	VERIFY_ENCODER
 
-// print out lots of information about the algorithm behaviour
-#undef	TRACK_STATISTICS
-
 // adjustments working only in "Debug" builds:
 // code only a specific mode-setting
 #undef	DEBUG_SETTING
 // print out lots of information about the search
 #undef	DEBUG_DETAILS
+
+// print out lots of information about the algorithm behaviour
+#define	TRACK_STATISTICS
 
 #endif // NDEBUG
 
@@ -133,9 +134,10 @@
 namespace squish {
   extern struct statistics {
     int num_counts[8][64][4][16];
+    int btr_cluster[8][2];
     int win_partition[8][64];
     int win_rotation[8][4];
-    int win_swap[8][2][2];
+    int win_swap[8][4][2];
     int win_cluster[8][2];
     int win_mode[8];
 //  int num_lines[4];

@@ -269,14 +269,15 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
       om = MODEORDER_TRNS, em = MODEORDER_TRNS_MAX;
 
 #if	defined(FEATURE_SHAREDBITS_TRIALS)
-    // if we see we have no transparent values, force at least one shared bit to 1, can be start or stop
+    // if we see we have no transparent values, force all shared bits to 1, or non-opaque codebook-entries occur
     // the all transparent case isn't so crucial, when we use IGNORE_ALPHA0 it's redundant to force 0 anyway
     if (!initial.IsTransparent() && initial.IsMergedAlpha())
-      sb = (~sb ? PaletteFit::GetSharedSkip(mnum) : sb);
+      sb = eb;
     // otherwise just use the most occurring bit (parity) for all other cases
     // otherwise just use the most occurring bit (parity) for all non-alpha cases
     else if (((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLYOPAQUE)) ||
-	     ((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLY) && (mode < kVariableCodingMode5)))
+	     ((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLY) && (mode != kVariableCodingMode7) && !initial.IsTransparent()) ||
+	     ((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_LOWPRC) && (mode < kVariableCodingMode5) && (mode != kVariableCodingMode1)))
       sb = eb = SBSKIP;
 #endif
     
@@ -361,16 +362,23 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 	  // update with old best error (reset IsBest)
 	  fit.SetError(error);
 	  fit.Compress(block, mnum);
+	  
+#if defined(TRACK_STATISTICS)
+	  gstat.btr_cluster[mnum][fit.IsBest() ? 1 : 0]++;
+#endif
 
+#if 0
 	  // we could code it lossless, no point in trying any further at all
 	  if (fit.Lossless())
 	    return;
 	  if (fit.IsBest()) {
 	    error = fit.GetError();
-
+	    
 	    if (cluster || 1)
+	      bestmde = mode,
 	      besttyp = 1;
 	  }
+#endif
 	}
       }
     }
