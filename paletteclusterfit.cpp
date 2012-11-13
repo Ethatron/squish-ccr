@@ -44,7 +44,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  bool const trns = m_palette->IsMergedAlpha();
+  bool const trns = m_palette->IsMergedAlpha() && m_palette->IsTransparent();
 
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -152,9 +152,9 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
       m_points_weights[set][(i << 1) + 1] = w;
 
       m_xsum_wsum     [(set << 1) + 0]   += x;
-      m_xsum_wsum     [(set << 1) + 1]   += x;
+      m_xsum_wsum     [(set << 1) + 1]   += w;
 //    m_xxsum_wwsum   [(set << 1) + 0]   += x * x;
-//    m_xxsum_wwsum   [(set << 1) + 1]   += x * x;
+//    m_xxsum_wwsum   [(set << 1) + 1]   += w * w;
     }
   }
   else {
@@ -371,11 +371,13 @@ Scr4 PaletteClusterFit::ClusterSearch4Alpha(u8 (&closest)[4][16], int count, int
   Vec4 const weight2(43.0f / 64.0f, 43.0f / 64.0f, 43.0f / 64.0f, 1849.0f / 4096.0f);
   Vec4 const twonineths                               = VEC4_CONST(882.0f / 4096.0f);
   */
-  Vec4 const weight1(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
-  Vec4 const weight2(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
-  Vec4 const twonineths                        = VEC4_CONST(2.0f / 9.0f);
-  Vec4 const fivenineths                       = VEC4_CONST(5.0f / 9.0f);
-  Vec4 const convnineths                       = VEC4_CONST(2.5f / 1.0f);
+  Vec4 const weight1x(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f);
+  Vec4 const weight2x(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f);
+  Vec4 const weight1w(1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f);
+  Vec4 const weight2w(4.0f / 9.0f, 4.0f / 9.0f, 4.0f / 9.0f, 4.0f / 9.0f);
+  Vec4 const twonineths                         = VEC4_CONST(2.0f / 9.0f);
+  Vec4 const fivenineths                        = VEC4_CONST(5.0f / 9.0f);
+  Vec4 const convnineths                        = VEC4_CONST(2.5f / 1.0f);
 
   Vec4 const two = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
@@ -423,11 +425,11 @@ Scr4 PaletteClusterFit::ClusterSearch4Alpha(u8 (&closest)[4][16], int count, int
 //	  Vec4 wgtsI = wsum_wsum - wgts2 - wgts1;
 
 	  // compute least squares terms directly
-	  Vec4 const alphax_sum = MultiplyAdd(part2, weight1, MultiplyAdd(part1, weight2, part0));
-	  Vec4 const  betax_sum = MultiplyAdd(part1, weight1, MultiplyAdd(part2, weight2, part3));
+	  Vec4 const alphax_sum = MultiplyAdd(part2, weight1x, MultiplyAdd(part1, weight2x, part0));
+	  Vec4 const  betax_sum = MultiplyAdd(part1, weight1x, MultiplyAdd(part2, weight2x, part3));
 
-	  Vec4 const alpha2_sum = MultiplyAdd(wgts2, weight1, MultiplyAdd(wgts1, weight2, wgts0));
-	  Vec4 const  beta2_sum = MultiplyAdd(wgts1, weight1, MultiplyAdd(wgts2, weight2, wgts3));
+	  Vec4 const alpha2_sum = MultiplyAdd(wgts2, weight1w, MultiplyAdd(wgts1, weight2w, wgts0));
+	  Vec4 const  beta2_sum = MultiplyAdd(wgts1, weight1w, MultiplyAdd(wgts2, weight2w, wgts3));
 
 	  Vec4 const alphabeta_sum = twonineths * (wgts1 + wgts2);
 
@@ -1491,7 +1493,8 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  u8  const tmask = m_palette->IsMergedAlpha() ? 0xFF : 0x00;
+  bool const trns = m_palette->IsMergedAlpha() && m_palette->IsTransparent();
+  u8  const tmask = trns ? 0xFF : 0x00;
 
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -1521,7 +1524,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
       u8 mask = ((s < isets) ? 0x7 : 0x8) | tmask;
 
       // find the closest code
-      Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
+      Scr4 dist = ComputeEndPoints(s, metric, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
@@ -1567,8 +1570,8 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
       assume(kb >= 2 && kb <= 3);
       switch(kb) {
         case 2:
-          if (m_palette->IsMergedAlpha())
-            cerror = ClusterSearch4Alpha   (closest, count, s, KillW(cmetric), q, sb);
+          if (trns)
+            cerror = ClusterSearch4Alpha   (closest, count, s,       cmetric , q, sb);
           else if (m_palette->IsUnweighted(s))
             cerror = ClusterSearch4Constant(closest, count, s, KillW(cmetric), q, sb);
           else
