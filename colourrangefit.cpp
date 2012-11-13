@@ -174,7 +174,8 @@ void ColourRangeFit::Compress3(void* block)
   u8 const* freq = m_colours->GetFrequencies();
 
   // create a codebook
-  Vec3 codes[3]; Codebook3(codes, m_start, m_end);
+  // resolve "metric * (value - code)" to "metric * value - metric * code"
+  Vec3 codes[3]; Codebook3(codes, m_metric * m_start, m_metric * m_end);
 
   // match each point to the closest code
   u8 closest[16];
@@ -183,16 +184,13 @@ void ColourRangeFit::Compress3(void* block)
   for (int i = 0; i < count; ++i) {
     // find the closest code
     Scr3 dist = Scr3(FLT_MAX);
+    Vec3 value = m_metric * values[i];
     int idx = 0;
 
     {
-      Vec3 t0 = m_metric * (values[i] - codes[0]);
-      Vec3 t1 = m_metric * (values[i] - codes[1]);
-      Vec3 t2 = m_metric * (values[i] - codes[2]);
-
-      Scr3 d0 = LengthSquared(t0);
-      Scr3 d1 = LengthSquared(t1);
-      Scr3 d2 = LengthSquared(t2);
+      Scr3 d0 = LengthSquared(value - codes[0]);
+      Scr3 d1 = LengthSquared(value - codes[1]);
+      Scr3 d2 = LengthSquared(value - codes[2]);
 
       // encourage OoO
       Scr3 da = Min(d0, d1);
@@ -236,7 +234,8 @@ void ColourRangeFit::Compress4(void* block)
   u8 const* freq = m_colours->GetFrequencies();
 
   // create a codebook
-  Vec3 codes[4]; Codebook4(codes, m_start, m_end);
+  // resolve "metric * (value - code)" to "metric * value - metric * code"
+  Vec3 codes[4]; Codebook4(codes, m_metric * m_start, m_metric * m_end);
 
   // match each point to the closest code
   u8 closest[16];
@@ -245,18 +244,14 @@ void ColourRangeFit::Compress4(void* block)
   for (int i = 0; i < count; ++i) {
     // find the closest code
     Scr3 dist = Scr3(FLT_MAX);
+    Vec3 value = m_metric * values[i];
     int idx = 0;
 
     {
-      Vec3 t0 = m_metric * (values[i] - codes[0]);
-      Vec3 t1 = m_metric * (values[i] - codes[1]);
-      Vec3 t2 = m_metric * (values[i] - codes[2]);
-      Vec3 t3 = m_metric * (values[i] - codes[3]);
-
-      Scr3 d0 = LengthSquared(t0);
-      Scr3 d1 = LengthSquared(t1);
-      Scr3 d2 = LengthSquared(t2);
-      Scr3 d3 = LengthSquared(t3);
+      Scr3 d0 = LengthSquared(value - codes[0]);
+      Scr3 d1 = LengthSquared(value - codes[1]);
+      Scr3 d2 = LengthSquared(value - codes[2]);
+      Scr3 d3 = LengthSquared(value - codes[3]);
 
       // encourage OoO
       Scr3 da = Min(d0, d1);
