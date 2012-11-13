@@ -36,9 +36,9 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
-static const int skip[2][3] = {
-  {1 /* 1 to 1 */, 3 /* 3 to  3 */,  7 /*  7 to  7 */},
-  {1 /* 1 to 3 */, 7 /* 7 to 15 */, 37 /* 37 to 63 */}
+static const int skip[2][4] = {
+  {0, 1 /* 1 to 1 */,  3 /* 3 to  3 */,  7 /*  7 to  7 */},
+  {0, 3 /* 1 to 3 */, 15 /* 7 to 15 */, 63 /* 37 to 63 */}
 };
 
 static const int maps[2][64] = {
@@ -48,7 +48,7 @@ static const int maps[2][64] = {
     6 << SBSTART | 6 << SBEND, 7 << SBSTART | 7 << SBEND} // 110|110 + 111|111
   ,
   { 0 << SBSTART | 0 << SBEND, 
-			       1 << SBSTART | 1 << SBEND, 0 << SBSTART | 1 << SBEND, 1 << SBSTART | 0 << SBEND,
+			       1 << SBSTART | 0 << SBEND, 0 << SBSTART | 1 << SBEND, 1 << SBSTART | 1 << SBEND, 
 
     0 << SBSTART | 2 << SBEND, 
     2 << SBSTART | 0 << SBEND, 
@@ -300,6 +300,7 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Scr4 &error) {
   // loop over all sets
   for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
+    // swap the code-book when the swap-index bit is set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
@@ -313,13 +314,13 @@ void PaletteFit::SumError(u8 (&closest)[4][16], int mode, Scr4 &error) {
     // snap floating-point-values to the integer-lattice
     Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
     Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
-
-    // swap the code-book when the swap-index bit is set
-    CodebookP(codes, kb, start, end);
+    
+    // resolve "metric * (value - code)" to "metric * value - metric * code"
+    CodebookP(codes, kb, metric * start, metric * end);
 
     // error-sum
     for (int i = 0; i < count; ++i)
-      error += LengthSquared(metric * (values[i] - codes[closest[s][i]])) * freq[i];
+      error += LengthSquared(metric * values[i] - codes[closest[s][i]]) * freq[i];
   }
 }
 
