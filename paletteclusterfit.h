@@ -35,13 +35,14 @@
 
 #include "palettefit.h"
 #include "singlepalettefit.h"
+#include "singlepalettesnap.h"
 #include "palettechannelfit.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-class PaletteClusterFit : public SinglePaletteFit, public PaletteChannelFit
+class PaletteClusterFit : public SinglePaletteMatch, public PaletteChannelFit
 {
 public:
   PaletteClusterFit(PaletteSet const* palettes, int flags, int swap = -1, int shared = -1);

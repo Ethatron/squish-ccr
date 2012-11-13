@@ -57,6 +57,7 @@ struct SinglePaletteLookup8
   SP_SourceBlock sources[8];
 };
 
+#define	SCL_ITERATIVE
 #include "singlepalettelookup.inl"
 
 SinglePaletteFit::SinglePaletteFit(PaletteSet const* palette, int flags, int swap, int shared)
@@ -81,7 +82,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
 #else
   // merge start and end shared bits
   int lb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
-  
+
   // allow bailout if whole == -1
 #define sp_lookup_5u1_4_sb_    (SK(sb) ? sp_lookup_6_4  : sp_lookup_5u1_4[lb])
 #define sp_lookup_7u1_4_sb_    (SK(sb) ? sp_lookup_8_4  : sp_lookup_7u1_4[lb])
@@ -229,7 +230,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
 
       m_start[set] = Vec4(s) * (1.0f / 255.0f);
       m_end  [set] = Vec4(e) * (1.0f / 255.0f);
-      
+
       m_index = (u8)(1 * index);
 
       // early out
@@ -285,7 +286,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
     // keep it if the error is lower
     if (error < besterror) {
       besterror = error;
-      
+
       Col4 s = Col4(
 	sources[0] ? sources[0]->start : 0x00,
 	sources[1] ? sources[1]->start : 0x00,
@@ -299,7 +300,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
 
       m_start[set] = Vec4(s) * (1.0f / 255.0f);
       m_end  [set] = Vec4(e) * (1.0f / 255.0f);
-      
+
       m_index = (u8)(1 * index);
 
       // early out
@@ -355,7 +356,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
     // keep it if the error is lower
     if (error < besterror) {
       besterror = error;
-      
+
       Col4 s = Col4(
 	sources[0] ? sources[0]->start : 0x00,
 	sources[1] ? sources[1]->start : 0x00,
@@ -369,7 +370,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
 
       m_start[set] = Vec4(s) * (1.0f / 255.0f);
       m_end  [set] = Vec4(e) * (1.0f / 255.0f);
-      
+
       m_index = (u8)(1 * index);
 
       // early out

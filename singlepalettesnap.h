@@ -24,67 +24,50 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_PALETTERANGEFIT_H
-#define SQUISH_PALETTERANGEFIT_H
+#ifndef SQUISH_SINGLEPALETTESNAP_H
+#define SQUISH_SINGLEPALETTESNAP_H
 
 #include <squish.h>
-#include "singlepalettefit.h"
-#include "singlepalettesnap.h"
-#include "maths.h"
+#include <limits.h>
+
+#include "palettefit.h"
+
+// pull in structure definitions
+#if	defined(SQUISH_USE_AMP)
+#include "singlepalettelookup_ccr.inl"
+#endif
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
+struct SinglePaletteLookup2;
+struct SinglePaletteLookup4;
+struct SinglePaletteLookup8;
+
 class PaletteSet;
-class PaletteRangeFit : public SinglePaletteMatch
+class SinglePaletteSnap : public virtual PaletteFit
 {
 public:
-  PaletteRangeFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
-  
-  virtual void Compress(void* block, int mode);
+  SinglePaletteSnap(PaletteSet const* colours, int flags, int swap = -1, int shared = 0);
 
 private:
-#ifdef	FEATURE_ELIMINATE_FLATBOOKS
-  Vec4 m_start_candidate[4];
-  Vec4 m_end_candidate[4];
-#endif
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup2 const* const* lookups, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup4 const* const* lookups, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup8 const* const* lookups, u8 cmask);
+
+  u8 m_index;
+
+protected:
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask);
+  u8 GetIndex() { return m_index; }
 };
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-struct PaletteRangeFit_CCR : inherit_hlsl SinglePaletteFit_CCR
-{
-public_hlsl
-  void AssignSet (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, const int metric, const int fit) amp_restricted;
-  void Compress  (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block, const bool trans,
-                  IndexBlockLUT yArr) amp_restricted;
-
-protected_hlsl
-  void Compress3 (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
-  void Compress4 (tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
-  void Compress34(tile_barrier barrier, const int thread,
-                  PaletteSet_CCRr m_palettes, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
-
-#if	!defined(SQUISH_USE_COMPUTE)
-private_hlsl
-  float4 m_metric;
-#endif
-};
-
-#if	defined(SQUISH_USE_COMPUTE)
-  tile_static float4 m_metric;
-#endif
 #endif
 
-} // squish
+} // namespace squish
 
-#endif // ndef SQUISH_PALETTERANGEFIT_H
+#endif // ndef SQUISH_SINGLEPALETTESNAP_H

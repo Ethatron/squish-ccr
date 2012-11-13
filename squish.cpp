@@ -48,7 +48,9 @@
 
 #include "alpha.h"
 #include "singlecolourfit.h"
+#include "singlecoloursnap.h"
 #include "singlepalettefit.h"
+#include "singlepalettesnap.h"
 
 namespace squish {
 

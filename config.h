@@ -27,6 +27,22 @@
 #ifndef SQUISH_CONFIG_H
 #define SQUISH_CONFIG_H
 
+/* define the algorithm to determine the best start/end-point
+ * for a single colour
+ * as Ryg already observed, it's possible to always force the highest
+ * precision interpolant to be at index "1" for the euclidian error-
+ * distance case [the sole exception being the 4u1, but the improvement
+ * there is too mior to justify the loss in speed and the growth of the
+ * lookup tables]
+ * if you want to use non-euclidian error-distances you can swap your
+ * own LUTs in and go back to the iterative fit functions
+ *
+ * - SingleColourSnap, SingleColourFit
+ * - SinglePaletteSnap, SinglePaletteFit
+ */
+#define	SingleColourMatch	SingleColourSnap
+#define	SinglePaletteMatch	SinglePaletteSnap
+
 /* use frequencies of colour/palette-entries to calculate errors
  * this is more exact but a bit slower and uses more memory
  * this doesn't impact BC2/BC3 but BC1 (one vs. the other) and BC7

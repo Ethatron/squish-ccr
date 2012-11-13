@@ -84,6 +84,9 @@
     <ClCompile Include="..\..\singlecoloursnap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\singlepalettesnap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\alpha.h">
@@ -153,6 +156,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\singlecoloursnap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\singlepalettesnap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

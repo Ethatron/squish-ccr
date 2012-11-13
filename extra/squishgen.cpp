@@ -181,18 +181,20 @@ static void GenerateDataDxt(std::string const& name, int bits, int colours, bool
       	fprintf(stderr, "assumption (error0 >= error1) incorrect!\n");
       }
 
-      for (int j = indices - 1;;) {
+      int j = 1; {
         SourceBlock const& block = values[i].sources[j];
+
+        int a = ( block.start << ( 8 - bits ) ) |
+	        ( block.start >> ( 2*bits - 8 ) );
+        int b = ( block.end   << ( 8 - bits ) ) |
+	        ( block.end   >> ( 2*bits - 8 ) );
+
         if( j < colours )
 	  std::cout << "{"
-	  <<     (block.start <= 9 ? " " : "") << block.start << ","
-	  <<     (block.end   <= 9 ? " " : "") << block.end   << "}";
+	  <<     (a <= 99 ? " " : "") << (a <= 9 ? " " : "") << a << ","
+	  <<     (b <= 99 ? " " : "") << (b <= 9 ? " " : "") << b   << "}";
         else
 	  std::cout << "{0,0}";
-
-        if (++j == indices)
-	  break;
-        std::cout << ",";
       }
 
       std::cout << "";
@@ -315,7 +317,7 @@ struct SSourceSet
 
 SSourceSet sets[4];
 
-static void GenerateDataBtc( std::string const& name, int bits, int sharedbits, int colours, int exactcases = 0 )
+static void GenerateDataBtc( std::string const& name, int bits, int sharedbits, int colours, int exactcases = 0, bool direct = false )
 {
   int count = ( 1 << bits );
   int permutations = ( 1 << (sharedbits * 2) );
@@ -414,66 +416,148 @@ static void GenerateDataBtc( std::string const& name, int bits, int sharedbits, 
     }
   }
 
-  std::cout << "\n/* 256 * " << indices << " * 3 * " << permutations << " = " << (256 * indices * 3 * permutations) << " */";
-  if ( permutations == 1 )
-    std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[256] = \n{\n";
-  else if ( exactcases == 2 )
-    std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[2][256] = \n{\n";
-  else
-    std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[4][256] = \n{\n";
+  if (!direct) {
+    std::cout << "\n/* 256 * " << indices << " * 3 * " << permutations << " = " << (256 * indices * 3 * permutations) << " */";
+    if ( permutations == 1 )
+      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[256] = \n{\n";
+    else if ( exactcases == 2 )
+      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[2][256] = \n{\n";
+    else
+      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[4][256] = \n{\n";
 
-  for( int k = 0;; )
-  {
-    if ( ( exactcases == 2 ) && ( k != 0 ) && ( k != 3 ) ) {
-      if( ++k == permutations )
-	break;
-      continue;
-    }
-
-    if( permutations > 1 )
-      std::cout << "{\n";
-
-    for( int i = 0;; )
+    for( int k = 0;; )
     {
-      std::cout << "  {{";
-
-      for( int j = 0;; )
-      {
-	// lowest error, lowest values, lowest index
-	SSourceSet const& cset = sets[k];
-	std::set<SSourceBlock, struct S>::iterator val = cset.values[i][j].begin();
-
-	if( j < colours )
-	  std::cout << "{"
-	  << (val->start <= 99 ? " " : "") << (val->start <= 9 ? " " : "") << val->start << ","
-	  << (val->end   <= 99 ? " " : "") << (val->end   <= 9 ? " " : "") << val->end   << ","
-	  <<                                                                  val->error << "}";
-
-	else
-	  std::cout << "{0,0,0}";
-	if( ++j == indices )
+      if ( ( exactcases == 2 ) && ( k != 0 ) && ( k != 3 ) ) {
+        if( ++k == permutations )
 	  break;
-	std::cout << ",";
+        continue;
       }
 
-      std::cout << "}}";
-      if( ++i == 256 )
-	break;
+      if( permutations > 1 )
+        std::cout << "{\n";
 
+      for( int i = 0;; )
+      {
+        std::cout << "  {{";
+
+        int min_error = 0xFFFF;
+        int min_index = 0;
+
+        for( int j = 0;; )
+        {
+	  // lowest error, lowest values, lowest index
+	  SSourceSet const& cset = sets[k];
+	  std::set<SSourceBlock, struct S>::iterator val = cset.values[i][j].begin();
+
+	  if( j < colours )
+	    if( min_error > val->error ) {
+	      min_error = val->error;
+	      min_index = j;
+	    }
+	    else if( min_error == val->error ) {
+	      min_index = !min_index ? j : min_index;
+	    }
+	  if( ++j == indices )
+	    break;
+        }
+
+        std::cout << "/*" << min_index << "*/";
+
+        for( int j = 0;; )
+        {
+	  // lowest error, lowest values, lowest index
+	  SSourceSet const& cset = sets[k];
+	  std::set<SSourceBlock, struct S>::iterator val = cset.values[i][j].begin();
+
+	  if( j < colours )
+	    std::cout << "{"
+	    << (val->start <= 99 ? " " : "") << (val->start <= 9 ? " " : "") << val->start << ","
+	    << (val->end   <= 99 ? " " : "") << (val->end   <= 9 ? " " : "") << val->end   << ","
+	    <<                                                                  val->error << "}";
+
+	  else
+	    std::cout << "{0,0,0}";
+	  if( ++j == indices )
+	    break;
+	  std::cout << ",";
+        }
+
+        std::cout << "}}";
+        if( ++i == 256 )
+	  break;
+
+        std::cout << ",";
+        if(!(i & 3))
+	  std::cout << "\n";
+      }
+
+      if( permutations > 1 )
+        std::cout << "\n}";
+
+      if( ++k == permutations )
+        break;
       std::cout << ",";
-      if(!(i & 3))
-	std::cout << "\n";
     }
 
-    if( permutations > 1 )
-      std::cout << "\n}";
-
-    if( ++k == permutations )
-      break;
-    std::cout << ",";
+    std::cout << "\n};\n";
   }
+  else {
+    std::cout << "\n/* 256 * 2 * " << permutations << " = " << (256 * 2 * permutations) << " */";
+    if ( permutations == 1 )
+      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[256] = \n{\n";
+    else if ( exactcases == 2 )
+      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[2][256] = \n{\n";
+    else
+      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[4][256] = \n{\n";
 
-  std::cout << "\n};\n";
+    for( int k = 0;; )
+    {
+      if ( ( exactcases == 2 ) && ( k != 0 ) && ( k != 3 ) ) {
+        if( ++k == permutations )
+	  break;
+        continue;
+      }
+
+      if( permutations > 1 )
+        std::cout << "{\n";
+
+      for( int i = 0;; )
+      {
+        std::cout << "  ";
+
+        int j = 1; {
+	  // lowest error, lowest values, lowest index
+	  SSourceSet const& cset = sets[k];
+	  std::set<SSourceBlock, struct S>::iterator val = cset.values[i][j].begin();
+
+	  if( j < colours )
+	    std::cout << "{"
+	    << (val->start <= 99 ? " " : "") << (val->start <= 9 ? " " : "") << val->start << ","
+	    << (val->end   <= 99 ? " " : "") << (val->end   <= 9 ? " " : "") << val->end   << "}";
+
+	  else
+	    std::cout << "{0,0}";
+        }
+
+        std::cout << "";
+        if( ++i == 256 )
+	  break;
+
+        std::cout << ",";
+        if(!(i & 7))
+	  std::cout << "\n";
+      }
+
+      if( permutations > 1 )
+        std::cout << "\n}";
+
+      if( ++k == permutations )
+        break;
+      std::cout << ",";
+    }
+
+    std::cout << "\n};\n";
+  }
 }
 
 struct ASourceBlock
@@ -791,7 +875,7 @@ int main()
     GenerateDataDxt( "lookup_6_4",    6,     4 );
   }
 
-  if (1) {
+  if (0) {
     // DXT types (with Ryg observation: error0 >= error1 always)
     GenerateDataDxt( "lookup_5_3",    5,     3 , true);
     GenerateDataDxt( "lookup_6_3",    6,     3 , true);
@@ -801,14 +885,14 @@ int main()
 
   if (0) {
     // BTC types
-    GenerateDataBtc( "lookup_5_4",    5, 0,  4 );
-    GenerateDataBtc( "lookup_6_4",    6, 0,  4 );
-    GenerateDataBtc( "lookup_7_4",    7, 0,  4 );
-    GenerateDataBtc( "lookup_8_4",    8, 0,  4 );
-    GenerateDataBtc( "lookup_5_8",    5, 0,  8 );
-    GenerateDataBtc( "lookup_6_8",    6, 0,  8 );
-    GenerateDataBtc( "lookup_7_8",    7, 0,  8 );	// needed
-    GenerateDataBtc( "lookup_8_16",   8, 0, 16 );	// needed
+    GenerateDataBtc( "lookup_5_4",    5, 0,  4, 0 );
+    GenerateDataBtc( "lookup_6_4",    6, 0,  4, 0 );
+    GenerateDataBtc( "lookup_7_4",    7, 0,  4, 0 );
+    GenerateDataBtc( "lookup_8_4",    8, 0,  4, 0 );
+    GenerateDataBtc( "lookup_5_8",    5, 0,  8, 0 );
+    GenerateDataBtc( "lookup_6_8",    6, 0,  8, 0 );
+    GenerateDataBtc( "lookup_7_8",    7, 0,  8, 0 );	// needed
+    GenerateDataBtc( "lookup_8_16",   8, 0, 16, 0 );	// needed
 
     GenerateDataBtc( "lookup_5u1_4",  5, 1,  4, 4 );
     GenerateDataBtc( "lookup_7u1_4",  7, 1,  4, 4 );
@@ -824,6 +908,24 @@ int main()
     //7,0,  1,0,  2,0       7u1	4
     //7,7,  1,0,  4,0       7u1	16
     //7,8,  0,0,  2,2       7,8	4,4
+  }
+
+  if (1) {
+    // BTC types
+    GenerateDataBtc( "lookup_5_4",    5, 0,  4, 0, true );
+    GenerateDataBtc( "lookup_6_4",    6, 0,  4, 0, true );
+    GenerateDataBtc( "lookup_7_4",    7, 0,  4, 0, true );
+    GenerateDataBtc( "lookup_8_4",    8, 0,  4, 0, true );
+    GenerateDataBtc( "lookup_5_8",    5, 0,  8, 0, true );
+    GenerateDataBtc( "lookup_6_8",    6, 0,  8, 0, true );
+    GenerateDataBtc( "lookup_7_8",    7, 0,  8, 0, true );	// needed
+    GenerateDataBtc( "lookup_8_16",   8, 0, 16, 0, true );	// needed
+
+    GenerateDataBtc( "lookup_5u1_4",  5, 1,  4, 4, true );
+    GenerateDataBtc( "lookup_7u1_4",  7, 1,  4, 4, true );
+    GenerateDataBtc( "lookup_4u1_8",  4, 1,  8, 4, true );
+    GenerateDataBtc( "lookup_6s1_8",  6, 1,  8, 2, true );
+    GenerateDataBtc( "lookup_7u1_16", 7, 1, 16, 4, true );
   }
 
   if (0) {

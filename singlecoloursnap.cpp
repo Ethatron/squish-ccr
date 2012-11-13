@@ -58,8 +58,8 @@ SingleColourSnap::SingleColourSnap(ColourSet const* colours, int flags)
   // as a result the lookup can be made in such a way
   // that index 1 always contains the best match
   //
-  // this hold even if a metric is used, the metric is
-  // does linear rescale of the RGB-cube: scaling preserves
+  // this holds even if a metric is used, the metric does
+  // linear a rescale of the RGB-cube: scaling preserves
   // relative lengths, in either cube the error-vector with
   // smallest length is the same
   m_colour[0] = (u8)FloatToInt(255.0f * values->X(), 255);

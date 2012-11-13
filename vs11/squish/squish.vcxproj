@@ -214,6 +214,7 @@
     <ClCompile Include="..\..\singlecolourfit.cpp" />
     <ClCompile Include="..\..\singlecoloursnap.cpp" />
     <ClCompile Include="..\..\singlepalettefit.cpp" />
+    <ClCompile Include="..\..\singlepalettesnap.cpp" />
     <ClCompile Include="..\..\squish.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -239,6 +240,7 @@
     <ClInclude Include="..\..\singlecolourfit.h" />
     <ClInclude Include="..\..\singlecoloursnap.h" />
     <ClInclude Include="..\..\singlepalettefit.h" />
+    <ClInclude Include="..\..\singlepalettesnap.h" />
     <ClInclude Include="..\..\squish.h" />
   </ItemGroup>
   <ItemGroup>

@@ -29,6 +29,7 @@
 
 #include <squish.h>
 #include "singlepalettefit.h"
+#include "singlepalettesnap.h"
 #include "maths.h"
 
 namespace squish {
@@ -36,7 +37,7 @@ namespace squish {
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
 class PaletteSet;
-class PaletteNormalFit : public SinglePaletteFit
+class PaletteNormalFit : public SinglePaletteMatch
 {
 public:
   PaletteNormalFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
