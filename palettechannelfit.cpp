@@ -108,14 +108,26 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   while (!CompareFirstGreaterThan(wend, cend)) {
     wstart = cstart;
     while (!CompareFirstGreaterThan(wstart, wend)) {
-      // swap the code-book when the swap-index bit is set
-      int ccs = CodebookP(codes, ib, wstart, wend);
+      // resolve "metric * (value - code)" to "metric * value - metric * code"
+      int ccs = CodebookP(codes, ib, metric * wstart, metric * wend);
 
       Scr4 error = Scr4(0.0f);
       for (int i = 0; i < count; ++i) {
 	Scr4 dist = Scr4(FLT_MAX);
-	for (int j = 0; j < ccs; ++j)
-	  dist = Min(dist, LengthSquared(metric * (values[i] - codes[j])));
+	Vec4 value = metric * values[i];
+	
+	for (int j = 0; j < ccs; j += 4) {
+	  Scr4 d0 = LengthSquared(value - codes[j + 0]);
+	  Scr4 d1 = LengthSquared(value - codes[j + 1]);
+	  Scr4 d2 = LengthSquared(value - codes[j + 2]);
+	  Scr4 d3 = LengthSquared(value - codes[j + 3]);
+
+	  // encourage OoO
+	  Scr4 da = Min(d0, d1);
+	  Scr4 db = Min(d2, d3);
+	  dist = Min(da, dist);
+	  dist = Min(db, dist);
+	}
 
 	// accumulate the error
 	error += dist * freq[i];
@@ -136,21 +148,33 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   // snap floating-point-values to the integer-lattice with up/down skew
   m_start[set] = beststart;
   m_end  [set] = bestend;
-
-  // swap the code-book when the swap-index bit is set
-  int ccs = CodebookP(codes, ib, m_start[set], m_end[set]);
+  
+  // resolve "metric * (value - code)" to "metric * value - metric * code"
+  int ccs = CodebookP(codes, ib, metric * beststart, metric * bestend);
 
   for (int i = 0; i < count; ++i) {
     // find the closest code
     Scr4 dist = Scr4(FLT_MAX);
+    Vec4 value = metric * values[i];
     int idx = 0;
+    
+    for (int j = 0; j < ccs; j += 0) {
+      Scr4 d0 = LengthSquared(value - codes[j + 0]);
+      Scr4 d1 = LengthSquared(value - codes[j + 1]);
+      Scr4 d2 = LengthSquared(value - codes[j + 2]);
+      Scr4 d3 = LengthSquared(value - codes[j + 3]);
 
-    for (int j = 0; j < ccs; ++j) {
-      Scr4 d = LengthSquared(metric * (values[i] - codes[j]));
-      if (d < dist) {
-	dist = d;
-	idx = j;
-      }
+      // encourage OoO
+      Scr4 da = Min(d0, d1);
+      Scr4 db = Min(d2, d3);
+      dist = Min(da, dist);
+      dist = Min(db, dist);
+
+      // will cause VS to make them all cmovs
+      if (d0 == dist) { idx = j; } j++;
+      if (d1 == dist) { idx = j; } j++;
+      if (d2 == dist) { idx = j; } j++;
+      if (d3 == dist) { idx = j; } j++;
     }
 
     // save the index
