@@ -164,6 +164,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
   // loop over all sets
   for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
+    // swap the code-book when the swap-index bit is set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
 
     // cache some values
@@ -181,7 +182,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
       u8 mask = ((s < isets) ? 0x7 : 0x8) | tmask;
 
       // find the closest code
-      Scr4 dist = ComputeEndPoints(s, metric, q, cb, ab, sb, kb, mask);
+      Scr4 dist = ComputeEndPoints(s, metric, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
@@ -194,32 +195,44 @@ void PaletteNormalFit::Compress(void* block, int mode)
       Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
       Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
 
-      // swap the code-book when the swap-index bit is set
+      // TODO: pre-normalize codebook
       int ccs = CodebookP(codes, kb, start, end);
 
       for (int i = 0; i < count; ++i) {
 	// find the closest code
 	Scr4 dist = Scr4(FLT_MAX);
 	int idx = 0;
+	
+	for (int j = 0; j < ccs; j += 0) {
+	  Scr4 a0 = Dot(Normalize(values[i]), Normalize(codes[j + 0]));
+	  Scr4 a1 = Dot(Normalize(values[i]), Normalize(codes[j + 1]));
+	  Scr4 a2 = Dot(Normalize(values[i]), Normalize(codes[j + 2]));
+	  Scr4 a3 = Dot(Normalize(values[i]), Normalize(codes[j + 3]));
+	  
+	  // measure angle-deviation (cosine)
+	  Scr4 d0 = a0 * a0;
+	  Scr4 d1 = a1 * a1;
+	  Scr4 d2 = a2 * a2;
+	  Scr4 d3 = a3 * a3;
 
-	for (int j = 0; j < ccs; ++j) {
-	  // measure angle-deviation
-	  Vec4 cnormal = Normalize(codes[j]);
-	  Vec4 vnormal = Normalize(values[j]);
-	  Scr4 angle = Scr4(1.0f) - Dot(values[i], codes[j]);
+	  // encourage OoO
+	  Scr4 da = Max(d0, d1);
+	  Scr4 db = Max(d2, d3);
+	  dist = Max(da, dist);
+	  dist = Max(db, dist);
 
-	  Scr4 d = angle * angle;
-	  if (d < dist) {
-	    dist = d;
-	    idx = j;
-	  }
+	  // will cause VS to make them all cmovs
+	  if (d0 == dist) { idx = j; } j++;
+	  if (d1 == dist) { idx = j; } j++;
+	  if (d2 == dist) { idx = j; } j++;
+	  if (d3 == dist) { idx = j; } j++;
 	}
 
 	// save the index
 	closest[s][i] = (u8)idx;
 
-	// accumulate the error
-	error += dist * freq[i];
+	// accumulate the error (sine)
+	error += (Scr4(1.0f) - dist) * freq[i];
       }
     }
 
