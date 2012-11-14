@@ -1918,6 +1918,16 @@ public:
 	  m_v = _mm_movelh_ps(m_v, _mm_load_ss(z));
 	}
 	
+	Vec4( const float *x, const float *y ) {
+	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
+	  m_v = _mm_movelh_ps(m_v, _mm_set1_ps( 0.0f ));
+	}
+	
+	Vec4( const float *x ) {
+	  m_v = _mm_load_ss(x);
+	  m_v = _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 0 ) );
+	}
+	
 	Vec4( float x, float y, float z, float w ) : m_v( _mm_setr_ps( x, y, z, w ) ) {}
 	Vec4( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec4( float x, float y ) : m_v( _mm_setr_ps( x, y, 0.0f, 0.0f ) ) {}
