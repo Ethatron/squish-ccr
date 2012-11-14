@@ -711,6 +711,63 @@ public:
   {
     return MaskBits(left, p, 0) | MaskBits(ShiftLeftHalf(right, p), n, p);
   }
+  
+  template<const int n, const int p>
+  friend Col4 KillBits(Col4::Arg a )
+  {
+    if ((p + n) <= 0)
+      return Col4(0);
+    if ((p + n) >= 64)
+      return a;
+
+    Col4 b;
+    
+    unsigned__int64 base1 =  (0xFFFFFFFFFFFFFFFFULL << (     (p + 0) & 63));
+    unsigned__int64 base2 =  (0xFFFFFFFFFFFFFFFFULL >> (64 - (p + n) & 63));
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+
+    bb[0] = (ba[0] & (base1 ^ base2));
+    bb[1] = (ba[1] &        0       );
+
+    return b;
+  }
+
+  friend Col4 KillBits(Col4::Arg a, const int n, const int p )
+  {
+    if ((p + n) >= 64)
+      return a;
+
+    Col4 b;
+    
+    unsigned__int64 base1 =  (0xFFFFFFFFFFFFFFFFULL << (     (p + 0) & 63));
+    unsigned__int64 base2 =  (0xFFFFFFFFFFFFFFFFULL >> (64 - (p + n) & 63));
+    unsigned__int64 *bb = (unsigned__int64 *)&b.r;
+    unsigned__int64 *ba = (unsigned__int64 *)&a.r;
+    
+    bb[0] = (ba[0] & (base1 ^ base2));
+    bb[1] = (ba[1] &        0       );
+
+    return b;
+  }
+
+  template<const int n, const int p>
+  friend Col4 InjtBits(Col4::Arg left, Col4::Arg right)
+  {
+    if (!n)
+      return left;
+    if (!p)
+      return MaskBits<n, 0>(right);
+    if ((p + n) >= 64)
+      return (left) | ShiftLeftHalf<p>(right);
+
+    return KillBits<n, p>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+  }
+
+  friend Col4 InjtBits(Col4::Arg left, Col4 right, const int n, const int p )
+  {
+    return KillBits(left, n, p) | MaskBits(ShiftLeftHalf(right, p), n, p);
+  }
 
   template<const int n, const int p>
   friend Col4 ExtrBits(Col4::Arg a )
@@ -1045,7 +1102,11 @@ public:
   Vec3(const float *_x, const float *_y, const float *_z) { x = *_x;  y = *_y;  z = *_z; }
   Vec3(float  _x, float  _y, float  _z) { x = _x;   y = _y;   z = _z; }
   Vec3(Vec3   _x, Vec3   _y, Vec3   _z) { x = _x.x; y = _y.x; z = _z.x; }
-
+  
+  void StoreX(float *_x) const { *_x = x; }
+  void StoreY(float *_y) const { *_y = y; }
+  void StoreZ(float *_z) const { *_z = z; }
+	
   float X() const { return x; }
   float Y() const { return y; }
   float Z() const { return z; }
@@ -1219,6 +1280,16 @@ public:
       return Vec3(a.y);
 //  if (b.z == c)
       return Vec3(a.z);
+  }
+  
+  template<const int n>
+  friend Vec3 RotateLeft( Arg a )
+  {
+    return Vec3(
+      n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)), 
+      n == 1 ? a.z : (n == 2 ? a.w : (n == 3 ? a.x : a.y)), 
+      n == 1 ? a.w : (n == 2 ? a.x : (n == 3 ? a.y : a.z))
+    );
   }
 
   friend Scr3 HorizontalMin( Arg a )
@@ -1419,7 +1490,12 @@ public:
   {
     return Vec3( x, y, z );
   }
-
+  
+  void StoreX(float *_x) const { *_x = x; }
+  void StoreY(float *_y) const { *_y = y; }
+  void StoreZ(float *_z) const { *_z = z; }
+  void StoreW(float *_w) const { *_w = w; }
+	
   float X() const { return x; }
   float Y() const { return y; }
   float Z() const { return z; }
@@ -1707,6 +1783,17 @@ public:
       return Vec4(a.z);
 //  if (b.w == c)
       return Vec4(a.w);
+  }
+  
+  template<const int n>
+  friend Vec4 RotateLeft( Arg a )
+  {
+    return Vec4(
+      n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)), 
+      n == 1 ? a.z : (n == 2 ? a.w : (n == 3 ? a.x : a.y)), 
+      n == 1 ? a.w : (n == 2 ? a.x : (n == 3 ? a.y : a.z)), 
+      n == 1 ? a.x : (n == 2 ? a.y : (n == 3 ? a.z : a.w))
+    );
   }
 
   friend Scr4 HorizontalMin( Arg a )

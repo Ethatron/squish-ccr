@@ -919,7 +919,7 @@ public:
 
 		return Col4( _mm_and_si128( a.m_v, mask ) );
 	}
-
+	
 	friend Col4 MaskBits( Col4::Arg a, const int n, const int p )
 	{
 		const int val = 64 - (p + n);
@@ -935,7 +935,7 @@ public:
 		// (0xFFFFFFFFFFFFFFFFULL >> (64 - (p + n) & 63))
 		return Col4( _mm_and_si128( a.m_v, mask ) );
 	}
-
+	
 	template<const int n, const int p>
 	friend Col4 CopyBits( Col4::Arg left, Col4::Arg right )
 	{
@@ -968,6 +968,81 @@ public:
 #endif
 	}
 
+	template<const int n, const int p>
+	friend Col4 KillBits( Col4::Arg a )
+	{
+		if ((p + n) <= 0)
+			return Col4(0);
+		if ((p + n) >= 64)
+			return a;
+
+		// compile time
+		__int64 base1 =  (0xFFFFFFFFFFFFFFFFULL << (     (p + 0) & 63));
+		__int64 base2 =  (0xFFFFFFFFFFFFFFFFULL >> (64 - (p + n) & 63));
+	//	__int64 base1 = ~(0xFFFFFFFFFFFFFFFFULL >> (64 - (p + 0) & 63));
+	//	__int64 base2 = ~(0xFFFFFFFFFFFFFFFFULL << (64 - (p + n) & 63));
+		__m128i mask = _mm_setr_epi32(
+		  (int)((base1 ^ base2) >>  0),
+		  (int)((base1 ^ base2) >> 32), 0, 0
+		);
+
+		return Col4( _mm_and_si128( a.m_v, mask ) );
+	}
+	
+	friend Col4 KillBits( Col4::Arg a, const int n, const int p )
+	{
+		const int val1 =      (p + 0);
+		const int val2 = 64 - (p + n);
+
+		__m128i shift1 = _mm_max_epi16( _mm_cvtsi32_si128( val1 ), _mm_set1_epi32( 0 ) );
+		__m128i shift2 = _mm_max_epi16( _mm_cvtsi32_si128( val2 ), _mm_set1_epi32( 0 ) );
+		__m128i mask1 = _mm_setr_epi32(
+		  0xFFFFFFFF,
+		  0xFFFFFFFF, 0, 0
+		);
+		__m128i mask2 = _mm_setr_epi32(
+		  0xFFFFFFFF,
+		  0xFFFFFFFF, 0, 0
+		);
+
+		mask1 = _mm_sll_epi64( mask1, shift1 );
+		mask2 = _mm_srl_epi64( mask2, shift2 );
+
+		return Col4( _mm_and_si128( a.m_v, _mm_xor_si128( mask1, mask2 ) ) );
+	}
+	
+	template<const int n, const int p>
+	friend Col4 InjtBits( Col4::Arg left, Col4::Arg right )
+	{
+		if (!n)
+			return left;
+		if (!p)
+			return MaskBits<n, 0>(right);
+		if ((p + n) >= 64)
+			return (left) | ShiftLeftHalf<p>(right);
+
+#if ( SQUISH_USE_XSSE == 4 )
+		return Col4( _mm_inserti_si64( left.m_v, right.m_v, n, p ) );
+#else
+		return KillBits<n, p>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+	//	return               (left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+#endif
+	}
+
+	friend Col4 InjtBits( Col4::Arg left, Col4 right, const int n, const int p )
+	{
+#if ( SQUISH_USE_XSSE == 4 )
+		/* ---- ---bl xxxx xxxx */
+		const int val = (p << 8) | (n << 0);
+
+		right.m_v = _mm_unpacklo_epi64( right.m_v, _mm_cvtsi32_si128( val ) );
+		return Col4( _mm_insert_si64( left.m_v, right.m_v ) );
+#else
+		return KillBits(left, n, p) | MaskBits(ShiftLeftHalf(right, p), n, p);
+	//	return         (left      ) | MaskBits(ShiftLeftHalf(right, p), n, p);
+#endif
+	}
+	
 	template<const int n, const int p>
 	friend Col4 ExtrBits( Col4::Arg a )
 	{
@@ -1319,7 +1394,11 @@ public:
 	Vec3( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec3( Vec3 x, Vec3 y, Vec3 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), y.m_v ) ) {}
 	Vec3( Vec3 x, Vec3 y ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_set1_ps( 0.0f ) ) ) {}
-
+	
+	void StoreX(float *x) const { _mm_store_ss(x, m_v); }
+	void StoreY(float *y) const { _mm_store_ss(y, _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 1 ) )); }
+	void StoreZ(float *z) const { _mm_store_ss(z, _mm_movehl_ps( m_v, m_v ) ); }
+	
 	float X() const { return ((float *)&m_v)[0]; }
 	float Y() const { return ((float *)&m_v)[1]; }
 	float Z() const { return ((float *)&m_v)[2]; }
@@ -1499,6 +1578,17 @@ public:
 			(t == 2 ? f : (f == 2 ? t : 2)),
 			(t == 3 ? f : (f == 3 ? t : 3))
 		) ) ) );
+	}
+	
+	template<const int n>
+	friend Vec3 RotateLeft( Arg a )
+	{
+		return Vec3( _mm_shuffle_ps( a.m_v , a.m_v , SQUISH_SSE_SHUF(
+			(n + 0) % 3,
+			(n + 1) % 3,
+			(n + 2) % 3,
+			3
+		) ) );
 	}
 
 	friend Vec3 HorizontalAdd( Arg a )
@@ -1845,6 +1935,11 @@ public:
 		return Vec3( m_v );
 	}
 
+	void StoreX(float *x) const { _mm_store_ss(x, m_v); }
+	void StoreY(float *y) const { _mm_store_ss(y, _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 1 ) )); }
+	void StoreZ(float *z) const { _mm_store_ss(z, _mm_movehl_ps( m_v, m_v ) ); }
+	void StoreW(float *w) const { _mm_store_ss(w, _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 3 ) )); }
+	
 	float X() const { return ((float *)&m_v)[0]; }
 	float Y() const { return ((float *)&m_v)[1]; }
 	float Z() const { return ((float *)&m_v)[2]; }
@@ -2056,6 +2151,17 @@ public:
 			(t == 2 ? f : (f == 2 ? t : 2)),
 			(t == 3 ? f : (f == 3 ? t : 3))
 		) ) ) );
+	}
+	
+	template<const int n>
+	friend Vec4 RotateLeft( Arg a )
+	{
+		return Vec4( _mm_shuffle_ps( a.m_v , a.m_v , SQUISH_SSE_SHUF(
+			(n + 0) % 4,
+			(n + 1) % 4,
+			(n + 2) % 4,
+			(n + 3) % 4
+		) ) );
 	}
 
 	friend Vec4 Select( Arg a, Arg b, Arg c )
