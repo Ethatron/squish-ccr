@@ -56,11 +56,9 @@ private:
   Scr4 ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup4 const* const* lookups, u8 cmask);
   Scr4 ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup8 const* const* lookups, u8 cmask);
 
-  u8 m_index;
-
 protected:
   Scr4 ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask);
-  u8 GetIndex() { return m_index; }
+  u8 GetIndex() { return 1; }
 };
 #endif
 

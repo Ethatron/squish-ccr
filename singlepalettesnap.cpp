@@ -196,14 +196,15 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePale
 
   m_start[set] = Vec4(s) * (1.0f / 255.0f);
   m_end  [set] = Vec4(e) * (1.0f / 255.0f);
-  m_index = 1;
 
   Vec4 code =
     weights_V4[2][3 - 1] * m_start[set] +
     weights_V4[2][0 + 1] * m_end  [set];
+  Scr4 error =
+    LengthSquared(metric * (*values - code));
 
   // return the error
-  return LengthSquared(metric * (*values - code));
+  return error;
 }
 
 Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup4 const* const* lookups, u8 cmask)
@@ -235,14 +236,15 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePale
 
   m_start[set] = Vec4(s) * (1.0f / 255.0f);
   m_end  [set] = Vec4(e) * (1.0f / 255.0f);
-  m_index = 1;
 
   Vec4 code =
     weights_V4[3][7 - 1] * m_start[set] +
     weights_V4[3][0 + 1] * m_end  [set];
+  Scr4 error =
+    LengthSquared(metric * (*values - code));
 
   // return the error
-  return LengthSquared(metric * (*values - code));
+  return error;
 }
 
 Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup8 const* const* lookups, u8 cmask)
@@ -274,14 +276,15 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePale
 
   m_start[set] = Vec4(s) * (1.0f / 255.0f);
   m_end  [set] = Vec4(e) * (1.0f / 255.0f);
-  m_index = 1;
 
   Vec4 code =
     weights_V4[4][15 - 1] * m_start[set] +
     weights_V4[4][ 0 + 1] * m_end  [set];
+  Scr4 error =
+    LengthSquared(metric * (*values - code));
 
   // return the error
-  return LengthSquared(metric * (*values - code));
+  return error;
 }
 #endif
 
