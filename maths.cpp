@@ -54,208 +54,321 @@ namespace squish {
 #if	!defined(SQUISH_USE_PRE)
 void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric) {
   // compute the centroid
-  centroid = Vec3(0.0f);
+  Vec3 center = Vec3(0.0f);
 
   for (int i = 0; i < n; ++i)
-    centroid += points[i];
+    center += points[i];
 
-  centroid /= n;
+  center /= n;
 
   // accumulate the covariance smatrix
-  covariance = Sym3x3(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec3 a = CoVar(points[i], centroid);
-    Vec3 b = a;
+  Vec3 covariance_035 = Vec3(0.0f);
+  Vec3 covariance_14 = Vec3(0.0f);
+  Vec3 covariance_2 = Vec3(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.X() * b.Z();
-    covariance[3] += a.Y() * b.Y();
-    covariance[4] += a.Y() * b.Z();
-    covariance[5] += a.Z() * b.Z();
+  for (int i = 0; i < n; ++i) {
+    Vec3 a = CoVar(points[i], center);
+    Vec3 b = a;
+    Vec3 c = a * b;
+    Vec3 d = a * RotateLeft<1>(b);
+    Vec3 e = a * RotateLeft<2>(b);
+
+    covariance_035 += c;
+    covariance_14 += d;
+    covariance_2 += e;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_035.StoreX(&covariance[0]);
+  covariance_035.StoreY(&covariance[3]);
+  covariance_035.StoreZ(&covariance[5]);
+  covariance_14.StoreX(&covariance[1]);
+  covariance_14.StoreY(&covariance[4]);
+  covariance_2.StoreX(&covariance[2]);
 }
 
 void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric) {
   // compute the centroid
-  centroid = Vec4(0.0f);
+  Vec4 center = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i)
-    centroid += points[i];
+    center += points[i];
 
-  centroid /= n;
+  center /= n;
 
   // accumulate the covariance smatrix
-  covariance = Sym2x2(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec4 a = CoVar(points[i], centroid);
-    Vec4 b = a;
+  Vec4 covariance_02 = Vec4(0.0f);
+  Vec4 covariance_1 = Vec4(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.Y() * b.Y();
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], center);
+    Vec4 b = a;
+    Vec4 c = a * b;
+    Vec4 d = a * RotateLeft<1>(b);
+
+    covariance_02 += c;
+    covariance_1 += d;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_02.StoreX(&covariance[0]);
+  covariance_02.StoreY(&covariance[2]);
+  covariance_1.StoreX(&covariance[1]);
 }
 
 void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric) {
   // compute the centroid
-  centroid = Vec4(0.0f);
+  Vec4 center = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i)
-    centroid += points[i];
+    center += points[i];
 
-  centroid /= n;
+  center /= n;
 
   // accumulate the covariance smatrix
-  covariance = Sym3x3(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec4 a = CoVar(points[i], centroid);
-    Vec4 b = a;
+  Vec4 covariance_035 = Vec4(0.0f);
+  Vec4 covariance_14 = Vec4(0.0f);
+  Vec4 covariance_2 = Vec4(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.X() * b.Z();
-    covariance[3] += a.Y() * b.Y();
-    covariance[4] += a.Y() * b.Z();
-    covariance[5] += a.Z() * b.Z();
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], center);
+    Vec4 b = a;
+    Vec4 c = a * b;
+    Vec4 d = a * RotateLeft<1>(b);
+    Vec4 e = a * RotateLeft<2>(b);
+
+    covariance_035 += c;
+    covariance_14 += d;
+    covariance_2 += e;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_035.StoreX(&covariance[0]);
+  covariance_035.StoreY(&covariance[3]);
+  covariance_035.StoreZ(&covariance[5]);
+  covariance_14.StoreX(&covariance[1]);
+  covariance_14.StoreY(&covariance[4]);
+  covariance_2.StoreX(&covariance[2]);
 }
 
 void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric) {
   // compute the centroid
-  centroid = Vec4(0.0f);
+  Vec4 center = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i)
-    centroid += points[i];
+    center += points[i];
 
-  centroid /= n;
+  center /= n;
 
   // accumulate the covariance smatrix
-  covariance = Sym4x4(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec4 a = CoVar(points[i], centroid);
-    Vec4 b = a;
+  Vec4 covariance_0479 = Vec4(0.0f);
+  Vec4 covariance_158 = Vec4(0.0f);
+  Vec4 covariance_26 = Vec4(0.0f);
+  Vec4 covariance_3 = Vec4(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.X() * b.Z();
-    covariance[3] += a.X() * b.W();
-    covariance[4] += a.Y() * b.Y();
-    covariance[5] += a.Y() * b.Z();
-    covariance[6] += a.Y() * b.W();
-    covariance[7] += a.Z() * b.Z();
-    covariance[8] += a.Z() * b.W();
-    covariance[9] += a.W() * b.W();
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], center);
+    Vec4 b = a;
+    Vec4 c = a * b;
+    Vec4 d = a * RotateLeft<1>(b);
+    Vec4 e = a * RotateLeft<2>(b);
+    Vec4 f = a * RotateLeft<3>(b);
+
+    covariance_0479 += c;
+    covariance_158 += d;
+    covariance_26 += e;
+    covariance_3 += f;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_0479.StoreX(&covariance[0]);
+  covariance_0479.StoreY(&covariance[4]);
+  covariance_0479.StoreZ(&covariance[7]);
+  covariance_0479.StoreW(&covariance[9]);
+  covariance_158.StoreX(&covariance[1]);
+  covariance_158.StoreY(&covariance[5]);
+  covariance_158.StoreZ(&covariance[8]);
+  covariance_26.StoreX(&covariance[2]);
+  covariance_26.StoreY(&covariance[6]);
+  covariance_3.StoreX(&covariance[3]);
 }
 
 void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric, float const* weights) {
   // compute the centroid
   float total = 0.0f;
-  centroid = Vec3(0.0f);
+  Vec3 center = Vec3(0.0f);
 
   for (int i = 0; i < n; ++i) {
-    total    += weights[i];
-    centroid += weights[i] * points[i];
+    total  += weights[i];
+    center += weights[i] * points[i];
   }
 
-  centroid /= total;
+  center /= total;
 
   // accumulate the covariance smatrix
-  covariance = Sym3x3(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec3 a = CoVar(points[i], centroid);
-    Vec3 b = weights[i] * a;
+  Vec3 covariance_035 = Vec3(0.0f);
+  Vec3 covariance_14 = Vec3(0.0f);
+  Vec3 covariance_2 = Vec3(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.X() * b.Z();
-    covariance[3] += a.Y() * b.Y();
-    covariance[4] += a.Y() * b.Z();
-    covariance[5] += a.Z() * b.Z();
+  for (int i = 0; i < n; ++i) {
+    Vec3 a = CoVar(points[i], center);
+    Vec3 b = weights[i] * a;
+    Vec3 c = a * b;
+    Vec3 d = a * RotateLeft<1>(b);
+    Vec3 e = a * RotateLeft<2>(b);
+
+    covariance_035 += c;
+    covariance_14 += d;
+    covariance_2 += e;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_035.StoreX(&covariance[0]);
+  covariance_035.StoreY(&covariance[3]);
+  covariance_035.StoreZ(&covariance[5]);
+  covariance_14.StoreX(&covariance[1]);
+  covariance_14.StoreY(&covariance[4]);
+  covariance_2.StoreX(&covariance[2]);
 }
 
 void ComputeWeightedCovariance2(Sym2x2 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, Vec4 const* weights) {
   // compute the centroid
   Vec4 total = Vec4(0.0f);
-  centroid = Vec4(0.0f);
+  Vec4 center = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i) {
-    total    += weights[i];
-    centroid += weights[i] * points[i];
+    total  += weights[i];
+    center += weights[i] * points[i];
   }
 
-  centroid /= total;
+  center /= total;
 
   // accumulate the covariance smatrix
-  covariance = Sym2x2(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec4 a = CoVar(points[i], centroid);
-    Vec4 b = weights[i] * a;
+  Vec4 covariance_02 = Vec4(0.0f);
+  Vec4 covariance_1 = Vec4(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.Y() * b.Y();
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], center);
+    Vec4 b = weights[i] * a;
+    Vec4 c = a * b;
+    Vec4 d = a * RotateLeft<1>(b);
+    Vec4 e = a * RotateLeft<2>(b);
+
+    covariance_02 += c;
+    covariance_1 += d;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_02.StoreX(&covariance[0]);
+  covariance_02.StoreY(&covariance[2]);
+  covariance_1.StoreX(&covariance[1]);
 }
 
 void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, Vec4 const* weights) {
   // compute the centroid
-  Vec4 total = Vec4(0.0f);
-  centroid = Vec4(0.0f);
+  Vec4 total  = Vec4(0.0f);
+  Vec4 center = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i) {
-    total    += weights[i];
-    centroid += weights[i] * points[i];
+    total  += weights[i];
+    center += weights[i] * points[i];
   }
 
-  centroid /= total;
+  center /= total;
 
   // accumulate the covariance smatrix
-  covariance = Sym3x3(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec4 a = CoVar(points[i], centroid);
-    Vec4 b = weights[i] * a;
+  Vec4 covariance_035 = Vec4(0.0f);
+  Vec4 covariance_14 = Vec4(0.0f);
+  Vec4 covariance_2 = Vec4(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.X() * b.Z();
-    covariance[3] += a.Y() * b.Y();
-    covariance[4] += a.Y() * b.Z();
-    covariance[5] += a.Z() * b.Z();
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], center);
+    Vec4 b = weights[i] * a;
+    Vec4 c = a * b;
+    Vec4 d = a * RotateLeft<1>(b);
+    Vec4 e = a * RotateLeft<2>(b);
+
+    covariance_035 += c;
+    covariance_14 += d;
+    covariance_2 += e;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_035.StoreX(&covariance[0]);
+  covariance_035.StoreY(&covariance[3]);
+  covariance_035.StoreZ(&covariance[5]);
+  covariance_14.StoreX(&covariance[1]);
+  covariance_14.StoreY(&covariance[4]);
+  covariance_2.StoreX(&covariance[2]);
 }
 
 void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 const* points, Vec4 const &metric, Vec4 const* weights) {
   // compute the centroid
-  Vec4 total = Vec4(0.0f);
-  centroid = Vec4(0.0f);
+  Vec4 total  = Vec4(0.0f);
+  Vec4 center = Vec4(0.0f);
 
   for (int i = 0; i < n; ++i) {
     total    += weights[i];
-    centroid += weights[i] * points[i];
+    center += weights[i] * points[i];
   }
 
-  centroid /= total;
+  center /= total;
 
   // accumulate the covariance smatrix
-  covariance = Sym4x4(0.0f);
-  for (int i = 0; i < n; ++i) {
-    Vec4 a = CoVar(points[i], centroid);
-    Vec4 b = weights[i] * a;
+  Vec4 covariance_0479 = Vec4(0.0f);
+  Vec4 covariance_158 = Vec4(0.0f);
+  Vec4 covariance_26 = Vec4(0.0f);
+  Vec4 covariance_3 = Vec4(0.0f);
 
-    covariance[0] += a.X() * b.X();
-    covariance[1] += a.X() * b.Y();
-    covariance[2] += a.X() * b.Z();
-    covariance[3] += a.X() * b.W();
-    covariance[4] += a.Y() * b.Y();
-    covariance[5] += a.Y() * b.Z();
-    covariance[6] += a.Y() * b.W();
-    covariance[7] += a.Z() * b.Z();
-    covariance[8] += a.Z() * b.W();
-    covariance[9] += a.W() * b.W();
+  for (int i = 0; i < n; ++i) {
+    Vec4 a = CoVar(points[i], center);
+    Vec4 b = weights[i] * a;
+    Vec4 c = a * b;
+    Vec4 d = a * RotateLeft<1>(b);
+    Vec4 e = a * RotateLeft<2>(b);
+    Vec4 f = a * RotateLeft<3>(b);
+
+    covariance_0479 += c;
+    covariance_158 += d;
+    covariance_26 += e;
+    covariance_3 += f;
   }
+  
+  // save the centroid
+  centroid = center;
+
+  // save the covariance smatrix (TODO: swizzled store)
+  covariance_0479.StoreX(&covariance[0]);
+  covariance_0479.StoreY(&covariance[4]);
+  covariance_0479.StoreZ(&covariance[7]);
+  covariance_0479.StoreW(&covariance[9]);
+  covariance_158.StoreX(&covariance[1]);
+  covariance_158.StoreY(&covariance[5]);
+  covariance_158.StoreZ(&covariance[8]);
+  covariance_26.StoreX(&covariance[2]);
+  covariance_26.StoreY(&covariance[6]);
+  covariance_3.StoreX(&covariance[3]);
 }
 
 /* .............................................................................
