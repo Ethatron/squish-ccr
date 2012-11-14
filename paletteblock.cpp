@@ -1759,8 +1759,8 @@ void ReadPaletteBlock3_m2(u8* rgba, void const* block) {
 
   ExtrBits< 6, 74 - 64>(blkh, b[1][C]);	// 4 bits set 2 blue stop
   ExtrBits< 2, 62 -  0>(blkl, b[0][C]);	// 4 bits set 1 blue stop
-  b[0][0] =
-  CopyBits< 4, 64 - 62>(b[0][0], blkh);	// 4 bits set 1 blue stop
+  b[0][C] =
+  CopyBits< 4, 64 - 62>(b[0][C], blkh);	// 4 bits set 1 blue stop
 
   ExtrBits< 6, 68 - 64>(blkh, a[1][C]);	// 4 bits set 2 blue start
   ExtrBits< 6, 56 -  0>(blkl, a[0][C]);	// 4 bits set 1 blue start
@@ -1907,7 +1907,7 @@ void ReadPaletteBlock3_m4(u8* rgba, void const* block) {
   ConcBits< 5, 59 -  0>(blkl, b[1][C]);	// 4 bits set 2 green stop
   ConcBits< 7, 45 -  0>(blkl, b[0][C]);	// 4 bits set 1 green stop
   b[1][C] =
-  CopyBits< 2, 64 - 59>(b[1][C], blkh);	// 4 bits set 2 green stop
+  InjtBits< 2, 64 - 59>(b[1][C], blkh);	// 4 bits set 2 green stop
 
   ConcBits< 7, 52 -  0>(blkl, a[1][C]);	// 4 bits set 2 green start
   ConcBits< 7, 38 -  0>(blkl, a[0][C]);	// 4 bits set 1 green start
