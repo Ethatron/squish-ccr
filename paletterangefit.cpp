@@ -218,7 +218,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 #endif
 }
 
-void PaletteRangeFit::Compress(void* block, int mode)
+void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 {
   int ib = GetIndexBits(mode);
   int jb = ib >> 16; ib = ib & 0xFF;
@@ -226,7 +226,7 @@ void PaletteRangeFit::Compress(void* block, int mode)
   int ab = cb >> 16; cb = cb & 0xFF;
   int zb = GetSharedField();
 
-  vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
+  q.ChangeShared(cb, cb, cb, ab, zb);
 
   // match each point to the closest code
   Scr4 error = Scr4(0.0f);
@@ -425,11 +425,11 @@ void PaletteRangeFit::Compress(void* block, int mode)
 
 #ifndef NDEBUG
   // kill late if this scheme looses
-  Scr4 verify_error = Scr4(0.0f); SumError(closest, mode, verify_error);
+  Scr4 verify_error = Scr4(0.0f); SumError(closest, q, mode, verify_error);
   Scr4 one_error = Scr4(1.0f / (1 << cb)); one_error *= one_error;
   // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
   if (verify_error > (error + one_error)) {
-    Scr4 verify_error2 = Scr4(0.0f); SumError(closest, mode, verify_error2);
+    Scr4 verify_error2 = Scr4(0.0f); SumError(closest, q, mode, verify_error2);
     abort();
   }
 

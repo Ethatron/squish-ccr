@@ -80,12 +80,12 @@ public:
   void SetError(Scr4 &error) { m_besterror = error; m_best = false; }
   Scr4 GetError() { return m_besterror; }
 
-  void Compress(void* block);
-  virtual void Compress(void* block, int mode) = 0;
+  void Compress(void* block, vQuantizer &q);
+  virtual void Compress(void* block, vQuantizer &q, int mode) = 0;
 
 #if 1 //ndef NDEBUG
-  void Decompress(u8 *rgba, int mode);
-  void SumError(u8 (&closest)[4][16], int mode, Scr4 &error);
+  void Decompress(u8 *rgba, vQuantizer &q, int mode);
+  void SumError(u8 (&closest)[4][16], vQuantizer &q, int mode, Scr4 &error);
 #endif
 
   bool Lossless() { return !(m_besterror > Scr4(0.0f)); }

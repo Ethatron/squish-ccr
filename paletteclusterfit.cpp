@@ -1475,7 +1475,7 @@ Scr4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 #define CMetric(m)  m
 #endif
 
-void PaletteClusterFit::CompressS23(void* block, int mode)
+void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
 {
   int ib = GetIndexBits(mode);
   int jb = ib >> 16; ib = ib & 0xFF;
@@ -1483,8 +1483,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   int ab = cb >> 16; cb = cb & 0xFF;
   int zb = GetSharedField();
 
-  vQuantizer qc = vQuantizer(cb, cb, cb, ab, zb);
-  vQuantizer qa = vQuantizer(ab, ab, ab, ab, zb);
+  q.ChangeShared(cb, cb, cb, ab, zb);
 
   // match each point to the closest code
   a16 u8 closest[4][16];
@@ -1507,9 +1506,6 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
     // how big is the codebook for the current set
     int kb = ((s < isets) ^ (!!m_swapindex)) ? ib : jb;
-
-    // the separate alpha-channel is splatted into the rgb channels
-    vQuantizer &q = (s < isets ? qc : qa);
 
     // declare variables
     int const count = m_palette->GetCount(s);
@@ -1534,6 +1530,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
     }
     // we do single channel fit for single component sets
     // (cluster-fit is really really really bad on one channel cases)
+    // the separate alpha-channel is splatted into the rgb channels
     else if (s >= isets) {
       // find the closest code
       Scr4 dist = ComputeCodebook(s, metric, q, sb, kb, closest[s]);
@@ -1609,7 +1606,7 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   // TODO: cluster-fit is still worst than range-fit currently, why?
 #if 1 //ndef NDEBUG
   // kill late if this scheme looses
-  error = Scr4(0.0f); SumError(closest, mode, error);
+  error = Scr4(0.0f); SumError(closest, q, mode, error);
   // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
   if (!(error < m_besterror))
     return;
@@ -1654,29 +1651,29 @@ void PaletteClusterFit::CompressS23(void* block, int mode)
   m_best = true;
 }
 
-void PaletteClusterFit::CompressC2(void* block, int mode) {
+void PaletteClusterFit::CompressC2(void* block, vQuantizer &q, int mode) {
   /* 2bit it can be done by CompressS23 as well */
-  CompressS23(block, mode);
+  CompressS23(block, q, mode);
 }
 
-void PaletteClusterFit::Compress(void* block, int mode) {
+void PaletteClusterFit::Compress(void* block, vQuantizer &q, int mode) {
   switch (mode) {
 #if (CLUSTERINDICES >= 2)
-    case 2: /*2*/  CompressS23(block, mode); break;
-    case 3: /*2*/  CompressS23(block, mode); break;
-    case 5: /*22*/ CompressS23(block, mode); break;
+    case 2: /*2*/  CompressS23(block, q, mode); break;
+    case 3: /*2*/  CompressS23(block, q, mode); break;
+    case 5: /*22*/ CompressS23(block, q, mode); break;
 
-    case 7: /*2*/  CompressC2 (block, mode); break;
+    case 7: /*2*/  CompressC2 (block, q, mode); break;
 #endif
 
 #if (CLUSTERINDICES >= 3)
-    case 0: /*3*/  CompressS23(block, mode); break;
-    case 1: /*3*/  CompressS23(block, mode); break;
-    case 4: /*23*/ CompressS23(block, mode); break;
+    case 0: /*3*/  CompressS23(block, q, mode); break;
+    case 1: /*3*/  CompressS23(block, q, mode); break;
+    case 4: /*23*/ CompressS23(block, q, mode); break;
 #endif
       
 #if (CLUSTERINDICES >= 4)
-    case 6: /*CompressC4(block, mode);*/ break;
+    case 6: /*CompressC4(block, q, mode);*/ break;
 #endif
   }
 }

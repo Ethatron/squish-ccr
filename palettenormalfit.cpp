@@ -135,7 +135,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
   }
 }
 
-void PaletteNormalFit::Compress(void* block, int mode)
+void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
 {
   int ib = GetIndexBits(mode);
   int jb = ib >> 16; ib = ib & 0xFF;
@@ -143,7 +143,7 @@ void PaletteNormalFit::Compress(void* block, int mode)
   int ab = cb >> 16; cb = cb & 0xFF;
   int zb = GetSharedField();
 
-  vQuantizer q = vQuantizer(cb, cb, cb, ab, zb);
+  q.ChangeShared(cb, cb, cb, ab, zb);
 
   // match each point to the closest code
   Scr4 error = Scr4(0.0f);

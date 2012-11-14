@@ -42,7 +42,7 @@ class PaletteRangeFit : public SinglePaletteMatch
 public:
   PaletteRangeFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
   
-  virtual void Compress(void* block, int mode);
+  virtual void Compress(void* block, vQuantizer &q, int mode);
 
 private:
 #ifdef	FEATURE_ELIMINATE_FLATBOOKS

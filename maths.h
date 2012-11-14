@@ -646,16 +646,7 @@ public:
 
   const a16 float *qLUT_t[8];
 
-  Vec4 grid;
-  Vec4 gridgap;
-  Vec4 gridint;
-  Col4 gridinv;
-
-  vQuantizer(const int rb, const int gb, const int bb, const int ab, const int sb = -1)/* :
-    rm(1 << rb), gm(1 << gb), bm(1 << bb), am(1 << ab),
-    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, ab ? 1.0f / am : 1.0f ),
-    grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, ab ? 1.0f + am : 1.0f )*/ {
-
+  void ChangeShared(const int rb, const int gb, const int bb, const int ab, const int sb = -1) {
     qLUT_t[0] = qLUT_a[rb];
     qLUT_t[1] = qLUT_a[gb];
     qLUT_t[2] = qLUT_a[bb];
@@ -670,9 +661,23 @@ public:
       qLUT_t[3] = qLUT_s[ab]; qLUT_t[7] = qLUT_c[ab];
     }
 #endif
+  }
+  
+  Vec4 grid;
+  Vec4 gridgap;
+  Vec4 gridint;
+//Col4 gridinv;
+  
+  vQuantizer(const int rb, const int gb, const int bb, const int ab, const int sb = -1)/* :
+    rm(1 << rb), gm(1 << gb), bm(1 << bb), am(1 << ab),
+    gridrcp( 1.0f / rm, 1.0f / gm, 1.0f / bm, ab ? 1.0f / am : 1.0f ),
+    grid   ( 1.0f + rm, 1.0f + gm, 1.0f + bm, ab ? 1.0f + am : 1.0f )*/ {
 
+    /* assign the LUTs */
+    ChangeShared(rb, gb, bb, ab, sb);
+    
+//  gridinv.SetRGBApow2<0>(rb, gb, bb, ab);
     gridgap.SetXYZWpow2<8>(rb, gb, bb, ab);
-    gridinv.SetRGBApow2<0>(rb, gb, bb, ab);
     grid.SetXYZWpow2<0>(rb, gb, bb, ab);
 
     // set inactive channels to 255.0 (Truncate will preserve the channel)
@@ -680,15 +685,19 @@ public:
     Vec4 one = Vec4(  1.0f);
     
     // merge "(FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8"
+    // into "FloatToInt<false>(Qf * gridinv * Vec4(255.0f) >> 8)"
     gridint  = grid;
     gridint *= Vec4(255.0f / 256.0f);
+    gridint  = Max(gridint, tff);
 
     // if a value has zero bits, to prevent
     // the singularity we set rcp to 1 as well
     grid -= one;
+    
+    // results in "x * 0 + 255", if ab is "0"
     gridgap *= grid;
     gridgap *= Vec4(0.5f / 255.0f);
-    grid += tff;
+    gridgap  = Max(gridgap, tff);
 
     // silence the compiler
     bool hb = !!sb; hb = false;
@@ -729,8 +738,6 @@ public:
     // [0,255]
     Vec4 Qf = SnapToLattice(val);
 
-    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
-
     // [0,1<<b-1]
     return FloatToInt<false>(Qf * gridint);
   }
@@ -739,8 +746,6 @@ public:
     // [0,255]
     Vec4 Qf = SnapToLatticeClamped(val);
     
-    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
-
     // [0,1<<b-1]
     return FloatToInt<false>(Qf * gridint);
   }
@@ -780,8 +785,6 @@ public:
     // [0,255]
     Vec4 Qf = SnapToLattice(val, bitset, bittest);
     
-    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
-
     // [0,1<<b-1]
     return FloatToInt<false>(Qf * gridint);
   }
@@ -790,8 +793,6 @@ public:
     // [0,255]
     Vec4 Qf = SnapToLatticeClamped(val, bitset, bittest);
     
-    assert(CompareAllEqualTo(FloatToInt<false>(Qf * gridint), (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8));
-
     // [0,1<<b-1]
     return FloatToInt<false>(Qf * gridint);
   }

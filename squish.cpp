@@ -95,7 +95,7 @@ void CompressColorBtc(u8 const* rgba, int mask, void* block, int flags)
   // check the compression type and compress colour
   if (colours.GetCount() == 1) {
     // always do a single colour fit
-    SingleColourFit fit(&colours, flags);
+    SingleColourMatch fit(&colours, flags);
     fit.Compress(block);
   }
   else if (((flags & kColourRangeFit) != 0) || (colours.GetCount() == 0)) {
@@ -255,9 +255,13 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
     sx = ex = DEBUG_SELECTION;
 //  sb = eb = DEBUG_SHAREDBIT;
 #endif
+
+    int cb = PaletteFit::GetPrecisionBits(mnum);
+    int ab = cb >> 16; cb = cb & 0xFF;
     
-    // create the initial point set
+    // create the initial point set and quantizer
     PaletteSet initial(rgba, mask, flags | mode);
+    vQuantizer qnt(cb, cb, cb, ab);
     
     // signal if we do we have anything better this iteration of the search
     bool better = false;
@@ -320,14 +324,14 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 	    
 	    // update with old best error (reset IsBest)
 	    fit.SetError(error);
-	    fit.Compress(block, mnum);
+	    fit.Compress(block, qnt, mnum);
 
 	    // we could code it lossless, no point in trying any further at all
-	    if (fit.Lossless())
-	      return;
 	    if (fit.IsBest()) {
+	      if (fit.Lossless())
+		return;
+	      
 	      error = fit.GetError();
-
 	      if (cluster || 1)
 		bestmde = mode,
 		bestpal = palette,
@@ -363,24 +367,22 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 	    
 	  // update with old best error (reset IsBest)
 	  fit.SetError(error);
-	  fit.Compress(block, mnum);
+	  fit.Compress(block, qnt, mnum);
 	  
 #if defined(TRACK_STATISTICS)
 	  gstat.btr_cluster[mnum][fit.IsBest() ? 1 : 0]++;
 #endif
 
-#if 0
 	  // we could code it lossless, no point in trying any further at all
-	  if (fit.Lossless())
-	    return;
 	  if (fit.IsBest()) {
-	    error = fit.GetError();
+	    if (fit.Lossless())
+	      return;
 	    
+	    error = fit.GetError();
 	    if (cluster || 1)
 	      bestmde = mode,
 	      besttyp = 1;
 	  }
-#endif
 	}
       }
     }
@@ -398,19 +400,25 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 #endif
 
 #if defined(VERIFY_QUANTIZER)
+  int cb = PaletteFit::GetPrecisionBits((bestmde >> 24) - 1);
+  int ab = cb >> 16; cb = cb & 0xFF;
+    
+  // create the initial point set and quantizer
+  vQuantizer qnt(cb, cb, cb, ab);
+    
   if (!besttyp) {
     // do a range fit (which uses single palette fit if appropriate)
     PaletteRangeFit fit(&bestpal, flags | bestmde, bestswp, bestbit);
 
-    fit.Compress(block, (bestmde >> 24) - 1);
-    fit.Decompress((u8*)rgba, (bestmde >> 24) - 1);
+    fit.Compress(block, qnt, (bestmde >> 24) - 1);
+    fit.Decompress((u8*)rgba, qnt, (bestmde >> 24) - 1);
   }
   else {
     // default to a cluster fit (could be iterative or not)
     PaletteClusterFit fit(&bestpal, flags | bestmde, bestswp, bestbit);
 
-    fit.Compress(block, (bestmde >> 24) - 1);
-    fit.Decompress((u8*)rgba, (bestmde >> 24) - 1);
+    fit.Compress(block, qnt, (bestmde >> 24) - 1);
+    fit.Decompress((u8*)rgba, qnt, (bestmde >> 24) - 1);
   }
 #endif
 

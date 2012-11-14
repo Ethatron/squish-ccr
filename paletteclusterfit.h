@@ -47,15 +47,15 @@ class PaletteClusterFit : public SinglePaletteMatch, public PaletteChannelFit
 public:
   PaletteClusterFit(PaletteSet const* palettes, int flags, int swap = -1, int shared = -1);
 
-  virtual void Compress(void* block, int mode);
+  virtual void Compress(void* block, vQuantizer &q, int mode);
 
 private:
 #define CLUSTERINDICES	3
   // separate components, 4/8 colors, 4/8 alphas
-  void CompressS23(void* block, int mode);
+  void CompressS23(void* block, vQuantizer &q, int mode);
   // combined components, 4/16 colors+alphas
-  void CompressC2(void* block, int mode);
-  void CompressC4(void* block, int mode);
+  void CompressC2(void* block, vQuantizer &q, int mode);
+  void CompressC4(void* block, vQuantizer &q, int mode);
 
   bool ConstructOrdering(Vec4 const& axis, int iteration, int set);
   

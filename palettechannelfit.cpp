@@ -82,11 +82,11 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   u8 const* freq = m_palette->GetFrequencies(set);
 
   // snap floating-point-values to the integer-lattice
-  Vec4 cstart = q.SnapToLattice(m_start_candidate[set], sb, 1 << SBSTART);
-  Vec4 cend   = q.SnapToLattice(m_end_candidate  [set], sb, 1 << SBEND);
+  Vec4 cstart = q.SnapToLattice(m_start_candidate[set], sb, 1 << SBSTART).SplatW();
+  Vec4 cend   = q.SnapToLattice(m_end_candidate  [set], sb, 1 << SBEND  ).SplatW();
 
   // the lattice to walk over
-  Vec4 gridrcp = Reciprocal(q.grid + Vec4(1.0f));
+  Vec4 gridrcp = Reciprocal(q.grid + Vec4(1.0f)).SplatW();
   Vec4 wstart;
   Vec4 wend;
   Vec4 wdelta = gridrcp; if (sb) wdelta *= Vec4(2.0f);
