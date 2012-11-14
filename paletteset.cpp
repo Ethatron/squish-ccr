@@ -506,6 +506,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 
       if ((cindex == -1) && (aindex == -1)) {
       	m_remap[s][i] = -1;
+      	m_remap[a][i] = -1;
 	continue;
       }
       
@@ -535,7 +536,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       // loop over previous points for a match
       for (int j = 0;; ++j) {
 	// allocate a new point
-	if (j == m_count[s]) {
+	if (j == i) {
 	  // get the index of the match and advance
 	  int index = m_count[s]++;
 
@@ -550,7 +551,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	  break;
 	}
 
-	if (CompareAllEqualTo(rgbx, m_points[s][j])) {
+	if (CompareAllEqualTo(rgbx, m_points[s][m_remap[s][j]])) {
 	  // get the index of the match
 	  int const index = m_remap[s][j];
 	  assume (index >= 0 && index < 16);
@@ -574,7 +575,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	// loop over previous points for a match
 	for (int j = 0;; ++j) {
 	  // allocate a new point
-	  if (j == m_count[a]) {
+	  if (j == i) {
 	    // get the index of the match and advance
 	    int index = m_count[a]++;
 
@@ -589,7 +590,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	    break;
 	  }
 	  
-	  if (CompareAllEqualTo(___a, m_points[a][j])) {
+	  if (CompareAllEqualTo(___a, m_points[a][m_remap[a][j]])) {
 	    // get the index of the match
 	    int index = m_remap[a][j];
 
