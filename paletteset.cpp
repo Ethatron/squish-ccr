@@ -244,8 +244,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   u8 const clra = !clearAlpha    ? 0x00 : 0xFF;
   u8 const wgta =  weightByAlpha ? 0x00 : 0xFF;
 
-  u8 rgbx[4 * 16], wgtx = wgta;
-  u8 ___a[1 * 16], ___w = 0xFF;
+  u8 rgbx[4 * 16], chkx[4 * 16], wgtx = wgta;
+  u8 ___a[1 * 16], chka[1 * 16], ___w = 0xFF;
 
   /* Apply the component rotation, while preserving semantics:
    * - swap: aa, ra, ga, ba
@@ -298,8 +298,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
     // combined exclusion and selection mask
     int pmask = mask & m_mask[s];
 
-    // create the minimal set
-    for (int i = 0; i < 16; ++i) {
+    // create the minimal set, O(16*count/2)
+    for (int i = 0, j; i < 16; ++i) {
       // check this pixel is enabled
       int bit = 1 << i;
       if ((pmask & bit) == 0) {
@@ -322,46 +322,15 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
       }
 #endif
 
-      // loop over previous points for a match
+      // loop over previous matches for a match
       u8 *rgbvalue = &rgbx[4 * i + 0];
-      for (int j = 0;; ++j) {
-	u8 *crgbvalue = &rgbx[4 * j + 0];
-
-	// allocate a new point
-	if (j == i) {
-	  // get the index of the match and advance
-	  int index = m_count[s]++;
-
-	  // normalize coordinates to [0,1]
-	  float r = caLUTs[0][rgbvalue[0]];
-	  float g = caLUTs[1][rgbvalue[1]];
-	  float b = caLUTs[2][rgbvalue[2]];
-	  float a = caLUTs[3][rgbvalue[3]];
-
-	  // add the point
-	  m_remap[s][i] = index;
-	  m_points[s][index] = Vec4(r, g, b, a);
-	  m_weights[s][index] = Vec4(W);
-	  m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][index] = 1;
-#endif
-	  break;
-	}
+      for (j = 0; j < m_count[s]; ++j) {
+	u8 *crgbvalue = &chkx[4 * j + 0];
 
 	// check for a match
-	int oldbit = 1 << j;
-	// cast to int reduces this line from 15% to 8%, fat hot-spot
-	bool match = ((pmask & oldbit) != 0)
-	  && (*((int *)rgbvalue) == *((int *)crgbvalue))/*
-	  && (rgbvalue[0] == crgbvalue[0])
-	  && (rgbvalue[1] == crgbvalue[1])
-	  && (rgbvalue[2] == crgbvalue[2])
-	  && (rgbvalue[3] == crgbvalue[3])*/;
-
-	if (match) {
+	if ((*((int *)rgbvalue) == *((int *)crgbvalue))) {
 	  // get the index of the match
-	  int const index = m_remap[s][j];
+	  int const index = j;
 	  assume (index >= 0 && index < 16);
 
 	  // map to this point and increase the weight
@@ -372,6 +341,34 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  m_frequencies[s][index] += 1;
 #endif
 	  break;
+	}
+      }
+
+      {
+	u8 *crgbvalue = &chkx[4 * j + 0];
+
+	// allocate a new point
+	if (j == m_count[s]) {
+	  // get the index of the match and advance
+	  int index = m_count[s]++;
+
+	  // normalize coordinates to [0,1]
+	  const float *r = &caLUTs[0][rgbvalue[0]];
+	  const float *g = &caLUTs[1][rgbvalue[1]];
+	  const float *b = &caLUTs[2][rgbvalue[2]];
+	  const float *a = &caLUTs[3][rgbvalue[3]];
+
+	  // add the point
+	  m_remap[s][i] = index;
+	  m_points[s][index] = Vec4(r, g, b, a);
+	  m_weights[s][index] = Vec4(W);
+	  m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][index] = 1;
+#endif
+
+	  // remember match for successive checks
+	  *((int *)crgbvalue) = *((int *)rgbvalue);
 	}
       }
     }
@@ -391,7 +388,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
       int a = s + m_numsets;
 
       // create the minimal set
-      for (int i = 0; i < 16; ++i) {
+      for (int i = 0, j; i < 16; ++i) {
 	// check this pixel is enabled
 	int bit = 1 << i;
 	if ((pmask & bit) == 0) {
@@ -414,38 +411,15 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
         }
 #endif
 
-	// loop over previous points for a match
+	// loop over previous matches for a match
 	u8 *avalue = &___a[1 * i + 0];
-	for (int j = 0;; ++j) {
-	  u8 *cavalue = &___a[1 * j + 0];
-
-	  // allocate a new point
-	  if (j == i) {
-	    // get the index of the match and advance
-	    int index = m_count[a]++;
-
-	    // normalize coordinates to [0,1]
-	    float c = caLUTs[3][avalue[0]];
-
-	    // add the point
-	    m_remap[a][i] = index;
-	    m_points[a][index] = Vec4(c);
-	    m_weights[a][index] = Vec4(W);
-	    m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
-#ifdef	FEATURE_EXACT_ERROR
-	    m_frequencies[a][index] = 1;
-#endif
-	    break;
-	  }
+	for (j = 0; j < m_count[a]; ++j) {
+	  u8 *cavalue = &chka[1 * j + 0];
 
 	  // check for a match
-	  int oldbit = 1 << j;
-	  bool match = ((pmask & oldbit) != 0)
-	    && (avalue[0] == cavalue[0]);
-
-	  if (match) {
+	  if (*avalue == *cavalue) {
 	    // get the index of the match
-	    int index = m_remap[a][j];
+	    int index = j;
 
 	    // map to this point and increase the weight
 	    m_remap[a][i] = index;
@@ -455,6 +429,31 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    m_frequencies[a][index] += 1;
 #endif
 	    break;
+	  }
+	}
+
+	{
+	  u8 *cavalue = &chka[1 * j + 0];
+
+	  // allocate a new point
+	  if (j == m_count[a]) {
+	    // get the index of the match and advance
+	    int index = m_count[a]++;
+
+	    // normalize coordinates to [0,1]
+	    const float *c = &caLUTs[3][avalue[0]];
+
+	    // add the point
+	    m_remap[a][i] = index;
+	    m_points[a][index] = Vec4(c);
+	    m_weights[a][index] = Vec4(W);
+	    m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
+#ifdef	FEATURE_EXACT_ERROR
+	    m_frequencies[a][index] = 1;
+#endif
+	    
+	    // remember match for successive checks
+	    *cavalue = *avalue;
 	  }
 	}
       }
@@ -498,8 +497,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int s = 0;
   int a = 1; {
-    // create the minimal set
-    for (int i = 0; i < 16; ++i) {
+    // create the minimal set, O(16*count/2)
+    for (int i = 0, j; i < 16; ++i) {
       // copy "unset"
       int cindex = palette.m_remap[0][i];
       int aindex = palette.m_remap[1][i];
@@ -532,28 +531,12 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
         W = Max(A, wgtx).SplatW();
 	
       rgbx = KillW(rgba);
-
-      // loop over previous points for a match
-      for (int j = 0;; ++j) {
-	// allocate a new point
-	if (j == i) {
-	  // get the index of the match and advance
-	  int index = m_count[s]++;
-
-	  // add the point
-	  m_remap[s][i] = index;
-	  m_points[s][index] = Vec4(rgbx);
-	  m_weights[s][index] = Vec4(W);
-	  m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][index] = 1;
-#endif
-	  break;
-	}
-
-	if (CompareAllEqualTo(rgbx, m_points[s][m_remap[s][j]])) {
+      
+      // loop over previous matches for a match
+      for (j = 0; j < m_count[s]; ++j) {
+	if (CompareAllEqualTo(rgbx, m_points[s][j])) {
 	  // get the index of the match
-	  int const index = m_remap[s][j];
+	  int const index = j;
 	  assume (index >= 0 && index < 16);
 
 	  // map to this point and increase the weight
@@ -568,14 +551,47 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       }
 
       {
+	// allocate a new point
+	if (j == m_count[s]) {
+	  // get the index of the match and advance
+	  int index = m_count[s]++;
+
+	  // add the point
+	  m_remap[s][i] = index;
+	  m_points[s][index] = Vec4(rgbx);
+	  m_weights[s][index] = Vec4(W);
+	  m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][index] = 1;
+#endif
+	}
+      }
+
+      {
         W = Max(A, ___w).SplatW();
 	
 	___a = rgba.SplatW();
+	
+	// loop over previous matches for a match
+	for (j = 0; j < m_count[a]; ++j) {
+	  if (CompareAllEqualTo(___a, m_points[a][j])) {
+	    // get the index of the match
+	    int index = j;
 
-	// loop over previous points for a match
-	for (int j = 0;; ++j) {
+	    // map to this point and increase the weight
+	    m_remap[a][i] = index;
+	    m_weights[a][index] += Vec4(W);
+	    m_unweighted[a] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	    m_frequencies[a][index] += 1;
+#endif
+	    break;
+	  }
+	}
+
+	{
 	  // allocate a new point
-	  if (j == i) {
+	  if (j == m_count[a]) {
 	    // get the index of the match and advance
 	    int index = m_count[a]++;
 
@@ -587,21 +603,6 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] = 1;
 #endif
-	    break;
-	  }
-	  
-	  if (CompareAllEqualTo(___a, m_points[a][m_remap[a][j]])) {
-	    // get the index of the match
-	    int index = m_remap[a][j];
-
-	    // map to this point and increase the weight
-	    m_remap[a][i] = index;
-	    m_weights[a][index] += Vec4(W);
-	    m_unweighted[a] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	    m_frequencies[a][index] += 1;
-#endif
-	    break;
 	  }
 	}
       }
