@@ -369,6 +369,20 @@ void PaletteFit::Decompress(u8 *rgba, vQuantizer &q, int mode)
     Col4 istart = q.QuantizeToInt(fstart, sb, 1 << SBSTART);
     Col4 iend   = q.QuantizeToInt(fend  , sb, 1 << SBEND);
     
+    istart = Col4(
+      (istart.R() << (8 - cb)) | (istart.R() >> (cb - (8 - cb))),
+      (istart.G() << (8 - cb)) | (istart.G() >> (cb - (8 - cb))),
+      (istart.B() << (8 - cb)) | (istart.B() >> (cb - (8 - cb))),
+      (istart.A() << (8 - ab)) | (istart.A() >> (ab - (8 - ab)))
+    );
+    
+    iend = Col4(
+      (iend.R() << (8 - cb)) | (iend.R() >> (cb - (8 - cb))),
+      (iend.G() << (8 - cb)) | (iend.G() >> (cb - (8 - cb))),
+      (iend.B() << (8 - cb)) | (iend.B() >> (cb - (8 - cb))),
+      (iend.A() << (8 - ab)) | (iend.A() >> (ab - (8 - ab)))
+    );
+
     int ccs;
     switch (kb) {
       case 2: ccs = CodebookP<2>(codes, istart, iend); break;
