@@ -530,16 +530,18 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	A = ((___a * Vec4(255.0f)) + Vec4(1.0f)) * Vec4(1.0f / (255.0f + 1.0f)),
         W = Max(A, wgtx).SplatW();
 	
+      rgbx = KillW(rgba);
+
       // loop over previous points for a match
       for (int j = 0;; ++j) {
 	// allocate a new point
-	if (j == i) {
+	if (j == m_count[s]) {
 	  // get the index of the match and advance
 	  int index = m_count[s]++;
 
 	  // add the point
 	  m_remap[s][i] = index;
-	  m_points[s][index] = Vec4(KillW(rgba));
+	  m_points[s][index] = Vec4(rgbx);
 	  m_weights[s][index] = Vec4(W);
 	  m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
 #ifdef	FEATURE_EXACT_ERROR
@@ -548,7 +550,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	  break;
 	}
 
-	if (CompareAllEqualTo(rgba.GetVec3(), m_points[s][j].GetVec3())) {
+	if (CompareAllEqualTo(rgbx, m_points[s][j])) {
 	  // get the index of the match
 	  int const index = m_remap[s][j];
 	  assume (index >= 0 && index < 16);
@@ -566,17 +568,19 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 
       {
         W = Max(A, ___w).SplatW();
+	
+	___a = rgba.SplatW();
 
 	// loop over previous points for a match
 	for (int j = 0;; ++j) {
 	  // allocate a new point
-	  if (j == i) {
+	  if (j == m_count[a]) {
 	    // get the index of the match and advance
 	    int index = m_count[a]++;
 
 	    // add the point
 	    m_remap[a][i] = index;
-	    m_points[a][index] = Vec4(rgba.SplatW());
+	    m_points[a][index] = Vec4(___a);
 	    m_weights[a][index] = Vec4(W);
 	    m_unweighted[a] = m_unweighted[a] && !CompareFirstLessThan(W, Vec4(1.0f));
 #ifdef	FEATURE_EXACT_ERROR
@@ -585,7 +589,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	    break;
 	  }
 	  
-	  if (CompareAllEqualTo(rgba.GetVec3(), m_points[a][j].GetVec3())) {
+	  if (CompareAllEqualTo(___a, m_points[a][j])) {
 	    // get the index of the match
 	    int index = m_remap[a][j];
 

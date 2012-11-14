@@ -2402,6 +2402,13 @@ public:
 		int value = _mm_movemask_ps( bits );
 		return value != 0;
 	}
+	
+	friend bool CompareAllEqualTo( Vec4::Arg left, Vec4::Arg right )
+	{
+		__m128 bits = _mm_cmpeq_ps( left.m_v, right.m_v );
+		int value = _mm_movemask_ps( bits );
+		return (value & 0xF) == 0xF;
+	}
 
 	friend int CompareFirstLessThan( Vec4::Arg left, Vec4::Arg right )
 	{
