@@ -29,20 +29,19 @@
 #define SQUISH_PALETTECLUSTERFIT_H
 
 #include <squish.h>
-
 #include "maths.h"
 #include "simd.h"
 
 #include "palettefit.h"
-#include "singlepalettefit.h"
-#include "singlepalettesnap.h"
+#include "palettesinglefit.h"
+#include "palettesinglesnap.h"
 #include "palettechannelfit.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-class PaletteClusterFit : public SinglePaletteMatch, public PaletteChannelFit
+class PaletteClusterFit : public PaletteSingleMatch, public PaletteChannelFit
 {
 public:
   PaletteClusterFit(PaletteSet const* palettes, int flags, int swap = -1, int shared = -1);
@@ -80,6 +79,8 @@ private:
   Vec4 m_points_weights[4][16 * 2];
 
   a16 u8 m_order[4][16 * kMaxIterations];
+
+  bool m_optimizable[4];
 };
 #endif
 

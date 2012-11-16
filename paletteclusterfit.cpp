@@ -37,7 +37,7 @@ namespace squish {
  */
 #if	!defined(SQUISH_USE_PRE)
 PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int swap, int shared)
-  : SinglePaletteMatch(palette, flags, swap, shared)
+  : PaletteSingleMatch(palette, flags, swap, shared)
   ,  PaletteChannelFit(palette, flags, swap, shared)
   ,         PaletteFit(palette, flags, swap, shared)
 {
@@ -59,6 +59,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
   // loop over all sets
   for (int s = 0; s < (isets + asets); s++) {
     // cache some values
+    bool const unweighted = m_palette->IsUnweighted(s);
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
     Vec4 const* weights = m_palette->GetWeights(s);
@@ -72,7 +73,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
         Sym4x4 covariance;
 
         // get the covariance matrix
-        if (m_palette->IsUnweighted(s))
+        if (unweighted)
 	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s]);
         else
 	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s], weights);
@@ -85,7 +86,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
         Sym3x3 covariance;
 
         // get the covariance matrix
-        if (m_palette->IsUnweighted(s))
+        if (unweighted)
 	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
         else
 	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
@@ -93,6 +94,9 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
 	// compute the principle component
 	GetPrincipleComponent(covariance, m_principle[s]);
       }
+
+      // we have tables for this
+      m_optimizable[s] = unweighted && (count == 16);
     }
   }
 
@@ -1528,6 +1532,16 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
       // accumulate the error
       error += dist * m_palette->GetFrequencies(s)[0];
     }
+#if 0 // cluster fit is very likely much better than the quick index-fit
+    // we do dual entry fit for sparse sets
+    else if (count == 2) {
+      // find the closest codes (it's just two)
+      Scr4 dist = StretchEndPoints(s, metric, q, sb, kb, closest[s]);
+
+      // accumulate the error
+      error += dist;
+    }
+#endif
     // we do single channel fit for single component sets
     // (cluster-fit is really really really bad on one channel cases)
     // the separate alpha-channel is splatted into the rgb channels
@@ -1536,7 +1550,7 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
       Scr4 dist = ComputeCodebook(s, metric, q, sb, kb, closest[s]);
 
       // accumulate the error
-      error += dist * 1.0f;
+      error += dist;
     }
     else {
       // metric is squared as well
@@ -1556,7 +1570,7 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
        *  [3]	0x00340960 {194, 0}
        */
       if (m_palette->GetCount(s) > 1) {
-	if (m_palette->IsUnweighted(s))
+	if (m_optimizable[s])
 	  gstat.has_noweightsets[kb][s][0]++;
 	else
 	  gstat.has_noweightsets[kb][s][1]++;
@@ -1569,13 +1583,13 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
         case 2:
           if (trns)
             cerror = ClusterSearch4Alpha   (closest, count, s,       cmetric , q, sb);
-          else if (m_palette->IsUnweighted(s))
+          else if (m_optimizable[s])
             cerror = ClusterSearch4Constant(closest, count, s, KillW(cmetric), q, sb);
           else
             cerror = ClusterSearch4        (closest, count, s, KillW(cmetric), q, sb);
           break;
         case 3:
-          if (m_palette->IsUnweighted(s))
+          if (m_optimizable[s])
 	    cerror = ClusterSearch8Constant(closest, count, s, KillW(cmetric), q, sb);
           else
 	    cerror = ClusterSearch8        (closest, count, s, KillW(cmetric), q, sb);
@@ -1607,7 +1621,7 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
 #if 1 //ndef NDEBUG
   // kill late if this scheme looses
   error = Scr4(0.0f); SumError(closest, q, mode, error);
-  // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
+  // the error coming back from the palettesinglefit is not entirely exact with OLD_QUANTIZERR
   if (!(error < m_besterror))
     return;
 #endif
