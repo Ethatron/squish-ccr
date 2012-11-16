@@ -65,7 +65,7 @@ void TestOneColour( int flags )
 	int counter = 0;
 
 #if	defined(SQUISH_USE_AMP) && !defined(USE_AMP_DEBUG)
-	Concurrency::array_view<const SingleColourLookup_CCR, 2> lArr(2, 256, (const SingleColourLookup_CCR *)::lookup_34_56_ccr);
+	Concurrency::array_view<const ColourSingleLookup_CCR, 2> lArr(2, 256, (const ColourSingleLookup_CCR *)::lookup_34_56_ccr);
 	Concurrency::array_view<const   IndexBlockLookup_CCR, 2> yArr(4, 8,   (const   IndexBlockLookup_CCR *)::lookup_c34a57_ccr);
 #endif
 

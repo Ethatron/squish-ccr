@@ -139,7 +139,7 @@ static void GenerateDataDxt(std::string const& name, int bits, int colours, bool
   }
 
   if (!direct) {
-    std::cout << "\nstatic SingleColourLookup" << " const sc_" << name << "[] = \n{\n";
+    std::cout << "\nstatic ColourSingleLookup" << " const sc_" << name << "[] = \n{\n";
 
     for(int i = 0;;) {
       std::cout << "  {{";
@@ -171,7 +171,7 @@ static void GenerateDataDxt(std::string const& name, int bits, int colours, bool
     std::cout << "\n};\n";
   }
   else {
-    std::cout << "\nstatic SingleColourLookup" << " const sc_" << name << "[] = \n{\n";
+    std::cout << "\nstatic ColourSingleLookup" << " const sc_" << name << "[] = \n{\n";
 
     for(int i = 0;;) {
       std::cout << "  ";
@@ -419,11 +419,11 @@ static void GenerateDataBtc( std::string const& name, int bits, int sharedbits, 
   if (!direct) {
     std::cout << "\n/* 256 * " << indices << " * 3 * " << permutations << " = " << (256 * indices * 3 * permutations) << " */";
     if ( permutations == 1 )
-      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[256] = \n{\n";
+      std::cout << "\nstatic PaletteSingleLookup" << indices << " const " << name << "[256] = \n{\n";
     else if ( exactcases == 2 )
-      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[2][256] = \n{\n";
+      std::cout << "\nstatic PaletteSingleLookup" << indices << " const " << name << "[2][256] = \n{\n";
     else
-      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[4][256] = \n{\n";
+      std::cout << "\nstatic PaletteSingleLookup" << indices << " const " << name << "[4][256] = \n{\n";
 
     for( int k = 0;; )
     {
@@ -504,11 +504,11 @@ static void GenerateDataBtc( std::string const& name, int bits, int sharedbits, 
   else {
     std::cout << "\n/* 256 * 2 * " << permutations << " = " << (256 * 2 * permutations) << " */";
     if ( permutations == 1 )
-      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[256] = \n{\n";
+      std::cout << "\nstatic PaletteSingleLookup" << indices << " const " << name << "[256] = \n{\n";
     else if ( exactcases == 2 )
-      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[2][256] = \n{\n";
+      std::cout << "\nstatic PaletteSingleLookup" << indices << " const " << name << "[2][256] = \n{\n";
     else
-      std::cout << "\nstatic SinglePaletteLookup" << indices << " const " << name << "[4][256] = \n{\n";
+      std::cout << "\nstatic PaletteSingleLookup" << indices << " const " << name << "[4][256] = \n{\n";
 
     for( int k = 0;; )
     {
