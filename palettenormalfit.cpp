@@ -36,7 +36,7 @@ namespace squish {
  */
 #if	!defined(SQUISH_USE_PRE)
 PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swap, int shared)
-  : SinglePaletteMatch(palette, flags, swap, shared)
+  : PaletteSingleMatch(palette, flags, swap, shared)
   ,         PaletteFit(palette, flags, swap, shared)
 {
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)

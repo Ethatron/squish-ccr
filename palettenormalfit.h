@@ -28,8 +28,8 @@
 #define SQUISH_PALETTENORMALFIT_H
 
 #include <squish.h>
-#include "singlepalettefit.h"
-#include "singlepalettesnap.h"
+#include "palettesinglefit.h"
+#include "palettesinglesnap.h"
 #include "maths.h"
 
 namespace squish {
@@ -37,7 +37,7 @@ namespace squish {
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
 class PaletteSet;
-class PaletteNormalFit : public SinglePaletteMatch
+class PaletteNormalFit : public PaletteSingleMatch
 {
 public:
   PaletteNormalFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
@@ -50,7 +50,7 @@ private:
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-struct PaletteNormalFit_CCR : inherit_hlsl SinglePaletteFit_CCR
+struct PaletteNormalFit_CCR : inherit_hlsl PaletteSingleFit_CCR
 {
 public_hlsl
   void AssignSet (tile_barrier barrier, const int thread,
