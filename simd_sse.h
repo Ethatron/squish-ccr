@@ -690,6 +690,11 @@ public:
 	{
 		return Col3( m_v );
 	}
+	
+	int GetM8() const
+	{
+		return _mm_movemask_epi8 ( m_v );
+	}
 
 	int GetLong() const
 	{
@@ -736,6 +741,20 @@ public:
 		v = _mm_insert_epi16( v, b, 4 );
 		v = _mm_insert_epi16( v, a, 6 );
 
+		if (inv) {
+			v = _mm_sub_epi32( _mm_set1_epi32( inv ), v );
+		}
+
+		v = _mm_slli_epi32( v, 23 );
+		v = _mm_add_epi32( v, _mm_castps_si128( _mm_set1_ps(1.0f) ) );
+
+		m_v = _mm_cvttps_epi32( _mm_castsi128_ps( v ) );
+	}
+	
+	template<const int inv>
+	void SetRGBApow2( int c ) {
+		__m128i v = _mm_shuffle_epi32( _mm_cvtsi32_si128( c ), SQUISH_SSE_SPLAT( 0 ) );
+		
 		if (inv) {
 			v = _mm_sub_epi32( _mm_set1_epi32( inv ), v );
 		}
@@ -2173,7 +2192,7 @@ public:
 			(n + 3) % 4
 		) ) );
 	}
-
+	
 	friend Vec4 Select( Arg a, Arg b, Arg c )
 	{
 #if 0
@@ -2298,6 +2317,22 @@ public:
 	{
 		return Vec4( _mm_sqrt_ps( v.m_v ) );
 	}
+	
+	friend Vec4 Length( Arg left )
+	{
+		Vec4 sum = HorizontalAdd( Vec4( _mm_mul_ps( left.m_v, left.m_v ) ) );
+		Vec4 sqt = Vec4( _mm_sqrt_ps( sum.m_v ) );
+
+		return sqt;
+	}
+
+	friend Vec4 ReciprocalLength( Arg left )
+	{
+		Vec4 sum = HorizontalAdd( Vec4( _mm_mul_ps( left.m_v, left.m_v ) ) );
+		Vec4 rsq = ReciprocalSqrt(sum);
+
+		return rsq;
+	}
 
 	friend Vec4 Normalize( Arg left )
 	{
@@ -2418,6 +2453,11 @@ public:
 		__m128 bits = _mm_cmpeq_ps( left.m_v, right.m_v );
 		int value = _mm_movemask_ps( bits );
 		return (value & 0xF) == 0xF;
+	}
+	
+	friend Col4 CompareAllEqualTo_M8( Vec4::Arg left, Vec4::Arg right )
+	{
+		return Col4( _mm_cmpeq_epi8( _mm_castps_si128 ( left.m_v ), _mm_castps_si128 ( right.m_v ) ) );
 	}
 
 	friend int CompareFirstLessThan( Vec4::Arg left, Vec4::Arg right )
