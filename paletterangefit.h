@@ -28,16 +28,18 @@
 #define SQUISH_PALETTERANGEFIT_H
 
 #include <squish.h>
-#include "singlepalettefit.h"
-#include "singlepalettesnap.h"
 #include "maths.h"
+
+#include "palettesinglefit.h"
+#include "palettesinglesnap.h"
+#include "paletteindexfit.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
 class PaletteSet;
-class PaletteRangeFit : public SinglePaletteMatch
+class PaletteRangeFit : public PaletteSingleMatch, public PaletteIndexFit
 {
 public:
   PaletteRangeFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
@@ -54,7 +56,7 @@ private:
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-struct PaletteRangeFit_CCR : inherit_hlsl SinglePaletteFit_CCR
+struct PaletteRangeFit_CCR : inherit_hlsl PaletteSingleFit_CCR
 {
 public_hlsl
   void AssignSet (tile_barrier barrier, const int thread,

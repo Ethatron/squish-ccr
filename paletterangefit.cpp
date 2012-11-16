@@ -36,7 +36,8 @@ namespace squish {
  */
 #if	!defined(SQUISH_USE_PRE)
 PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap, int shared)
-  : SinglePaletteMatch(palette, flags, swap, shared)
+  : PaletteSingleMatch(palette, flags, swap, shared)
+  ,    PaletteIndexFit(palette, flags, swap, shared)
   ,         PaletteFit(palette, flags, swap, shared)
 {
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
@@ -50,12 +51,17 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
 
   for (int s = 0; s < isets; s++) {
     // cache some values
+    bool const unweighted = m_palette->IsUnweighted(s);
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
     Vec4 const* weights = m_palette->GetWeights(s);
+    
+    // the codebook endpoints
+    Vec4 start(0.0f);
+    Vec4 end(0.0f);
 
     // we don't do this for sparse sets
-    if (count != 1) {
+    if (count > 2) {
       Vec4 centroid;
       Vec4 principle;
 
@@ -64,7 +70,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
         Sym4x4 covariance;
 
         // get the covariance matrix
-        if (m_palette->IsUnweighted(s))
+        if (unweighted)
 	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s]);
         else
 	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s], weights);
@@ -77,7 +83,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
         Sym3x3 covariance;
 
         // get the covariance matrix
-        if (m_palette->IsUnweighted(s))
+        if (unweighted)
 	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
         else
 	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
@@ -87,98 +93,97 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
       }
 
       // get the min and max range as the codebook endpoints
-      Vec4 start(0.0f);
-      Vec4 end(0.0f);
+#ifdef	FEATURE_RANGEFIT_PROJECT
+      Scr4 div = Reciprocal(Dot(principle, principle));
+      Vec4 rec = Reciprocal(    principle            );
+      Scr4 len, min, max;
+      Vec4 chk;
 
-      if (count > 0) {
-#ifdef	FEATURE_PROJECT_FAST
-	Scr4 div = Reciprocal(Dot(principle, principle));
-	Vec4 rec = Reciprocal(    principle            );
-	Scr4 len, min, max;
-	Vec4 chk;
+      // compute the projection
+      min = max = Dot(values[0] - centroid, principle);
 
-	// compute the projection
-	min = max = Dot(values[0] - centroid, principle);
-
-	for (int i = 1; i < count; ++i) {
-	  len = Dot(values[i] - centroid, principle);
-	  min = Min(min, len);
-	  max = Max(max, len);
-	}
-
-	start = centroid + principle * min * div;
-	end   = centroid + principle * max * div;
-
-	// intersect with negative axis-plane, clamp to 0.0
-	chk = start;
-	while (CompareAnyLessThan(chk, Vec4(-1.0f / 65536))) {
-	  Vec4 fct = chk * rec;
-	  Vec4 hin = Select(fct, chk, HorizontalMin(chk));
-
-	  start -= principle * hin;
-	  chk = start;
-	}
-
-	// intersect negative undershoot with axis-plane(s), clamp to 0.0
-	chk = end;
-	while (CompareAnyLessThan(chk, Vec4(-1.0f / 65536))) {
-	  Vec4 fct = chk * rec;
-	  Vec4 hin = Select(fct, chk, HorizontalMin(chk));
-
-	  end -= principle * hin;
-	  chk = end;
-	}
-
-	// intersect positive overshoot with axis-plane(s), clamp to 1.0
-	chk = start - Vec4(1.0f);
-	while (CompareAnyGreaterThan(chk, Vec4(1.0f / 65536))) {
-	  Vec4 fct = chk * rec;
-	  Vec4 hax = Select(fct, chk, HorizontalMax(chk));
-
-	  start -= principle * hax;
-	  chk = start - Vec4(1.0f);
-	}
-
-	// intersect positive overshoot with axis-plane(s), clamp to 1.0
-	chk = end - Vec4(1.0f);
-	while (CompareAnyGreaterThan(chk, Vec4(1.0f / 65536))) {
-	  Vec4 fct = chk * rec;
-	  Vec4 hax = Select(fct, chk, HorizontalMax(chk));
-
-	  end -= principle * hax;
-	  chk = end - Vec4(1.0f);
-	}
-
-/*	assert(HorizontalMin(start).X() > -0.0001);
-	assert(HorizontalMin(end  ).X() > -0.0001);
-	assert(HorizontalMax(start).X() <  1.0001);
-	assert(HorizontalMax(end  ).X() <  1.0001);  */
-#else
-	Scr4 min, max;
-
-	// compute the range
-	start = end = values[0];
-	min = max = Dot(values[0], principle);
-
-	for (int i = 1; i < count; ++i) {
-	  Scr4 val = Dot(values[i], principle);
-
-	  if (min > val) {
-	    start = values[i];
-	    min = val;
-	  }
-	  else if (max < val) {
-	    end = values[i];
-	    max = val;
-	  }
-	}
-#endif
+      for (int i = 1; i < count; ++i) {
+	len = Dot(values[i] - centroid, principle);
+	min = Min(min, len);
+	max = Max(max, len);
       }
 
-      // clamp the output to [0, 1]
-      m_start[s] = start;
-      m_end  [s] = end;
+      start = centroid + principle * min * div;
+      end   = centroid + principle * max * div;
+
+      // take care that low magnitude overshoots can have very high
+      // derivatives on the other axis (-0.0039 in R may be +1 in G,
+      // thus we at least go to -0.0039/255 to get +1/255 -> 1/255²)
+
+      // intersect with negative axis-plane, clamp to 0.0
+      chk = start;
+      while (CompareAnyLessThan(chk, Vec4(-1.0f / (255.0f * 255.0f)))) {
+	Vec4 fct = chk * rec;
+	Vec4 hin = Select(fct, chk, HorizontalMin(chk));
+
+	start -= principle * hin;
+	chk = start;
+      }
+
+      // intersect negative undershoot with axis-plane(s), clamp to 0.0
+      chk = end;
+      while (CompareAnyLessThan(chk, Vec4(-1.0f / (255.0f * 255.0f)))) {
+	Vec4 fct = chk * rec;
+	Vec4 hin = Select(fct, chk, HorizontalMin(chk));
+
+	end -= principle * hin;
+	chk = end;
+      }
+
+      // intersect positive overshoot with axis-plane(s), clamp to 1.0
+      chk = start - Vec4(1.0f);
+      while (CompareAnyGreaterThan(chk, Vec4(1.0f / (255.0f * 255.0f)))) {
+	Vec4 fct = chk * rec;
+	Vec4 hax = Select(fct, chk, HorizontalMax(chk));
+
+	start -= principle * hax;
+	chk = start - Vec4(1.0f);
+      }
+
+      // intersect positive overshoot with axis-plane(s), clamp to 1.0
+      chk = end - Vec4(1.0f);
+      while (CompareAnyGreaterThan(chk, Vec4(1.0f / (255.0f * 255.0f)))) {
+	Vec4 fct = chk * rec;
+	Vec4 hax = Select(fct, chk, HorizontalMax(chk));
+
+	end -= principle * hax;
+	chk = end - Vec4(1.0f);
+      }
+
+/*    assert(HorizontalMin(start).X() > -0.0001);
+      assert(HorizontalMin(end  ).X() > -0.0001);
+      assert(HorizontalMax(start).X() <  1.0001);
+      assert(HorizontalMax(end  ).X() <  1.0001);  */
+#else
+      Scr4 min, max;
+
+      // compute the range
+      start = end = values[0];
+      min = max = Dot(values[0], principle);
+
+      for (int i = 1; i < count; ++i) {
+	Scr4 val = Dot(values[i], principle);
+
+	if (min > val) {
+	  start = values[i];
+	  min = val;
+	}
+	else if (max < val) {
+	  end = values[i];
+	  max = val;
+	}
+      }
+#endif
     }
+
+    // clamp the output to [0, 1]
+    m_start[s] = start;
+    m_end  [s] = end;
   }
 
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
@@ -186,27 +191,31 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
     // cache some values
     int const count = m_palette->GetCount(a);
     Vec4 const* values = m_palette->GetPoints(a);
-
-    // we don't do this for sparse sets
-    if (count != 1) {
-      // get the min and max range as the codebook endpoints
-      Vec4 start(1.0f);
-      Vec4 end(1.0f);
-
-      if (count > 0) {
-	// compute the range
-	start = end = values[0];
-
-	for (int i = 1; i < count; ++i) {
-	  start = Min(start, values[i]);
-	  end   = Max(end  , values[i]);
-	}
-      }
-
-      // clamp the output to [0, 1]
-      m_start[a] = start;
-      m_end  [a] = end;
+    
+    // the codebook endpoints
+    Vec4 start(0.0f);
+    Vec4 end(0.0f);
+    
+    // this is a sparse set
+    if (count == 2) {
+      start = values[0];
+      end   = values[1];
     }
+    // we don't do this for sparse sets
+    else if (count > 2) {
+      // get the min and max range as the codebook endpoints
+      start = end = values[0];
+
+      // compute the range
+      for (int i = 1; i < count; ++i) {
+	start = Min(start, values[i]);
+	end   = Max(end  , values[i]);
+      }
+    }
+
+    // clamp the output to [0, 1]
+    m_start[a] = start;
+    m_end  [a] = end;
   }
 
 #ifdef	FEATURE_ELIMINATE_FLATBOOKS
@@ -273,6 +282,14 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 
       // accumulate the error
       error += dist * freq[0];
+    }
+    // we do dual entry fit for sparse sets
+    else if (count == 2) {
+      // find the closest codes (it's just two)
+      Scr4 dist = StretchEndPoints(s, metric, q, sb, kb, closest[s]);
+
+      // accumulate the error
+      error += dist;
     }
     else {
 #ifdef	FEATURE_ELIMINATE_FLATBOOKS
@@ -427,7 +444,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
   // kill late if this scheme looses
   Scr4 verify_error = Scr4(0.0f); SumError(closest, q, mode, verify_error);
   Scr4 one_error = Scr4(1.0f / (1 << cb)); one_error *= one_error;
-  // the error coming back from the singlepalettefit is not entirely exact with OLD_QUANTIZERR
+  // the error coming back from the palettesinglefit is not entirely exact with OLD_QUANTIZERR
   if (verify_error > (error + one_error)) {
     Scr4 verify_error2 = Scr4(0.0f); SumError(closest, q, mode, verify_error2);
     abort();
@@ -554,7 +571,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 
 void PaletteRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, PaletteSet_CCRr m_palette, const int metric, const int fit ) amp_restricted
 {
-  SinglePaletteFit_CCR::AssignSet(barrier, thread, m_palette, metric, fit);
+  PaletteSingleFit_CCR::AssignSet(barrier, thread, m_palette, metric, fit);
 
 #if	!defined(SQUISH_USE_COMPUTE)
   using namespace Concurrency::vector_math;
