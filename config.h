@@ -37,11 +37,11 @@
  * if you want to use non-euclidian error-distances you can swap your
  * own LUTs in and go back to the iterative fit functions
  *
- * - SingleColourSnap, SingleColourFit
- * - SinglePaletteSnap, SinglePaletteFit
+ * - ColourSingleSnap, ColourSingleFit
+ * - PaletteSingleSnap, PaletteSingleFit
  */
-#define	SingleColourMatch	SingleColourSnap
-#define	SinglePaletteMatch	SinglePaletteSnap
+#define	ColourSingleMatch	ColourSingleSnap
+#define	PaletteSingleMatch	PaletteSingleSnap
 
 /* use frequencies of colour/palette-entries to calculate errors
  * this is more exact but a bit slower and uses more memory
@@ -89,7 +89,20 @@
  * problems with the principle direction: if black exist it will always
  * end up as one endpoint (dot-product being 0)
  */
-#define	FEATURE_PROJECT_FAST
+#define	FEATURE_RANGEFIT_PROJECT
+
+/* inline the index-fit error-check, makes it use the minimal amount
+ * of instructions possible at the cost of more code (~2x)
+ * search all heuristically chosen interpolants for the best one, works
+ * only if all checks are inlined
+ *
+ * first hit improvements:    thorough search:
+ *   ib=2: x2.64		ib=2: x10.73	mse: 1.175e-4 vs. 4.146e-5
+ *   ib=3: x3.39		ib=3:  x9.93	mse: 0.001409 vs. 4.403e-4
+ *   ib=4: x3.45		ib=4:  x?.?
+ */
+#define	FEATURE_INDEXFIT_INLINED
+#define	FEATURE_INDEXFIT_THOROUGH	true
 
 /* - use the weights building the covariance-matrix, affects all
  * - sqr() the metric for least-squares, affects only cluster-fit
@@ -122,7 +135,7 @@
 
 #define	FEATURE_SHAREDBITS_TRIALS		SHAREDBITS_TRIAL_LOWPRC
 
-#undef	FEATURE_TEST_LINES
+#define	FEATURE_TEST_LINES
 
 /* .............................................................................
  */
@@ -131,7 +144,7 @@
 
 // adjustments working in "Debug" or "Release" builds:
 // throw the quantized rgba values back into the input.image
-#undef	VERIFY_QUANTIZER
+#define	VERIFY_QUANTIZER
 // throw the decoded rgba values back into the input-image
 #undef	VERIFY_ENCODER
 
@@ -150,6 +163,8 @@
 namespace squish {
   extern struct statistics {
     int num_counts[8][64][4][16];
+    int num_channels[8][64][4][5];
+    int btr_index[5][2];
     int btr_cluster[8][2];
     int win_partition[8][64];
     int win_rotation[8][4];
@@ -161,6 +176,7 @@ namespace squish {
     int has_noweightsets[8][4][2];
     int num_poweritrs[64];
     int alpha[6];
+    float err_index[5][2];
   } gstat;
 }
 #endif
@@ -180,7 +196,7 @@ namespace squish {
 
 // Set to 3 or 4 when building squish to use SSSE3 or SSE4A instructions.
 #ifndef SQUISH_USE_XSSE
-#define SQUISH_USE_XSSE 0
+#define SQUISH_USE_XSSE 4
 #endif
 
 // Internally et SQUISH_USE_SIMD when either Altivec or SSE is available.
