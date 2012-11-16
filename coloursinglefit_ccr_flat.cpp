@@ -26,7 +26,7 @@
 namespace squish {
 
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-void SingleColourFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted
+void ColourSingleFit_CCR::AssignSet(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted
 {
   ColourFit_CCR::AssignSet(barrier, thread, m_colours, metric, fit);
 
@@ -43,8 +43,8 @@ void SingleColourFit_CCR::AssignSet(tile_barrier barrier, const int thread, Colo
   }
 }
 
-void SingleColourFit_CCR::Compress(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block, const bool trans,
-				   IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted
+void ColourSingleFit_CCR::Compress(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block, const bool trans,
+				   IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted
 {
   /* all or nothing branches, OK, same for all threads */
   const bool isBtc1 = (trans);
@@ -59,8 +59,8 @@ void SingleColourFit_CCR::Compress(tile_barrier barrier, const int thread, Colou
 #define CASE3	0
 #define CASE4	1
 
-void SingleColourFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
-				    IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted
+void ColourSingleFit_CCR::Compress3(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+				    IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted
 {
   // find the best end-points and index
   ComputeEndPoints(barrier, thread, CASE3, lArr);
@@ -76,8 +76,8 @@ void SingleColourFit_CCR::Compress3(tile_barrier barrier, const int thread, Colo
   }
 }
 
-void SingleColourFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
-				    IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted
+void ColourSingleFit_CCR::Compress4(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+				    IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted
 {
   // find the best end-points and index
   ComputeEndPoints(barrier, thread, CASE4, lArr);
@@ -93,8 +93,8 @@ void SingleColourFit_CCR::Compress4(tile_barrier barrier, const int thread, Colo
   }
 }
 
-void SingleColourFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
-				     IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted
+void ColourSingleFit_CCR::Compress34(tile_barrier barrier, const int thread, ColourSet_CCRr m_colours, out code64 block,
+				     IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted
 {
   // find the best end-points and index
   int is4 = ComputeEndPoints(barrier, thread, lArr);
@@ -122,8 +122,8 @@ void SingleColourFit_CCR::Compress34(tile_barrier barrier, const int thread, Col
 #define CBITS	1	// number of bits
 #define CMASK	1	// mask
 
-void SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread, const int is4,
-					   SingleColourLUT lArr) amp_restricted
+void ColourSingleFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread, const int is4,
+					   ColourSingleLUT lArr) amp_restricted
 {
 #if	!defined(SQUISH_USE_COMPUTE)
   tile_static ::SourceBlock_CCR sources[3 * SIDES];
@@ -161,9 +161,9 @@ void SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int threa
     const int cpos = ljoint >> CBITS;
 
     lines[side][cpos] = float3(
-      (float)SB_CLINE(sources[(0 << CBITS) + side], cpos),
-      (float)SB_CLINE(sources[(1 << CBITS) + side], cpos),
-      (float)SB_CLINE(sources[(2 << CBITS) + side], cpos)
+      (float)sources[(0 << CBITS) + side].cline[cpos],
+      (float)sources[(1 << CBITS) + side].cline[cpos],
+      (float)sources[(2 << CBITS) + side].cline[cpos]
     ) /
       float3(31.0f, 63.0f, 31.0f);
   }
@@ -173,9 +173,9 @@ void SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int threa
     const int index = ejoint & CMASK;
 
     error[index] =
-      SB_ERRSQR(sources[(0 << CBITS) + index]) +
-      SB_ERRSQR(sources[(1 << CBITS) + index]) +
-      SB_ERRSQR(sources[(2 << CBITS) + index]);
+      sources[(0 << CBITS) + index].error_sqr +
+      sources[(1 << CBITS) + index].error_sqr +
+      sources[(2 << CBITS) + index].error_sqr;
   }
 
   // make it visible
@@ -209,8 +209,8 @@ void SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int threa
 #define CBITS	2	// number of bits
 #define CMASK	3	// mask
 
-int SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread,
-					  SingleColourLUT lArr) amp_restricted
+int ColourSingleFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread,
+					  ColourSingleLUT lArr) amp_restricted
 {
 #if	!defined(SQUISH_USE_COMPUTE)
   tile_static ::SourceBlock_CCR sources[3 * CNUMS];
@@ -246,9 +246,9 @@ int SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread
     const int cpos = (ljoint >> CBITS);
 
     lines[wsde][cpos] = float3(
-      (float)SB_CLINE(sources[(0 << CBITS) + wsde], cpos),
-      (float)SB_CLINE(sources[(1 << CBITS) + wsde], cpos),
-      (float)SB_CLINE(sources[(2 << CBITS) + wsde], cpos)
+      (float)sources[(0 << CBITS) + wsde].cline[cpos],
+      (float)sources[(1 << CBITS) + wsde].cline[cpos],
+      (float)sources[(2 << CBITS) + wsde].cline[cpos]
     ) /
       float3(31.0f, 63.0f, 31.0f);
   }
@@ -258,9 +258,9 @@ int SingleColourFit_CCR::ComputeEndPoints(tile_barrier barrier, const int thread
     const int wsde = ejoint;
 
     error[wsde] =
-      SB_ERRSQR(sources[(0 << CBITS) + wsde]) +
-      SB_ERRSQR(sources[(1 << CBITS) + wsde]) +
-      SB_ERRSQR(sources[(2 << CBITS) + wsde]);
+      sources[(0 << CBITS) + wsde].error_sqr +
+      sources[(1 << CBITS) + wsde].error_sqr +
+      sources[(2 << CBITS) + wsde].error_sqr;
   }
 
   // make it visible

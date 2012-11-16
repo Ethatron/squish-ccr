@@ -24,7 +24,7 @@
 
    -------------------------------------------------------------------------- */
 
-#include "singlepalettefit.h"
+#include "palettesinglefit.h"
 #include "paletteset.h"
 #include "paletteblock.h"
 
@@ -42,30 +42,30 @@ struct SP_SourceBlock
   u8 error;
 };
 
-struct SinglePaletteLookup2
+struct PaletteSingleLookup2
 {
   SP_SourceBlock sources[2];
 };
 
-struct SinglePaletteLookup4
+struct PaletteSingleLookup4
 {
   SP_SourceBlock sources[4];
 };
 
-struct SinglePaletteLookup8
+struct PaletteSingleLookup8
 {
   SP_SourceBlock sources[8];
 };
 
 #define	SCL_ITERATIVE
-#include "singlepalettelookup.inl"
+#include "palettesinglelookup.inl"
 
-SinglePaletteFit::SinglePaletteFit(PaletteSet const* palette, int flags, int swap, int shared)
+PaletteSingleFit::PaletteSingleFit(PaletteSet const* palette, int flags, int swap, int shared)
   : PaletteFit(palette, flags, swap, shared)
 {
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask)
+Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask)
 {
 #if	!defined(FEATURE_SHAREDBITS_TRIALS)
   // silence the compiler
@@ -97,8 +97,8 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
   assume(ib >= 2 && ib <= 4);
   switch (ib) {
     case 2: {
-      SinglePaletteLookup2 const* cl;
-      SinglePaletteLookup2 const* al;
+      PaletteSingleLookup2 const* cl;
+      PaletteSingleLookup2 const* al;
 
       assume(cb >= 5 && cb <= 8);
       switch (cb) {
@@ -116,14 +116,14 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
 	default: al = NULL; break;			//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 }, / { 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
       }
 
-      SinglePaletteLookup2 const* const lookups[] =
+      PaletteSingleLookup2 const* const lookups[] =
       { cl, cl, cl, al };
 
       return ComputeEndPoints(set, metric, lookups, cmask);
     } break;
     case 3: {
-      SinglePaletteLookup4 const* cl;
-      SinglePaletteLookup4 const* al;
+      PaletteSingleLookup4 const* cl;
+      PaletteSingleLookup4 const* al;
 
       assume(cb == 5 || cb == 7);
       switch (cb) {
@@ -138,14 +138,14 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
 	default: al = NULL; break;			//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
       }
 
-      SinglePaletteLookup4 const* const lookups[] =
+      PaletteSingleLookup4 const* const lookups[] =
       { cl, cl, cl, al };
 
       return ComputeEndPoints(set, metric, lookups, cmask);
     } break;
     case 4: {
-      SinglePaletteLookup8 const* cl;
-      SinglePaletteLookup8 const* al;
+      PaletteSingleLookup8 const* cl;
+      PaletteSingleLookup8 const* al;
 
       assume(cb == 8);
       switch (cb) {
@@ -159,7 +159,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
 	default: abort(); break;
       }
 
-      SinglePaletteLookup8 const* const lookups[] =
+      PaletteSingleLookup8 const* const lookups[] =
       { cl, cl, cl, al };
 
       return ComputeEndPoints(set, metric, lookups, cmask);
@@ -171,7 +171,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
   }
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup2 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup2 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -198,7 +198,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
       // skip if it's completely irrelevant what's in a specific channel
       if (cmask & (1 << channel)) {
 	// grab the lookup table and index for this channel
-	SinglePaletteLookup2 const* lookup = lookups[channel];
+	PaletteSingleLookup2 const* lookup = lookups[channel];
 	int target = m_entry[set][channel];
 
 	// store a pointer to the source for this channel
@@ -242,7 +242,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
   return besterror;
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup4 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup4 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -269,7 +269,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
       // skip if it's completely irrelevant what's in a specific channel
       if (cmask & (1 << channel)) {
 	// grab the lookup table and index for this channel
-	SinglePaletteLookup4 const* lookup = lookups[channel];
+	PaletteSingleLookup4 const* lookup = lookups[channel];
 	int target = m_entry[set][channel];
 
 	// store a pointer to the source for this channel
@@ -312,7 +312,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
   return besterror;
 }
 
-Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup8 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup8 const* const* lookups, u8 cmask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -339,7 +339,7 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
       // skip if it's completely irrelevant what's in a specific channel
       if (cmask & (1 << channel)) {
 	// grab the lookup table and index for this channel
-	SinglePaletteLookup8 const* lookup = lookups[channel];
+	PaletteSingleLookup8 const* lookup = lookups[channel];
 	int target = m_entry[set][channel];
 
 	// store a pointer to the source for this channel
@@ -386,11 +386,11 @@ Scr4 SinglePaletteFit::ComputeEndPoints(int set, Vec4 const &metric, SinglePalet
 } // namespace squish
 
 #if	defined(SBL_FLAT)
-#include "singlepalettefit_ccr_flat.cpp"
+#include "palettesinglefit_ccr_flat.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 1)
-#include "singlepalettefit_ccr_packed.cpp"
+#include "palettesinglefit_ccr_packed.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 2)
-#include "singlepalettefit_ccr_packed_copy.cpp"
+#include "palettesinglefit_ccr_packed_copy.cpp"
 #elif	defined(SBL_VECTOR)
-#include "singlepalettefit_ccr_vector.cpp"
+#include "palettesinglefit_ccr_vector.cpp"
 #endif

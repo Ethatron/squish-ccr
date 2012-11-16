@@ -1,6 +1,6 @@
 #ifdef	SPL_ITERATIVE
 /* 256 * 2 * 3 * 1 = 1536 */
-static SinglePaletteLookup2 const sp_lookup_5_4[256] =
+static PaletteSingleLookup2 const sp_lookup_5_4[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  0,1}}},  {{/*1*/{  0,  0,2},{  0,  8,0}}},  {{/*1*/{  0,  0,3},{  0,  8,1}}},
   {{/*1*/{  0,  0,4},{  0, 16,1}}},  {{/*1*/{  8,  8,3},{  0, 16,0}}},  {{/*1*/{  8,  8,2},{  0, 16,1}}},  {{/*1*/{  8,  8,1},{  0, 24,0}}},
@@ -69,7 +69,7 @@ static SinglePaletteLookup2 const sp_lookup_5_4[256] =
 };
 
 /* 256 * 2 * 3 * 1 = 1536 */
-static SinglePaletteLookup2 const sp_lookup_6_4[256] =
+static PaletteSingleLookup2 const sp_lookup_6_4[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  4,0}}},  {{/*1*/{  0,  0,2},{  0,  8,0}}},  {{/*1*/{  4,  4,1},{  0, 12,0}}},
   {{/*1*/{  4,  4,0},{  4,  4,0}}},  {{/*1*/{  4,  4,1},{  0, 16,0}}},  {{/*1*/{  4,  4,2},{  0, 20,0}}},  {{/*1*/{  8,  8,1},{  0, 24,0}}},
@@ -138,7 +138,7 @@ static SinglePaletteLookup2 const sp_lookup_6_4[256] =
 };
 
 /* 256 * 2 * 3 * 1 = 1536 */
-static SinglePaletteLookup2 const sp_lookup_7_4[256] =
+static PaletteSingleLookup2 const sp_lookup_7_4[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  4,0}}},  {{/*1*/{  2,  2,0},{  0,  8,0}}},  {{/*1*/{  2,  2,1},{  0, 10,0}}},
   {{/*1*/{  4,  4,0},{  0, 14,0}}},  {{/*1*/{  4,  4,1},{  0, 16,0}}},  {{/*1*/{  6,  6,0},{  0, 20,0}}},  {{/*1*/{  6,  6,1},{  0, 22,0}}},
@@ -207,7 +207,7 @@ static SinglePaletteLookup2 const sp_lookup_7_4[256] =
 };
 
 /* 256 * 2 * 3 * 1 = 1536 */
-static SinglePaletteLookup2 const sp_lookup_8_4[256] =
+static PaletteSingleLookup2 const sp_lookup_8_4[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  1,  1,0},{  0,  4,0}}},  {{/*1*/{  2,  2,0},{  0,  7,0}}},  {{/*1*/{  3,  3,0},{  0, 10,0}}},
   {{/*1*/{  4,  4,0},{  0, 13,0}}},  {{/*1*/{  5,  5,0},{  0, 16,0}}},  {{/*1*/{  6,  6,0},{  0, 19,0}}},  {{/*1*/{  7,  7,0},{  0, 22,0}}},
@@ -276,7 +276,7 @@ static SinglePaletteLookup2 const sp_lookup_8_4[256] =
 };
 
 /* 256 * 4 * 3 * 1 = 3072 */
-static SinglePaletteLookup4 const sp_lookup_5_8[256] =
+static PaletteSingleLookup4 const sp_lookup_5_8[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  8,0},{  0,  0,1},{  0,  0,1}}},  {{/*1*/{  0,  0,2},{  0, 16,0},{  0,  8,0},{  0,  8,1}}},  {{/*1*/{  0,  0,3},{  0, 24,0},{  0,  8,1},{  0,  8,0}}},
   {{/*1*/{  0,  0,4},{  0, 33,0},{  0, 16,0},{  8,  0,0}}},  {{/*1*/{  8,  8,3},{  0, 41,0},{  8,  0,0},{  0, 16,1}}},  {{/*1*/{  8,  8,2},{  0, 49,0},{  0, 24,0},{  0, 16,0}}},  {{/*1*/{  8,  8,1},{  0, 49,1},{  0, 24,1},{  0, 16,1}}},
@@ -345,7 +345,7 @@ static SinglePaletteLookup4 const sp_lookup_5_8[256] =
 };
 
 /* 256 * 4 * 3 * 1 = 3072 */
-static SinglePaletteLookup4 const sp_lookup_6_8[256] =
+static PaletteSingleLookup4 const sp_lookup_6_8[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  8,0},{  0,  4,0},{  0,  4,0}}},  {{/*1*/{  0,  0,2},{  0, 16,0},{  0,  8,0},{  4,  0,0}}},  {{/*1*/{  4,  4,1},{  0, 24,0},{  0, 12,0},{  0,  8,0}}},
   {{/*1*/{  4,  4,0},{  0, 32,0},{  0, 16,0},{  4,  4,0}}},  {{/*1*/{  4,  4,1},{  0, 36,0},{  0, 20,0},{  0, 12,0}}},  {{/*1*/{  4,  4,2},{  0, 44,0},{  0, 24,0},{  0, 16,0}}},  {{/*1*/{  8,  8,1},{  0, 52,0},{  0, 28,0},{  4, 12,0}}},
@@ -414,7 +414,7 @@ static SinglePaletteLookup4 const sp_lookup_6_8[256] =
 };
 
 /* 256 * 4 * 3 * 1 = 3072 */
-static SinglePaletteLookup4 const sp_lookup_7_8[256] =
+static PaletteSingleLookup4 const sp_lookup_7_8[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  8,0},{  0,  4,0},{  0,  4,0}}},  {{/*1*/{  2,  2,0},{  0, 16,0},{  0,  8,0},{  0,  6,0}}},  {{/*1*/{  2,  2,1},{  0, 22,0},{  0, 12,0},{  0,  8,0}}},
   {{/*1*/{  4,  4,0},{  0, 30,0},{  0, 16,0},{  0, 10,0}}},  {{/*1*/{  4,  4,1},{  0, 36,0},{  0, 18,0},{  0, 12,0}}},  {{/*1*/{  6,  6,0},{  0, 44,0},{  0, 22,0},{  0, 16,0}}},  {{/*1*/{  6,  6,1},{  0, 50,0},{  0, 26,0},{  0, 18,0}}},
@@ -483,7 +483,7 @@ static SinglePaletteLookup4 const sp_lookup_7_8[256] =
 };
 
 /* 256 * 8 * 3 * 1 = 6144 */
-static SinglePaletteLookup8 const sp_lookup_8_16[256] =
+static PaletteSingleLookup8 const sp_lookup_8_16[256] =
 {
   {{/*1*/{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  1,  1,0},{  0, 16,0},{  0,  8,0},{  0,  5,0},{  0,  4,0},{  0,  4,0},{  0,  3,0},{  0,  3,0}}},  {{/*1*/{  2,  2,0},{  0, 32,0},{  0, 15,0},{  0, 10,0},{  0,  8,0},{  0,  7,0},{  0,  5,0},{  0,  5,0}}},  {{/*1*/{  3,  3,0},{  0, 48,0},{  0, 22,0},{  0, 15,0},{  0, 12,0},{  0, 10,0},{  0,  8,0},{  0,  7,0}}},
   {{/*1*/{  4,  4,0},{  0, 64,0},{  0, 29,0},{  0, 20,0},{  0, 16,0},{  0, 13,0},{  0, 10,0},{  0,  9,0}}},  {{/*1*/{  5,  5,0},{  0, 80,0},{  0, 36,0},{  0, 25,0},{  0, 19,0},{  0, 16,0},{  0, 13,0},{  0, 11,0}}},  {{/*1*/{  6,  6,0},{  0, 96,0},{  0, 43,0},{  0, 30,0},{  0, 23,0},{  0, 19,0},{  0, 15,0},{  0, 13,0}}},  {{/*1*/{  7,  7,0},{  0,112,0},{  0, 50,0},{  0, 35,0},{  0, 27,0},{  0, 22,0},{  0, 18,0},{  0, 15,0}}},
@@ -552,7 +552,7 @@ static SinglePaletteLookup8 const sp_lookup_8_16[256] =
 };
 
 /* 256 * 2 * 3 * 4 = 6144 */
-static SinglePaletteLookup2 const sp_lookup_5u1_4[4][256] =
+static PaletteSingleLookup2 const sp_lookup_5u1_4[4][256] =
 {
 {
   {{/*1*/{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  0,1}}},  {{/*1*/{  0,  0,2},{  0,  8,0}}},  {{/*1*/{  0,  0,3},{  0,  8,1}}},
@@ -818,7 +818,7 @@ static SinglePaletteLookup2 const sp_lookup_5u1_4[4][256] =
 };
 
 /* 256 * 2 * 3 * 4 = 6144 */
-static SinglePaletteLookup2 const sp_lookup_7u1_4[4][256] =
+static PaletteSingleLookup2 const sp_lookup_7u1_4[4][256] =
 {
 {
   {{/*1*/{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  4,0}}},  {{/*1*/{  2,  2,0},{  0,  8,0}}},  {{/*1*/{  2,  2,1},{  0, 10,0}}},
@@ -1084,7 +1084,7 @@ static SinglePaletteLookup2 const sp_lookup_7u1_4[4][256] =
 };
 
 /* 256 * 4 * 3 * 4 = 12288 */
-static SinglePaletteLookup4 const sp_lookup_4u1_8[4][256] =
+static PaletteSingleLookup4 const sp_lookup_4u1_8[4][256] =
 {
 {
   {{/*1*/{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  0,1},{  0,  0,1},{  0,  0,1}}},  {{/*1*/{  0,  0,2},{  0, 16,0},{  0,  0,2},{  0,  0,2}}},  {{/*1*/{  0,  0,3},{  0, 16,1},{  0, 16,1},{  0,  0,3}}},
@@ -1350,7 +1350,7 @@ static SinglePaletteLookup4 const sp_lookup_4u1_8[4][256] =
 };
 
 /* 256 * 4 * 3 * 4 = 12288 */
-static SinglePaletteLookup4 const sp_lookup_6s1_8[2][256] =
+static PaletteSingleLookup4 const sp_lookup_6s1_8[2][256] =
 {
 {
   {{/*1*/{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0,  8,0},{  0,  4,0},{  0,  4,0}}},  {{/*1*/{  0,  0,2},{  0, 16,0},{  0,  8,0},{  4,  0,0}}},  {{/*1*/{  4,  4,1},{  0, 24,0},{  0, 12,0},{  0,  8,0}}},
@@ -1486,7 +1486,7 @@ static SinglePaletteLookup4 const sp_lookup_6s1_8[2][256] =
 };
 
 /* 256 * 8 * 3 * 4 = 24576 */
-static SinglePaletteLookup8 const sp_lookup_7u1_16[4][256] =
+static PaletteSingleLookup8 const sp_lookup_7u1_16[4][256] =
 {
 {
   {{/*1*/{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0},{  0,  0,0}}},  {{/*1*/{  0,  0,1},{  0, 16,0},{  0,  8,0},{  0,  6,0},{  0,  4,0},{  0,  4,0},{  0,  4,0},{  0,  4,0}}},  {{/*1*/{  2,  2,0},{  0, 32,0},{  0, 16,0},{  0, 10,0},{  0,  8,0},{  0,  8,0},{  0,  6,0},{  0,  6,0}}},  {{/*1*/{  2,  2,1},{  0, 48,0},{  0, 22,0},{  0, 16,0},{  0, 12,0},{  0, 10,0},{  0,  8,0},{  0,  8,0}}},
@@ -1752,7 +1752,7 @@ static SinglePaletteLookup8 const sp_lookup_7u1_16[4][256] =
 };
 #else
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup2 const sp_lookup_5_4[256] =
+static PaletteSingleLookup2 const sp_lookup_5_4[256] =
 {
   {  0,  0},  {  0,  0},  {  0,  8},  {  0,  8},  {  0, 16},  {  0, 16},  {  0, 16},  {  0, 24},
   {  8,  8},  {  0, 33},  {  0, 33},  {  0, 33},  {  0, 41},  {  0, 41},  {  0, 41},  {  0, 49},
@@ -1789,7 +1789,7 @@ static SinglePaletteLookup2 const sp_lookup_5_4[256] =
 };
 
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup2 const sp_lookup_6_4[256] =
+static PaletteSingleLookup2 const sp_lookup_6_4[256] =
 {
   {  0,  0},  {  0,  4},  {  0,  8},  {  0, 12},  {  4,  4},  {  0, 16},  {  0, 20},  {  0, 24},
   {  8,  8},  {  0, 28},  {  0, 32},  {  0, 36},  { 12, 12},  {  0, 40},  {  0, 44},  {  0, 48},
@@ -1826,7 +1826,7 @@ static SinglePaletteLookup2 const sp_lookup_6_4[256] =
 };
 
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup2 const sp_lookup_7_4[256] =
+static PaletteSingleLookup2 const sp_lookup_7_4[256] =
 {
   {  0,  0},  {  0,  4},  {  0,  8},  {  0, 10},  {  0, 14},  {  0, 16},  {  0, 20},  {  0, 22},
   {  0, 26},  {  0, 28},  {  0, 32},  {  0, 34},  {  0, 38},  {  0, 40},  {  0, 44},  {  0, 46},
@@ -1863,7 +1863,7 @@ static SinglePaletteLookup2 const sp_lookup_7_4[256] =
 };
 
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup2 const sp_lookup_8_4[256] =
+static PaletteSingleLookup2 const sp_lookup_8_4[256] =
 {
   {  0,  0},  {  0,  4},  {  0,  7},  {  0, 10},  {  0, 13},  {  0, 16},  {  0, 19},  {  0, 22},
   {  0, 25},  {  0, 28},  {  0, 31},  {  0, 34},  {  0, 37},  {  0, 40},  {  0, 43},  {  0, 46},
@@ -1900,7 +1900,7 @@ static SinglePaletteLookup2 const sp_lookup_8_4[256] =
 };
 
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup4 const sp_lookup_5_8[256] =
+static PaletteSingleLookup4 const sp_lookup_5_8[256] =
 {
   {  0,  0},  {  0,  8},  {  0, 16},  {  0, 24},  {  0, 33},  {  0, 41},  {  0, 49},  {  0, 49},
   {  0, 57},  {  0, 66},  {  0, 74},  {  0, 82},  {  0, 90},  {  0, 99},  {  8, 57},  {  0,107},
@@ -1937,7 +1937,7 @@ static SinglePaletteLookup4 const sp_lookup_5_8[256] =
 };
 
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup4 const sp_lookup_6_8[256] =
+static PaletteSingleLookup4 const sp_lookup_6_8[256] =
 {
   {  0,  0},  {  0,  8},  {  0, 16},  {  0, 24},  {  0, 32},  {  0, 36},  {  0, 44},  {  0, 52},
   {  0, 60},  {  0, 65},  {  0, 73},  {  0, 81},  {  0, 89},  {  0, 93},  {  0,101},  {  0,109},
@@ -1974,7 +1974,7 @@ static SinglePaletteLookup4 const sp_lookup_6_8[256] =
 };
 
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup4 const sp_lookup_7_8[256] =
+static PaletteSingleLookup4 const sp_lookup_7_8[256] =
 {
   {  0,  0},  {  0,  8},  {  0, 16},  {  0, 22},  {  0, 30},  {  0, 36},  {  0, 44},  {  0, 50},
   {  0, 58},  {  0, 64},  {  0, 72},  {  0, 80},  {  0, 86},  {  0, 94},  {  0,100},  {  0,108},
@@ -2011,7 +2011,7 @@ static SinglePaletteLookup4 const sp_lookup_7_8[256] =
 };
 
 /* 256 * 2 * 1 = 512 */
-static SinglePaletteLookup8 const sp_lookup_8_16[256] =
+static PaletteSingleLookup8 const sp_lookup_8_16[256] =
 {
   {  0,  0},  {  0, 16},  {  0, 32},  {  0, 48},  {  0, 64},  {  0, 80},  {  0, 96},  {  0,112},
   {  0,128},  {  0,144},  {  0,160},  {  0,176},  {  0,192},  {  0,208},  {  0,224},  {  0,240},
@@ -2048,7 +2048,7 @@ static SinglePaletteLookup8 const sp_lookup_8_16[256] =
 };
 
 /* 256 * 2 * 4 = 2048 */
-static SinglePaletteLookup2 const sp_lookup_5u1_4[4][256] =
+static PaletteSingleLookup2 const sp_lookup_5u1_4[4][256] =
 {
 {
   {  0,  0},  {  0,  0},  {  0,  8},  {  0,  8},  {  0, 16},  {  0, 16},  {  0, 16},  {  0, 24},
@@ -2186,7 +2186,7 @@ static SinglePaletteLookup2 const sp_lookup_5u1_4[4][256] =
 };
 
 /* 256 * 2 * 4 = 2048 */
-static SinglePaletteLookup2 const sp_lookup_7u1_4[4][256] =
+static PaletteSingleLookup2 const sp_lookup_7u1_4[4][256] =
 {
 {
   {  0,  0},  {  0,  4},  {  0,  8},  {  0, 10},  {  0, 14},  {  0, 16},  {  0, 20},  {  0, 22},
@@ -2324,7 +2324,7 @@ static SinglePaletteLookup2 const sp_lookup_7u1_4[4][256] =
 };
 
 /* 256 * 2 * 4 = 2048 */
-static SinglePaletteLookup4 const sp_lookup_4u1_8[4][256] =
+static PaletteSingleLookup4 const sp_lookup_4u1_8[4][256] =
 {
 {
   {  0,  0},  {  0,  0},  {  0, 16},  {  0, 16},  {  0, 33},  {  0, 33},  {  0, 49},  {  0, 49},
@@ -2462,7 +2462,7 @@ static SinglePaletteLookup4 const sp_lookup_4u1_8[4][256] =
 };
 
 /* 256 * 2 * 4 = 2048 */
-static SinglePaletteLookup4 const sp_lookup_6s1_8[2][256] =
+static PaletteSingleLookup4 const sp_lookup_6s1_8[2][256] =
 {
 {
   {  0,  0},  {  0,  8},  {  0, 16},  {  0, 24},  {  0, 32},  {  0, 36},  {  0, 44},  {  0, 52},
@@ -2534,7 +2534,7 @@ static SinglePaletteLookup4 const sp_lookup_6s1_8[2][256] =
 };
 
 /* 256 * 2 * 4 = 2048 */
-static SinglePaletteLookup8 const sp_lookup_7u1_16[4][256] =
+static PaletteSingleLookup8 const sp_lookup_7u1_16[4][256] =
 {
 {
   {  0,  0},  {  0, 16},  {  0, 32},  {  0, 48},  {  0, 64},  {  0, 80},  {  0, 96},  {  0,112},

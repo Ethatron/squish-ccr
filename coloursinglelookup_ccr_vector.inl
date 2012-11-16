@@ -1,7 +1,7 @@
 #ifndef SBL_ONLY_STRUCT
 #define SBL_ONLY_STRUCT
 #define SBL_VECTOR
-struct SingleColourLookup_CCR
+struct ColourSingleLookup_CCR
 {
   /* 5 lo, 5 hi, 6 lo, 6 hi */
   uint4 sources;
@@ -14,15 +14,15 @@ struct SingleColourLookup_CCR
 
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 #if	!defined(USE_COMPUTE)
-typedef const ::Concurrency::array_view<const ::SingleColourLookup_CCR, 2> &SingleColourLUT;
+typedef const ::Concurrency::array_view<const ::ColourSingleLookup_CCR, 2> &ColourSingleLUT;
 #else
-typedef const                                 ::SingleColourLookup_CCR      SingleColourLUT[2][256];
+typedef const                                 ::ColourSingleLookup_CCR      ColourSingleLUT[2][256];
 #endif
 #endif
 #endif
 
 #if	defined(ONLY_ARRAY)
-static_hlsl const SingleColourLookup_CCR lookup_34_56_ccr[2][256] = {
+static_hlsl const ColourSingleLookup_CCR lookup_34_56_ccr[2][256] = {
 { /* 3-step line */
 	/* 5-bit color */                                          /* 6-bit color */
 	{ { SB_PACK( 0, 0, 0*0) , SB_PACK( 0,  0, 0*0) , SB_PACK( 0, 0, 0*0) , SB_PACK( 0,  0, 0*0) } },
@@ -543,5 +543,5 @@ static_hlsl const SingleColourLookup_CCR lookup_34_56_ccr[2][256] = {
 }
 };
 #elif	!defined(USE_COMPUTE)
-extern const SingleColourLookup_CCR lookup_34_56_ccr[2][256];
+extern const ColourSingleLookup_CCR lookup_34_56_ccr[2][256];
 #endif // LUT

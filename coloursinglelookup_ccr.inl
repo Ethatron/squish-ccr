@@ -12,6 +12,6 @@
  * change the include, rest is automatic
  */
 
-//nclude "singlecolourlookup_ccr_flat.inl"
-//nclude "singlecolourlookup_ccr_packed.inl"
-#include "singlecolourlookup_ccr_vector.inl"
+//nclude "coloursinglelookup_ccr_flat.inl"
+//nclude "coloursinglelookup_ccr_packed.inl"
+#include "coloursinglelookup_ccr_vector.inl"

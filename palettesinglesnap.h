@@ -24,36 +24,41 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_SINGLECOLOURSNAP_H
-#define SQUISH_SINGLECOLOURSNAP_H
+#ifndef SQUISH_PALETTESINGLESNAP_H
+#define SQUISH_PALETTESINGLESNAP_H
 
 #include <squish.h>
 #include <limits.h>
-#include "colourfit.h"
+
+#include "palettefit.h"
 
 // pull in structure definitions
 #if	defined(SQUISH_USE_AMP)
-#include "singlecolourlookup_ccr.inl"
+#include "palettesinglelookup_ccr.inl"
 #endif
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-class ColourSet;
-struct SingleColourLookup;
-class SingleColourSnap : public ColourFit
+struct PaletteSingleLookup2;
+struct PaletteSingleLookup4;
+struct PaletteSingleLookup8;
+
+class PaletteSet;
+class PaletteSingleSnap : public virtual PaletteFit
 {
 public:
-  SingleColourSnap(ColourSet const* colours, int flags);
+  PaletteSingleSnap(PaletteSet const* colours, int flags, int swap = -1, int shared = 0);
 
 private:
-  virtual void Compress3(void* block);
-  virtual void Compress4(void* block);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup2 const* const* lookups, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup4 const* const* lookups, u8 cmask);
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup8 const* const* lookups, u8 cmask);
 
-  u8   m_colour[3];
-  Vec3 m_start;
-  Vec3 m_end;
+protected:
+  Scr4 ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask);
+  u8 GetIndex() { return 1; }
 };
 #endif
 
@@ -63,4 +68,4 @@ private:
 
 } // namespace squish
 
-#endif // ndef SQUISH_SINGLECOLOURSNAP_H
+#endif // ndef SQUISH_PALETTESINGLESNAP_H

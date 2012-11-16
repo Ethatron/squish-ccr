@@ -24,7 +24,7 @@
 
    -------------------------------------------------------------------------- */
 
-#include "singlecolourfit.h"
+#include "coloursinglefit.h"
 #include "colourset.h"
 #include "colourblock.h"
 
@@ -42,15 +42,15 @@ struct SC_SourceBlock
   u8 error;
 };
 
-struct SingleColourLookup
+struct ColourSingleLookup
 {
   SC_SourceBlock sources[2];
 };
 
 #define	SCL_ITERATIVE
-#include "singlecolourlookup.inl"
+#include "coloursinglelookup.inl"
 
-SingleColourFit::SingleColourFit(ColourSet const* colours, int flags)
+ColourSingleFit::ColourSingleFit(ColourSet const* colours, int flags)
   : ColourFit(colours, flags)
 {
   // grab the single colour
@@ -64,10 +64,10 @@ SingleColourFit::SingleColourFit(ColourSet const* colours, int flags)
   m_besterror = INT_MAX;
 }
 
-void SingleColourFit::Compress3(void* block)
+void ColourSingleFit::Compress3(void* block)
 {
   // build the table of lookups
-  SingleColourLookup const* const lookups[] =
+  ColourSingleLookup const* const lookups[] =
   {
     sc_lookup_5_3,
     sc_lookup_6_3,
@@ -92,10 +92,10 @@ void SingleColourFit::Compress3(void* block)
   }
 }
 
-void SingleColourFit::Compress4(void* block)
+void ColourSingleFit::Compress4(void* block)
 {
   // build the table of lookups
-  SingleColourLookup const* const lookups[] =
+  ColourSingleLookup const* const lookups[] =
   {
     sc_lookup_5_4,
     sc_lookup_6_4,
@@ -120,7 +120,7 @@ void SingleColourFit::Compress4(void* block)
   }
 }
 
-int SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
+int ColourSingleFit::ComputeEndPoints(ColourSingleLookup const* const* lookups)
 {
   // check each index combination (endpoint or intermediate)
   int besterror = INT_MAX;
@@ -132,7 +132,7 @@ int SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
 
     for (int channel = 0; channel < 3; ++channel) {
       // grab the lookup table and index for this channel
-      SingleColourLookup const* lookup = lookups[channel];
+      ColourSingleLookup const* lookup = lookups[channel];
       int target = m_colour[channel];
 
       // store a pointer to the source for this channel
@@ -175,11 +175,11 @@ int SingleColourFit::ComputeEndPoints(SingleColourLookup const* const* lookups)
 } // namespace squish
 
 #if	defined(SBL_FLAT)
-#include "singlecolourfit_ccr_flat.cpp"
+#include "coloursinglefit_ccr_flat.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 1)
-#include "singlecolourfit_ccr_packed.cpp"
+#include "coloursinglefit_ccr_packed.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 2)
-#include "singlecolourfit_ccr_packed_copy.cpp"
+#include "coloursinglefit_ccr_packed_copy.cpp"
 #elif	defined(SBL_VECTOR)
-#include "singlecolourfit_ccr_vector.cpp"
+#include "coloursinglefit_ccr_vector.cpp"
 #endif

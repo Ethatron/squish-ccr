@@ -1,5 +1,5 @@
 #ifdef	SCL_ITERATIVE
-static SingleColourLookup const sc_lookup_5_3[] =
+static ColourSingleLookup const sc_lookup_5_3[] =
 {
 	{ { { 0, 0, 0 }, { 0, 0, 0 } } },
 	{ { { 0, 0, 1 }, { 0, 0, 1 } } },
@@ -259,7 +259,7 @@ static SingleColourLookup const sc_lookup_5_3[] =
 	{ { { 31, 0, 0 }, { 31, 31, 0 } } }
 };
 
-static SingleColourLookup const sc_lookup_6_3[] =
+static ColourSingleLookup const sc_lookup_6_3[] =
 {
 	{ { { 0, 0, 0 }, { 0, 0, 0 } } },
 	{ { { 0, 0, 1 }, { 0, 1, 1 } } },
@@ -519,7 +519,7 @@ static SingleColourLookup const sc_lookup_6_3[] =
 	{ { { 63, 0, 0 }, { 63, 63, 0 } } }
 };
 
-static SingleColourLookup const sc_lookup_5_4[] =
+static ColourSingleLookup const sc_lookup_5_4[] =
 {
 	{ { { 0, 0, 0 }, { 0, 0, 0 } } },
 	{ { { 0, 0, 1 }, { 0, 1, 1 } } },
@@ -779,7 +779,7 @@ static SingleColourLookup const sc_lookup_5_4[] =
 	{ { { 31, 0, 0 }, { 31, 31, 0 } } }
 };
 
-static SingleColourLookup const sc_lookup_6_4[] =
+static ColourSingleLookup const sc_lookup_6_4[] =
 {
 	{ { { 0, 0, 0 }, { 0, 0, 0 } } },
 	{ { { 0, 0, 1 }, { 0, 1, 0 } } },
@@ -1040,7 +1040,7 @@ static SingleColourLookup const sc_lookup_6_4[] =
 };
 #else
 
-static SingleColourLookup const sc_lookup_5_3[] =
+static ColourSingleLookup const sc_lookup_5_3[] =
 {
   {  0,  0},  {  0,  0},  {  0,  0},  {  0,  8},  {  0,  8},  {  0,  8},  {  0,  8},  {  0, 16},
   {  0, 16},  {  0, 16},  {  0, 16},  {  0, 24},  {  0, 24},  {  0, 24},  {  0, 24},  {  0, 33},
@@ -1076,7 +1076,7 @@ static SingleColourLookup const sc_lookup_5_3[] =
   {239,255},  {239,255},  {247,255},  {247,255},  {247,255},  {247,255},  {255,255},  {255,255}
 };
 
-static SingleColourLookup const sc_lookup_6_3[] =
+static ColourSingleLookup const sc_lookup_6_3[] =
 {
   {  0,  0},  {  0,  4},  {  0,  4},  {  0,  8},  {  0,  8},  {  0, 12},  {  0, 12},  {  0, 16},
   {  0, 16},  {  0, 20},  {  0, 20},  {  0, 24},  {  0, 24},  {  0, 28},  {  0, 28},  {  0, 32},
@@ -1112,7 +1112,7 @@ static SingleColourLookup const sc_lookup_6_3[] =
   {243,255},  {243,255},  {247,255},  {247,255},  {251,255},  {251,255},  {255,255},  {255,255}
 };
 
-static SingleColourLookup const sc_lookup_5_4[] =
+static ColourSingleLookup const sc_lookup_5_4[] =
 {
   {  0,  0},  {  0,  8},  {  0,  8},  {  0,  8},  {  0, 16},  {  0, 16},  {  0, 16},  {  0, 24},
   {  0, 24},  {  8, 16},  {  8, 16},  {  0, 33},  {  0, 41},  {  0, 41},  {  0, 41},  {  0, 49},
@@ -1148,7 +1148,7 @@ static SingleColourLookup const sc_lookup_5_4[] =
   {247,255},  {247,255},  {247,255},  {255,247},  {255,247},  {255,247},  {255,255},  {255,255}
 };
 
-static SingleColourLookup const sc_lookup_6_4[] =
+static ColourSingleLookup const sc_lookup_6_4[] =
 {
   {  0,  0},  {  0,  4},  {  0,  8},  {  0, 12},  {  0, 12},  {  0, 16},  {  0, 20},  {  0, 24},
   {  0, 24},  {  0, 28},  {  0, 32},  {  0, 36},  {  0, 36},  {  0, 40},  {  0, 44},  {  0, 48},

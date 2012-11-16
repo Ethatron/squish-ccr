@@ -24,7 +24,7 @@
 
    -------------------------------------------------------------------------- */
 
-#include "singlecoloursnap.h"
+#include "coloursinglesnap.h"
 #include "colourset.h"
 #include "colourblock.h"
 
@@ -35,16 +35,16 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
-struct SingleColourLookup
+struct ColourSingleLookup
 {
   u8 start;
   u8 end;
 };
 
 #undef	SCL_ITERATIVE
-#include "singlecolourlookup.inl"
+#include "coloursinglelookup.inl"
 
-SingleColourSnap::SingleColourSnap(ColourSet const* colours, int flags)
+ColourSingleSnap::ColourSingleSnap(ColourSet const* colours, int flags)
   : ColourFit(colours, flags)
 {
   // grab the single colour
@@ -67,7 +67,7 @@ SingleColourSnap::SingleColourSnap(ColourSet const* colours, int flags)
   m_colour[2] = (u8)FloatToInt(255.0f * values->Z(), 255);
 }
 
-void SingleColourSnap::Compress3(void* block)
+void ColourSingleSnap::Compress3(void* block)
 {
   const float *eLUT = ComputeGammaLUT(false);
 
@@ -89,7 +89,7 @@ void SingleColourSnap::Compress3(void* block)
   WriteColourBlock3(m_start, m_end, indices, block);
 }
 
-void SingleColourSnap::Compress4(void* block)
+void ColourSingleSnap::Compress4(void* block)
 {
   const float *eLUT = ComputeGammaLUT(false);
 
@@ -115,11 +115,11 @@ void SingleColourSnap::Compress4(void* block)
 } // namespace squish
 
 #if	defined(SBL_FLAT)
-#include "singlecoloursnap_ccr_flat.cpp"
+#include "coloursinglesnap_ccr_flat.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 1)
-#include "singlecoloursnap_ccr_packed.cpp"
+#include "coloursinglesnap_ccr_packed.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 2)
-#include "singlecoloursnap_ccr_packed_copy.cpp"
+#include "coloursinglesnap_ccr_packed_copy.cpp"
 #elif	defined(SBL_VECTOR)
-#include "singlecoloursnap_ccr_vector.cpp"
+#include "coloursinglesnap_ccr_vector.cpp"
 #endif

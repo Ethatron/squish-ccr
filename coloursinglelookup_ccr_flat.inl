@@ -8,7 +8,7 @@ struct SourceBlock_CCR
       unsigned int pad;
 };
 
-struct SingleColourLookup_CCR
+struct ColourSingleLookup_CCR
 {
   /* lo, hi */
   SourceBlock_CCR sources[2];
@@ -17,16 +17,16 @@ struct SingleColourLookup_CCR
 #if	defined(USE_AMP) || defined(USE_COMPUTE)
 namespace squish {
 #if	!defined(USE_COMPUTE)
-typedef const ::Concurrency::array_view<const ::SingleColourLookup_CCR, 3> &SingleColourLUT;
+typedef const ::Concurrency::array_view<const ::ColourSingleLookup_CCR, 3> &ColourSingleLUT;
 #else
-typedef const                                 ::SingleColourLookup_CCR      SingleColourLUT[2][256][2];
+typedef const                                 ::ColourSingleLookup_CCR      ColourSingleLUT[2][256][2];
 #endif
 }
 #endif
 #endif
 
 #if	defined(ONLY_ARRAY)
-static_hlsl const SingleColourLookup_CCR lookup_34_56_ccr[2][256][2] = {
+static_hlsl const ColourSingleLookup_CCR lookup_34_56_ccr[2][256][2] = {
 { /* 3-step line */
 	/* 5-bit color */                                          /* 6-bit color */
 	{ { {  0, 0, 0*0, 0 } , {  0,  0, 0*0, 0 } } , { {  0, 0, 0*0, 0 } , {  0,  0, 0*0, 0 } } },
@@ -547,5 +547,5 @@ static_hlsl const SingleColourLookup_CCR lookup_34_56_ccr[2][256][2] = {
 }
 };
 #elif	!defined(USE_COMPUTE)
-extern const SingleColourLookup_CCR lookup_34_56_ccr[2][256][2];
+extern const ColourSingleLookup_CCR lookup_34_56_ccr[2][256][2];
 #endif // LUT

@@ -24,7 +24,7 @@
 
    -------------------------------------------------------------------------- */
 
-#include "singlepalettesnap.h"
+#include "palettesinglesnap.h"
 #include "paletteset.h"
 #include "paletteblock.h"
 
@@ -35,33 +35,33 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
-struct SinglePaletteLookup2
+struct PaletteSingleLookup2
 {
   u8 start;
   u8 end;
 };
 
-struct SinglePaletteLookup4
+struct PaletteSingleLookup4
 {
   u8 start;
   u8 end;
 };
 
-struct SinglePaletteLookup8
+struct PaletteSingleLookup8
 {
   u8 start;
   u8 end;
 };
 
 #undef	SPL_ITERATIVE
-#include "singlepalettelookup.inl"
+#include "palettesinglelookup.inl"
 
-SinglePaletteSnap::SinglePaletteSnap(PaletteSet const* palette, int flags, int swap, int shared)
+PaletteSingleSnap::PaletteSingleSnap(PaletteSet const* palette, int flags, int swap, int shared)
   : PaletteFit(palette, flags, swap, shared)
 {
 }
 
-Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask)
+Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, int ab, int sb, int ib, u8 cmask)
 {
 #if	!defined(FEATURE_SHAREDBITS_TRIALS)
   // silence the compiler
@@ -93,8 +93,8 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, in
   assume(ib >= 2 && ib <= 4);
   switch (ib) {
     case 2: {
-      SinglePaletteLookup2 const* cl;
-      SinglePaletteLookup2 const* al;
+      PaletteSingleLookup2 const* cl;
+      PaletteSingleLookup2 const* al;
 
       assume(cb >= 5 && cb <= 8);
       switch (cb) {
@@ -112,14 +112,14 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, in
 	default: al = NULL; break;			//{ 3, 6, 0, 0,  5, 0, 0,  0,  2, 0 }, / { 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
       }
 
-      SinglePaletteLookup2 const* const lookups[] =
+      PaletteSingleLookup2 const* const lookups[] =
       { cl, cl, cl, al };
 
       return ComputeEndPoints(set, metric, lookups, cmask);
     } break;
     case 3: {
-      SinglePaletteLookup4 const* cl;
-      SinglePaletteLookup4 const* al;
+      PaletteSingleLookup4 const* cl;
+      PaletteSingleLookup4 const* al;
 
       assume(cb == 5 || cb == 7);
       switch (cb) {
@@ -134,14 +134,14 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, in
 	default: al = NULL; break;			//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
       }
 
-      SinglePaletteLookup4 const* const lookups[] =
+      PaletteSingleLookup4 const* const lookups[] =
       { cl, cl, cl, al };
 
       return ComputeEndPoints(set, metric, lookups, cmask);
     } break;
     case 4: {
-      SinglePaletteLookup8 const* cl;
-      SinglePaletteLookup8 const* al;
+      PaletteSingleLookup8 const* cl;
+      PaletteSingleLookup8 const* al;
 
       assume(cb == 8);
       switch (cb) {
@@ -155,7 +155,7 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, in
 	default: abort(); break;
       }
 
-      SinglePaletteLookup8 const* const lookups[] =
+      PaletteSingleLookup8 const* const lookups[] =
       { cl, cl, cl, al };
 
       return ComputeEndPoints(set, metric, lookups, cmask);
@@ -167,7 +167,7 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, in
   }
 }
 
-Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup2 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup2 const* const* lookups, u8 cmask)
 {
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
@@ -207,7 +207,7 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePale
   return error;
 }
 
-Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup4 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup4 const* const* lookups, u8 cmask)
 {
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
@@ -247,7 +247,7 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePale
   return error;
 }
 
-Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePaletteLookup8 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup8 const* const* lookups, u8 cmask)
 {
   // grab the single entry
   Vec4 const* values = m_palette->GetPoints(set);
@@ -291,11 +291,11 @@ Scr4 SinglePaletteSnap::ComputeEndPoints(int set, Vec4 const &metric, SinglePale
 } // namespace squish
 
 #if	defined(SBL_FLAT)
-#include "singlepalettesnap_ccr_flat.cpp"
+#include "palettesinglesnap_ccr_flat.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 1)
-#include "singlepalettesnap_ccr_packed.cpp"
+#include "palettesinglesnap_ccr_packed.cpp"
 #elif	defined(SBL_PACKED) && (SBL_PACKED == 2)
-#include "singlepalettesnap_ccr_packed_copy.cpp"
+#include "palettesinglesnap_ccr_packed_copy.cpp"
 #elif	defined(SBL_VECTOR)
-#include "singlepalettesnap_ccr_vector.cpp"
+#include "palettesinglesnap_ccr_vector.cpp"
 #endif
