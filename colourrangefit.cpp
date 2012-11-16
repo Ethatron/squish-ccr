@@ -77,7 +77,7 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   Vec3 end(0.0f);
 
   if (count > 0) {
-#ifdef	FEATURE_PROJECT_FAST
+#ifdef	FEATURE_RANGEFIT_PROJECT
     Scr3 div = Reciprocal(Dot(principle, principle));
     Vec3 rec = Reciprocal(    principle            );
     Scr3 len, min, max;
