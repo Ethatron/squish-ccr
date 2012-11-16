@@ -47,10 +47,10 @@
 #include "hdrblock.h"
 
 #include "alpha.h"
-#include "singlecolourfit.h"
-#include "singlecoloursnap.h"
-#include "singlepalettefit.h"
-#include "singlepalettesnap.h"
+#include "coloursinglefit.h"
+#include "coloursinglesnap.h"
+#include "palettesinglefit.h"
+#include "palettesinglesnap.h"
 
 namespace squish {
 
@@ -95,7 +95,7 @@ void CompressColorBtc(u8 const* rgba, int mask, void* block, int flags)
   // check the compression type and compress colour
   if (colours.GetCount() == 1) {
     // always do a single colour fit
-    SingleColourMatch fit(&colours, flags);
+    ColourSingleMatch fit(&colours, flags);
     fit.Compress(block);
   }
   else if (((flags & kColourRangeFit) != 0) || (colours.GetCount() == 0)) {
@@ -304,6 +304,10 @@ void CompressPaletteBtc(u8 const* rgba, int mask, void* block, int flags)
 	for (int xu = 0; xu < nums; xu++) {
 	  int cnt = palette.GetCount(xu);
 	  gstat.num_counts[mnum][p][xu][cnt]++;
+#ifdef	FEATURE_TEST_LINES
+	  int chn = palette.GetChannel(xu) + 1;
+	  gstat.num_channels[mnum][p][xu][chn]++;
+#endif
 	}
 
 	if (palette.GetCount() <= nums)
@@ -721,7 +725,7 @@ void DecompressImage(u8* rgba, int width, int height, void const* blocks, int fl
  */
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #if	defined(SQUISH_USE_COMPUTE)
-    tile_static SingleColourFit_CCR sfit;
+    tile_static ColourSingleFit_CCR sfit;
     tile_static ColourRangeFit_CCR rfit;
     tile_static ClusterFit_CCR cfit;
 #endif
@@ -729,7 +733,7 @@ void DecompressImage(u8* rgba, int width, int height, void const* blocks, int fl
 void CompressColorBtc ( tile_barrier barrier, const int thread,
 			pixel16 rgba, ColourSet_CCRr colours, out code64 block,
 			int metric, bool trans, int fit,
-			IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted {
+			IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted {
   // all of these conditions are identical over the entire
   // thread-group, so all threads take one of 0,1,2, not
   // distinct branches
@@ -738,7 +742,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
   if (colours.GetCount() == 1) {
     // always do a single colour fit
 #if	!defined(SQUISH_USE_COMPUTE)
-    tile_static SingleColourFit_CCR sfit;
+    tile_static ColourSingleFit_CCR sfit;
 #endif
 
     sfit.AssignSet(barrier, thread, colours, metric, fit);
@@ -771,7 +775,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
 void CompressColorBtc1( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
-			IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted {
+			IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted {
 #if	!defined(SQUISH_USE_COMPUTE)
   tile_static ColourSet_CCR colours;
 #endif
@@ -786,7 +790,7 @@ void CompressColorBtc1( tile_barrier barrier, const int thread,
 void CompressColorBtc2( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
-			IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted {
+			IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted {
 #if	!defined(SQUISH_USE_COMPUTE)
   tile_static ColourSet_CCR colours;
 #endif
@@ -801,7 +805,7 @@ void CompressColorBtc2( tile_barrier barrier, const int thread,
 void CompressColorBtc3( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
-			IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted {
+			IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted {
 #if	!defined(SQUISH_USE_COMPUTE)
   tile_static ColourSet_CCR colours;
 #endif

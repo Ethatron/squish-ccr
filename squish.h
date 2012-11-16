@@ -30,7 +30,7 @@
 #include "config.h"
 
 #if	defined(SQUISH_USE_COMPUTE) || defined(SQUISH_USE_AMP)
-#include "singlecolourlookup_ccr.inl"
+#include "coloursinglelookup_ccr.inl"
 #include "degeneracy_ccr.inl"
 #endif
 
@@ -370,31 +370,31 @@ typedef ColourSet_CCR  ColourSet_CCRr;
 void CompressColorBtc (tile_barrier barrier, const int thread,
 		       pixel16 rgba, ColourSet_CCRr colours, out code64 block,
 		       int metric, bool trans, int fit,
-		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
 void CompressColorBtc1(tile_barrier barrier, const int thread,
 		       pixel16 rgba, int mask, out code64 block,
 		       int metric, bool trans, int fit,
-		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
 void CompressColorBtc2(tile_barrier barrier, const int thread,
 		       pixel16 rgba, int mask, out code64 block,
 		       int metric, bool trans, int fit,
-		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
 void CompressColorBtc3(tile_barrier barrier, const int thread,
 		       pixel16 rgba, int mask, out code64 block,
 		       int metric, bool trans, int fit,
-		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
 void CompressColorBtc4(tile_barrier barrier, const int thread,
 		       pixel16 z, int mask, out code64 block,
 		       int metric, bool trans, int fit,
-		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
 void CompressColorBtc5(tile_barrier barrier, const int thread,
 		       pixel16 xy, int mask, out code64 block,
 		       int metric, bool trans, int fit,
-		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
 void CompressPaletteBtc(tile_barrier barrier, const int thread,
 		       pixel16 rgba, ColourSet_CCRr colours, out code64 block,
 		       int metric, bool trans, int fit,
-		       IndexBlockLUT yArr, SingleColourLUT lArr) amp_restricted;
+		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
 
 #endif
 #endif

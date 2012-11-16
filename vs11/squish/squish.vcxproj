@@ -208,13 +208,14 @@
     <ClCompile Include="..\..\palettechannelfit.cpp" />
     <ClCompile Include="..\..\paletteclusterfit.cpp" />
     <ClCompile Include="..\..\palettefit.cpp" />
+    <ClCompile Include="..\..\paletteindexfit.cpp" />
     <ClCompile Include="..\..\palettenormalfit.cpp" />
     <ClCompile Include="..\..\paletterangefit.cpp" />
     <ClCompile Include="..\..\paletteset.cpp" />
-    <ClCompile Include="..\..\singlecolourfit.cpp" />
-    <ClCompile Include="..\..\singlecoloursnap.cpp" />
-    <ClCompile Include="..\..\singlepalettefit.cpp" />
-    <ClCompile Include="..\..\singlepalettesnap.cpp" />
+    <ClCompile Include="..\..\coloursinglefit.cpp" />
+    <ClCompile Include="..\..\coloursinglesnap.cpp" />
+    <ClCompile Include="..\..\palettesinglefit.cpp" />
+    <ClCompile Include="..\..\palettesinglesnap.cpp" />
     <ClCompile Include="..\..\squish.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -230,6 +231,7 @@
     <ClInclude Include="..\..\palettechannelfit.h" />
     <ClInclude Include="..\..\paletteclusterfit.h" />
     <ClInclude Include="..\..\palettefit.h" />
+    <ClInclude Include="..\..\paletteindexfit.h" />
     <ClInclude Include="..\..\palettenormalfit.h" />
     <ClInclude Include="..\..\paletterangefit.h" />
     <ClInclude Include="..\..\paletteset.h" />
@@ -237,19 +239,19 @@
     <ClInclude Include="..\..\simd_float.h" />
     <ClInclude Include="..\..\simd_sse.h" />
     <ClInclude Include="..\..\simd_ve.h" />
-    <ClInclude Include="..\..\singlecolourfit.h" />
-    <ClInclude Include="..\..\singlecoloursnap.h" />
-    <ClInclude Include="..\..\singlepalettefit.h" />
-    <ClInclude Include="..\..\singlepalettesnap.h" />
+    <ClInclude Include="..\..\coloursinglefit.h" />
+    <ClInclude Include="..\..\coloursinglesnap.h" />
+    <ClInclude Include="..\..\palettesinglefit.h" />
+    <ClInclude Include="..\..\palettesinglesnap.h" />
     <ClInclude Include="..\..\squish.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\singlecolourlookup.inl" />
+    <None Include="..\..\coloursinglelookup.inl" />
     <None Include="..\..\singlecolourlookup_ccr.inl" />
     <None Include="..\..\singlecolourlookup_ccr_flat.inl" />
     <None Include="..\..\singlecolourlookup_ccr_packed.inl" />
     <None Include="..\..\singlecolourlookup_ccr_vector.inl" />
-    <None Include="..\..\singlepalettelookup.inl" />
+    <None Include="..\..\palettesinglelookup.inl" />
     <None Include="..\..\texture_compression_s3tc.txt" />
   </ItemGroup>
   <ItemGroup>
