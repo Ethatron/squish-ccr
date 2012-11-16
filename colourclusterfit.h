@@ -66,6 +66,8 @@ private:
   Vec4 m_xsum_wsum;
   Vec4 m_points_weights[16];
   a16 u8 m_order[16 * kMaxIterations];
+
+  bool m_optimizable;
 };
 #endif
 

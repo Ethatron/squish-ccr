@@ -60,6 +60,7 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
     m_metric = Vec4(0.3333f, 0.3334f, 0.3333f, 0.0f);
 
   // cache some values
+  bool const unweighted = m_colours->IsUnweighted();
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
   
@@ -67,13 +68,16 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   Vec3 centroid;
 
   // get the covariance matrix
-  if (m_colours->IsUnweighted())
+  if (unweighted)
     ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric.GetVec3());
   else
     ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric.GetVec3(), m_colours->GetWeights());
 
   // compute the principle component
   GetPrincipleComponent(covariance, m_principle);
+
+  // we have tables for this
+  m_optimizable = unweighted && ((count == 16) || (flags & kBtc1));
 }
 
 bool ColourClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
@@ -799,13 +803,13 @@ void ColourClusterFit::Compress3(void* block)
    * C == 3, numset ==
    *  [0]	0x00f796e0 {124800, 15616}
    */
-  if (m_colours->IsUnweighted())
+  if (m_optimizable)
     gstat.has_noweightsets[0][0][0]++;
   else
     gstat.has_noweightsets[0][0][1]++;
 #endif
 
-  if (m_colours->IsUnweighted())
+  if (m_optimizable)
     ClusterFit3Constant(block);
   else
     ClusterFit3        (block);
@@ -819,13 +823,13 @@ void ColourClusterFit::Compress4(void* block)
    * C == 4, numset ==
    *  [0]	0x00f796e0 {13856, 5184}
    */
-  if (m_colours->IsUnweighted())
+  if (m_optimizable)
     gstat.has_noweightsets[1][0][0]++;
   else
     gstat.has_noweightsets[1][0][1]++;
 #endif
 
-  if (m_colours->IsUnweighted())
+  if (m_optimizable)
     ClusterFit4Constant(block);
   else
     ClusterFit4        (block);
