@@ -244,8 +244,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   u8 const clra = !clearAlpha    ? 0x00 : 0xFF;
   u8 const wgta =  weightByAlpha ? 0x00 : 0xFF;
 
-  u8 rgbx[4 * 16], chkx[4 * 16], wgtx = wgta;
-  u8 ___a[1 * 16], chka[1 * 16], ___w = 0xFF;
+  u8 rgbx[4 * 16], wgtx = wgta;
+  u8 ___a[1 * 16], ___w = 0xFF;
 
   /* Apply the component rotation, while preserving semantics:
    * - swap: aa, ra, ga, ba
@@ -294,12 +294,19 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   m_unweighted[0] = m_unweighted[1] =
   m_unweighted[2] = m_unweighted[3] = true;
 
+  // required for being able to reorder the contents of "rgbx"
+  assert(m_numsets == 1);
   for (int s = 0; s < m_numsets; s++) {
     // combined exclusion and selection mask
     int pmask = mask & m_mask[s];
+    
+#ifdef	FEATURE_TEST_LINES
+    Col4 m_cnst_s_(~0);
+    Col4 m_grey_s_(~0);
+#endif
 
     // create the minimal set, O(16*count/2)
-    for (int i = 0, j; i < 16; ++i) {
+    for (int i = 0, index; i < 16; ++i) {
       // check this pixel is enabled
       int bit = 1 << i;
       if ((pmask & bit) == 0) {
@@ -324,13 +331,12 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
       // loop over previous matches for a match
       u8 *rgbvalue = &rgbx[4 * i + 0];
-      for (j = 0; j < m_count[s]; ++j) {
-	u8 *crgbvalue = &chkx[4 * j + 0];
-
+      for (index = 0; index < m_count[s]; ++index) {
+	u8 *crgbvalue = &rgbx[4 * index + 0];
+	
 	// check for a match
-	if ((*((int *)rgbvalue) == *((int *)crgbvalue))) {
+	if (*((int *)rgbvalue) == *((int *)crgbvalue)) {
 	  // get the index of the match
-	  int const index = j;
 	  assume (index >= 0 && index < 16);
 
 	  // map to this point and increase the weight
@@ -343,14 +349,15 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  break;
 	}
       }
-
-      {
-	u8 *crgbvalue = &chkx[4 * j + 0];
+      
+      // re-use the memory of already processed pixels
+      assert(index <= i); {
+	u8 *crgbvalue = &rgbx[4 * index + 0];
 
 	// allocate a new point
-	if (j == m_count[s]) {
+	if (index == m_count[s]) {
 	  // get the index of the match and advance
-	  int index = m_count[s]++;
+	  m_count[s] = index + 1;
 
 	  // normalize coordinates to [0,1]
 	  const float *r = &caLUTs[0][rgbvalue[0]];
@@ -369,18 +376,29 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 	  // remember match for successive checks
 	  *((int *)crgbvalue) = *((int *)rgbvalue);
+
+#ifdef	FEATURE_TEST_LINES
+	  // if -1, all bytes are identical, checksum to check which bytes flip
+	  m_cnst_s_ &= CompareAllEqualTo_M8(m_points[s][index], m_points[s][0]);
+	  m_grey_s_ &= CompareAllEqualTo_M8(m_points[s][index], RotateLeft<1>(m_points[s][index]));
+
+//	  m_cnst[s] |= (*((int *)rgbx    ) ^ (*((int *)rgbvalue)) >> 0);
+//	  m_grey[s] |= (*((int *)rgbvalue) ^ (*((int *)rgbvalue)) >> 8);
+#endif
 	}
       }
     }
+    
+#ifdef	FEATURE_TEST_LINES
+    m_cnst[s] = ~m_cnst_s_.GetM8();
+    m_grey[s] = ~m_grey_s_.GetM8();
+#endif
 
-#ifdef FEATURE_WEIGHTS_ROOTED
+#ifdef	FEATURE_WEIGHTS_ROOTED
     // square root the weights
     for (int i = 0; i < m_count[s]; ++i)
       m_weights[s][i] = Sqrt(m_weights[s][i]);
 #endif
-
-    // we have tables for this
-    m_unweighted[s] = m_unweighted[s] && (m_count[s] == 16);
 
     // TODO: if not m_transparent this all becomes a constant!
     if (seperateAlpha) {
@@ -388,7 +406,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
       int a = s + m_numsets;
 
       // create the minimal set
-      for (int i = 0, j; i < 16; ++i) {
+      for (int i = 0, index; i < 16; ++i) {
 	// check this pixel is enabled
 	int bit = 1 << i;
 	if ((pmask & bit) == 0) {
@@ -413,13 +431,13 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 	// loop over previous matches for a match
 	u8 *avalue = &___a[1 * i + 0];
-	for (j = 0; j < m_count[a]; ++j) {
-	  u8 *cavalue = &chka[1 * j + 0];
+	for (index = 0; index < m_count[a]; ++index) {
+	  u8 *cavalue = &___a[1 * index + 0];
 
 	  // check for a match
 	  if (*avalue == *cavalue) {
 	    // get the index of the match
-	    int index = j;
+	    assume (index >= 0 && index < 16);
 
 	    // map to this point and increase the weight
 	    m_remap[a][i] = index;
@@ -432,13 +450,14 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  }
 	}
 
-	{
-	  u8 *cavalue = &chka[1 * j + 0];
+	// re-use the memory of already processed pixels
+	assert(index <= i); {
+	  u8 *cavalue = &___a[1 * index + 0];
 
 	  // allocate a new point
-	  if (j == m_count[a]) {
+	  if (index == m_count[a]) {
 	    // get the index of the match and advance
-	    int index = m_count[a]++;
+	    m_count[a] = index + 1;
 
 	    // normalize coordinates to [0,1]
 	    const float *c = &caLUTs[3][avalue[0]];
@@ -457,15 +476,17 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  }
 	}
       }
+      
+#ifdef	FEATURE_TEST_LINES
+      m_cnst[a] = 0;
+      m_grey[a] = 0;
+#endif
 
 #ifdef FEATURE_WEIGHTS_ROOTED
       // square root the weights
       for (int i = 0; i < m_count[a]; ++i)
 	m_weights[a][i] = Sqrt(m_weights[a][i]);
 #endif
-
-      // we have tables for this
-      m_unweighted[a] = m_unweighted[a] && (m_count[a] == 16);
     }
   }
 
@@ -497,8 +518,13 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int s = 0;
   int a = 1; {
+#ifdef	FEATURE_TEST_LINES
+    Col4 m_cnst_s_(~0);
+    Col4 m_grey_s_(~0);
+#endif
+
     // create the minimal set, O(16*count/2)
-    for (int i = 0, j; i < 16; ++i) {
+    for (int i = 0, index; i < 16; ++i) {
       // copy "unset"
       int cindex = palette.m_remap[0][i];
       int aindex = palette.m_remap[1][i];
@@ -533,10 +559,9 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       rgbx = KillW(rgba);
       
       // loop over previous matches for a match
-      for (j = 0; j < m_count[s]; ++j) {
-	if (CompareAllEqualTo(rgbx, m_points[s][j])) {
+      for (index = 0; index < m_count[s]; ++index) {
+	if (CompareAllEqualTo(rgbx, m_points[s][index])) {
 	  // get the index of the match
-	  int const index = j;
 	  assume (index >= 0 && index < 16);
 
 	  // map to this point and increase the weight
@@ -550,11 +575,11 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	}
       }
 
-      {
+      assert(index <= i); {
 	// allocate a new point
-	if (j == m_count[s]) {
+	if (index == m_count[s]) {
 	  // get the index of the match and advance
-	  int index = m_count[s]++;
+	  m_count[s] = index + 1;
 
 	  // add the point
 	  m_remap[s][i] = index;
@@ -563,6 +588,12 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	  m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][index] = 1;
+#endif
+
+#ifdef	FEATURE_TEST_LINES
+	  // if -1, all bytes are identical, checksum to check which bytes flip
+	  m_cnst_s_ &= CompareAllEqualTo_M8(rgbx, m_points[s][0]);
+	  m_grey_s_ &= CompareAllEqualTo_M8(rgbx, RotateLeft<1>(rgbx));
 #endif
 	}
       }
@@ -573,10 +604,10 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	___a = rgba.SplatW();
 	
 	// loop over previous matches for a match
-	for (j = 0; j < m_count[a]; ++j) {
-	  if (CompareAllEqualTo(___a, m_points[a][j])) {
+	for (index = 0; index < m_count[a]; ++index) {
+	  if (CompareAllEqualTo(___a, m_points[a][index])) {
 	    // get the index of the match
-	    int index = j;
+	    assume (index >= 0 && index < 16);
 
 	    // map to this point and increase the weight
 	    m_remap[a][i] = index;
@@ -589,11 +620,11 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	  }
 	}
 
-	{
+	assert(index <= i); {
 	  // allocate a new point
-	  if (j == m_count[a]) {
+	  if (index == m_count[a]) {
 	    // get the index of the match and advance
-	    int index = m_count[a]++;
+	    m_count[a] = index + 1;
 
 	    // add the point
 	    m_remap[a][i] = index;
@@ -607,6 +638,11 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	}
       }
     }
+    
+#ifdef	FEATURE_TEST_LINES
+    m_cnst[s] = ~m_cnst_s_.GetM8(); m_cnst[a] = 0;
+    m_grey[s] = ~m_grey_s_.GetM8(); m_grey[a] = 0;
+#endif
 
 #ifdef FEATURE_WEIGHTS_ROOTED
       // square root the weights
@@ -615,10 +651,6 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
     for (int i = 0; i < m_count[a]; ++i)
       m_weights[a][i] = Sqrt(m_weights[a][i]);
 #endif
-    
-    // we have tables for this
-    m_unweighted[s] = m_unweighted[s] && (m_count[s] == 16);
-    m_unweighted[a] = m_unweighted[a] && (m_count[a] == 16);
   }
 
   // clear if we're suppose to throw alway alpha
@@ -642,13 +674,18 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
   m_count     [2] = m_count     [3] = 0;
   m_unweighted[0] = m_unweighted[1] =
   m_unweighted[2] = m_unweighted[3] = true;
-
+  
   for (int s = 0; s < m_numsets; s++) {
     // selection mask
     int pmask = mask & m_mask[s];
     
     // record mappings (multi-assignment possible)
     a16 char gotcha[16]; memset(gotcha, -1, sizeof(gotcha));
+    
+#ifdef	FEATURE_TEST_LINES
+    Col4 m_cnst_s_(~0);
+    Col4 m_grey_s_(~0);
+#endif
 
     // create the minimal set
     for (int i = 0; i < 16; ++i) {
@@ -676,7 +713,21 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
       rgba = Max(rgba, clra);
 
       int index;
-      if ((index = gotcha[uindex]) < 0) {
+      if ((index = gotcha[uindex]) >= 0) {
+	// get the index of the match
+	assume (index >= 0 && index < 16);
+
+	// map to this point and increase the weight
+	m_remap[s][i] = index;
+	m_weights[s][index] += Vec4(W);
+	m_unweighted[s] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	m_frequencies[s][index] += 1;
+#endif
+	continue;
+      }
+      
+      {
 	// get the index of the match and advance
 	index = gotcha[uindex] = (char)(m_count[s]++);
 
@@ -688,20 +739,27 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 #ifdef	FEATURE_EXACT_ERROR
 	m_frequencies[s][index] = 1;
 #endif
-      }
-      else {
-	// get the index of the match
-	assume (index >= 0 && index < 16);
 
-	// map to this point and increase the weight
-	m_remap[s][i] = index;
-	m_weights[s][index] += Vec4(W);
-	m_unweighted[s] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[s][index] += 1;
+#ifdef	FEATURE_TEST_LINES
+	// if -1, all bytes are identical, checksum to check which bytes flip
+	m_cnst_s_ &= CompareAllEqualTo_M8(rgba, m_points[s][0]);
+	m_grey_s_ &= CompareAllEqualTo_M8(rgba, RotateLeft<1>(rgba));
 #endif
       }
     }
+
+#ifdef	FEATURE_TEST_LINES
+    m_cnst[s] = ~m_cnst_s_.GetM8();
+    m_grey[s] = ~m_grey_s_.GetM8();
+#endif
+    
+#ifdef FEATURE_WEIGHTS_ROOTED
+      // square root the weights
+    for (int i = 0; i < m_count[s]; ++i)
+      m_weights[s][i] = Sqrt(m_weights[s][i]);
+    for (int i = 0; i < m_count[a]; ++i)
+      m_weights[a][i] = Sqrt(m_weights[a][i]);
+#endif
   }
 
   // clear if we're suppose to throw alway alpha

@@ -100,6 +100,25 @@ private:
   Vec4  m_points[4][16];
   Vec4  m_weights[4][16];
   int   m_remap[4][16];
+  
+#ifdef	FEATURE_TEST_LINES
+  /* --------------------------------------------------------------------------- */
+public:
+  int   GetChannel(int idx) const {
+    if (m_mergedalpha) {
+      if (!(m_cnst[idx] & 0x0FFF)) return 3; }{
+      if (!(m_cnst[idx] & 0xF0FF)) return 2;
+      if (!(m_cnst[idx] & 0xFF0F)) return 1;
+      if (!(m_cnst[idx] & 0xFFF0)) return 0;
+    }
+    
+    return -1;
+  }
+
+private:
+  int   m_cnst[4];
+  int   m_grey[4];
+#endif
 
 #ifdef	FEATURE_EXACT_ERROR
   /* --------------------------------------------------------------------------- */

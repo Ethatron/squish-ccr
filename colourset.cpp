@@ -42,11 +42,6 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
   bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
 
-#ifdef	FEATURE_TEST_LINES
-  Scr3 angl, epsl = Scr3(1.0f - (1.0f / 256));
-  Vec3 chkl, line;
-#endif
-
   // build mapped data
   u8 clra = clearAlpha || !isBtc1 ? 0xFF : 0x00;
   u8 wgta = weightByAlpha         ? 0x00 : 0xFF;
@@ -70,9 +65,9 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
       ___a[1 * i + 0] = 0x00;
 #endif
   }
-
-  // create the minimal set
-  for (int i = 0; i < 16; ++i) {
+  
+  // create the minimal set, O(16*count/2)
+  for (int i = 0, index; i < 16; ++i) {
     // check this pixel is enabled
     int bit = 1 << i;
     if ((mask & bit) == 0) {
@@ -92,58 +87,15 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
     // ensure there is always non-zero weight even for zero alpha
     u8    w = rgba[4 * i + 3] | wgta;
     float W = (float)(w + 1) / 256.0f;
-
-    // loop over previous points for a match
+    
+    // loop over previous matches for a match
     u8 *rgbvalue = &rgbx[4 * i + 0];
-    for (int j = 0;; ++j) {
-      u8 *crgbvalue = &rgbx[4 * j + 0];
-
-      // allocate a new point
-      if (j == i) {
-	// normalize coordinates to [0,1]
-	float r = rgbLUT[rgbvalue[0]];
-	float g = rgbLUT[rgbvalue[1]];
-	float b = rgbLUT[rgbvalue[2]];
-
-	// add the point
-	m_remap[i] = m_count;
-	m_points[m_count] = Vec3(r, g, b);
-	m_weights[m_count] = W;
-	m_unweighted = m_unweighted && !(u8)(~w);
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[m_count] = 1;
-#endif
-
-#ifdef	FEATURE_TEST_LINES
-        // straight line test
-	if (m_count >= 2) {
-	  // (a/n * b/m + c/n * d/m + e/n * f/m)
-	  chkl = Normalize(m_points[m_count - 1] - m_points[m_count - 2]);
-	  angl = Abs(Dot(line, chkl));
-
-	  m_straight = m_straight && (angl < epsl);
-        }
-	else if (m_count >= 1)
-	  line = Normalize(m_points[m_count - 0] - m_points[m_count - 1]);
-#endif
-
-	// advance
-	++m_count;
-	break;
-      }
-
+    for (index = 0; index < m_count; ++index) {
+      u8 *crgbvalue = &rgbx[4 * index + 0];
+      
       // check for a match
-      int oldbit = 1 << j;
-      bool match = ((mask & oldbit) != 0)
-	&& (*((int *)rgbvalue) == *((int *)crgbvalue)) && ___a[j]/*
-	&& (rgba[4 * i + 0] == rgba[4 * j + 0])
-	&& (rgba[4 * i + 1] == rgba[4 * j + 1])
-	&& (rgba[4 * i + 2] == rgba[4 * j + 2])
-	&& (rgba[4 * j + 3] >= 128 || !isBtc1 || clearAlpha)*/;
-
-      if (match) {
+      if (*((int *)rgbvalue) == *((int *)crgbvalue)) {
 	// get the index of the match
-	int const index = m_remap[j];
 	assume (index >= 0 && index < 16);
 
 	// map to this point and increase the weight
@@ -156,6 +108,34 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 	break;
       }
     }
+    
+    // re-use the memory of already processed pixels
+    assert(index <= i); {
+      u8 *crgbvalue = &rgbx[4 * index + 0];
+
+      // allocate a new point
+      if (index == m_count) {
+	// get the index of the match and advance
+	m_count = index + 1;
+
+	// normalize coordinates to [0,1]
+	const float *r = &rgbLUT[rgbvalue[0]];
+	const float *g = &rgbLUT[rgbvalue[1]];
+	const float *b = &rgbLUT[rgbvalue[2]];
+
+	// add the point
+	m_remap[i] = index;
+	m_points[index] = Vec3(r, g, b);
+	m_weights[index] = W;
+	m_unweighted = m_unweighted && !(u8)(~w);
+#ifdef	FEATURE_EXACT_ERROR
+	m_frequencies[index] = 1;
+#endif
+	
+	// remember match for successive checks
+	*((int *)crgbvalue) = *((int *)rgbvalue);
+      }
+    }
   }
 
 #ifdef FEATURE_WEIGHTS_ROOTED
@@ -166,9 +146,6 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
   // clear if we're suppose to throw alway alpha
   m_transparent = m_transparent && !clearAlpha;
-
-  // we have tables for this
-  m_unweighted = m_unweighted && ((m_count == 16) || isBtc1);
 }
 
 void ColourSet::RemapIndices(u8 const* source, u8* target) const
