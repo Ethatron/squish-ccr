@@ -105,7 +105,7 @@ private:
   /* --------------------------------------------------------------------------- */
 public:
   int   GetChannel(int idx) const {
-    if (m_mergedalpha) {
+    if (m_mergedalpha || (idx >= m_numsets)) {
       if (!(m_cnst[idx] & 0x0FFF)) return 3; }{
       if (!(m_cnst[idx] & 0xF0FF)) return 2;
       if (!(m_cnst[idx] & 0xFF0F)) return 1;
