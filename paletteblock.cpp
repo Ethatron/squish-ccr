@@ -29,6 +29,9 @@
 
 #include "paletteblock.h"
 
+#define SBSTART	0
+#define SBEND	3
+
 #include "inlineables.cpp"
 
 #pragma warning(disable: 4100)
@@ -430,8 +433,9 @@ static void passreg WritePaletteBlock(int partition, Col4 (&idx)[2], Col4 &blkl,
 
 template<const int set>
 static void passreg ExchangeBits(int &sharedbits) {
-  int switched = ((sharedbits & 1) << 3) | ((sharedbits >> 3) & 1);
-  sharedbits = sharedbits & (~((1 << 3) | (1 << 0))) | switched;
+  const int setbit = (1 << set);
+  int switched = ((sharedbits & setbit) << SBEND) | ((sharedbits >> SBEND) & setbit);
+  sharedbits = sharedbits & (~((setbit << SBEND) | (setbit << SBSTART))) | switched;
 }
 
 template<const int ibits>
@@ -632,9 +636,6 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&en
 #define	C	COLORA
 #define	U	UNIQUE
 #define	S	SHARED
-
-#define SBSTART	0
-#define SBEND	3
 
 void WritePaletteBlock3_m1(int partition, Vec4 const (&start)[3], Vec4 const (&end)[3], int sharedbits, u8 const (&indices)[1][16], void* block)
 {
