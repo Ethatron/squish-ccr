@@ -1947,6 +1947,8 @@ public:
 	  m_v = _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 0 ) );
 	}
 	
+	Vec4( bool x, bool y, bool z, bool w ) : m_v( _mm_castsi128_ps( _mm_setr_epi32( x ? ~0 : 0, y ? ~0 : 0, z ? ~0 : 0, w ? ~0 : 0 ) ) ) {}
+
 	Vec4( float x, float y, float z, float w ) : m_v( _mm_setr_ps( x, y, z, w ) ) {}
 	Vec4( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec4( float x, float y ) : m_v( _mm_setr_ps( x, y, 0.0f, 0.0f ) ) {}
