@@ -1515,7 +1515,8 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
     int const count = m_palette->GetCount(s);
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
-    Vec4 metric = m_metric[s < isets ? 0 : 2];
+    Vec4 rmetric = m_metric[s < isets ? 0 : 1];
+    Vec4 xmetric = m_metric[s < isets ? 0 : 2];
 
     // we do single entry fit for sparse sets
     if (count == 1) {
@@ -1524,7 +1525,7 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
       u8 mask = ((s < isets) ? 0x7 : 0x8) | tmask;
 
       // find the closest code
-      Scr4 dist = ComputeEndPoints(s, metric, cb, ab, sb, kb, mask);
+      Scr4 dist = ComputeEndPoints(s, rmetric, cb, ab, sb, kb, mask);
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
@@ -1536,7 +1537,7 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
     // we do dual entry fit for sparse sets
     else if (count == 2) {
       // find the closest codes (it's just two)
-      Scr4 dist = StretchEndPoints(s, metric, q, sb, kb, closest[s]);
+      Scr4 dist = StretchEndPoints(s, rmetric, q, sb, kb, closest[s]);
 
       // accumulate the error
       error += dist;
@@ -1545,16 +1546,16 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
     // we do single channel fit for single component sets
     // (cluster-fit is really really really bad on one channel cases)
     // the separate alpha-channel is splatted into the rgb channels
-    else if (s >= isets) {
+    else if (IsChannel(s)) {
       // find the closest code
-      Scr4 dist = ComputeCodebook(s, metric, q, sb, kb, closest[s]);
+      Scr4 dist = ComputeCodebook(s, rmetric, q, sb, kb, closest[s]);
 
       // accumulate the error
       error += dist;
     }
     else {
       // metric is squared as well
-      Vec4 cmetric = CMetric(metric);
+      Vec4 cmetric = CMetric(xmetric);
       Scr4 cerror = Scr4(0.0f);
 
 #if defined(TRACK_STATISTICS)

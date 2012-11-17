@@ -45,32 +45,41 @@ PaletteChannelFit::PaletteChannelFit(PaletteSet const* palette, int flags, int s
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
   assume(((isets    +    asets) <= 3));
-
-  for (int a = isets; a < (isets + asets); a++) {
+  
+#ifdef	FEATURE_TEST_LINES
+  for (int s =     0; s < (isets + asets); s++) {
+#else
+  for (int s = isets; s < (isets + asets); s++) {
+#endif
     // cache some values
-    int const count = m_palette->GetCount(a);
-    Vec4 const* values = m_palette->GetPoints(a);
+    int const channel = m_palette->GetChannel(s);
+    int const count = m_palette->GetCount(s);
+    Vec4 const* values = m_palette->GetPoints(s);
 
     // we don't do this for sparse sets
-    if (count != 1) {
-      // get the min and max range as the codebook endpoints
+#ifdef	FEATURE_TEST_LINES
+    if ((count != 1) && (channel >= 0)) {
+#else
+    if ((count != 1)) {
+#endif
+      // the codebook endpoints
       Vec4 start(1.0f);
-      Vec4 end(1.0f);
-
-      if (count > 0) {
-	// compute the range
-	start = end = values[0];
-
-	for (int i = 1; i < count; ++i) {
-	  start = Min(start, values[i]);
-	  end   = Max(end  , values[i]);
-	}
+      Vec4 end(0.0f);
+      
+      // get the min and max range as the codebook endpoints
+      // compute the range
+      for (int i = 0; i < count; ++i) {
+	start = Min(start, values[i]);
+	end   = Max(end  , values[i]);
       }
 
       // clamp the output to [0, 1]
-      m_start_candidate[a] = Min(start, end);
-      m_end_candidate  [a] = Max(start, end);
+      m_start_candidate[s] = Min(start, end);
+      m_end_candidate  [s] = Max(start, end);
     }
+    
+    // store the channel
+    m_channel[s] = channel;
   }
 }
 
@@ -82,14 +91,25 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   u8 const* freq = m_palette->GetFrequencies(set);
 
   // snap floating-point-values to the integer-lattice
-  Vec4 cstart = q.SnapToLattice(m_start_candidate[set], sb, 1 << SBSTART).SplatW();
-  Vec4 cend   = q.SnapToLattice(m_end_candidate  [set], sb, 1 << SBEND  ).SplatW();
+  Vec4 cstart = q.SnapToLatticeClamped(m_start_candidate[set], sb, 1 << SBSTART);
+  Vec4 cend   = q.SnapToLatticeClamped(m_end_candidate  [set], sb, 1 << SBEND  );
 
   // the lattice to walk over
-  Vec4 gridrcp = Reciprocal(q.grid + Vec4(1.0f)).SplatW();
+  Vec4 gridrcp = Reciprocal(q.grid + Vec4(1.0f));
   Vec4 wstart;
   Vec4 wend;
-  Vec4 wdelta = gridrcp; if (sb) wdelta *= Vec4(2.0f);
+  Vec4 wdelta = gridrcp;
+  Vec4 wmask;
+
+  switch (m_channel[set]) {
+    case 0: wmask = Vec4(true, false, false, false); break;
+    case 1: wmask = Vec4(false, true, false, false); break;
+    case 2: wmask = Vec4(false, false, true, false); break;
+    case 3: wmask = Vec4(false, false, false, true); break;
+  }
+
+  if (~sb) wdelta *= Vec4(2.0f);
+  wdelta = wdelta & wmask;
 
   // lower the lower by 1 and raise the higher by 1
   // compensates a bit the rounding error of the end-points
@@ -105,9 +125,9 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
 
   // Brute force approach, try all the possible endpoints with g0 > g1.
   wend = cstart + wdelta;
-  while (!CompareFirstGreaterThan(wend, cend)) {
+  while (!CompareAnyGreaterThan(wend, cend)) {
     wstart = cstart;
-    while (!CompareFirstGreaterThan(wstart, wend)) {
+    while (!CompareAnyGreaterThan(wstart, wend)) {
       // resolve "metric * (value - code)" to "metric * value - metric * code"
       int ccs = CodebookP(codes, ib, metric * wstart, metric * wend);
 

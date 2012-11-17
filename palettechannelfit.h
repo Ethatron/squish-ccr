@@ -44,11 +44,14 @@ public:
   PaletteChannelFit(PaletteSet const* colours, int flags, int swap = -1, int shared = 0);
 
 private:
+  int  m_channel[4];
   Vec4 m_start_candidate[4];
-  Vec4 m_end_candidate[4];
+  Vec4 m_end_candidate  [4];
 
 protected:
   Scr4 ComputeCodebook(int set, Vec4 const &metric, vQuantizer &q, int sb, int ib, u8 (&closest)[16]);
+
+  bool IsChannel(int set) { return m_channel[set] >= 0; }
 };
 #endif
 
