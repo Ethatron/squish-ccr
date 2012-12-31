@@ -318,7 +318,7 @@ static void passreg WritePaletteBlock(int partition, Col4 (&idx)[1], Col4 &blkl,
         sbn = (bgn + sln - 3);
 
       	// subtract the already conducted shifts
-        iblk = ShiftRightHalf(iblk, sln - fln - ibits);
+        iblk = ShiftRightHalf(iblk, sln - fln);
 
         // remaining length can be anything, length overflow is silent
         blkh = CopyBits(blkh, iblk, ibits * 14, sbn);
