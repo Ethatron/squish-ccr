@@ -62,27 +62,33 @@ ColourSingleSnap::ColourSingleSnap(ColourSet const* colours, int flags)
   // linear a rescale of the RGB-cube: scaling preserves
   // relative lengths, in either cube the error-vector with
   // smallest length is the same
-  m_colour[0] = (u8)FloatToInt(255.0f * values->X(), 255);
-  m_colour[1] = (u8)FloatToInt(255.0f * values->Y(), 255);
-  m_colour[2] = (u8)FloatToInt(255.0f * values->Z(), 255);
+
+  // values are directly out of the codebook and
+  // natural numbers / 255, no need to round
+  PackBytes(FloatToInt<true>((*values) * Vec3(255.0f)), (int &)(m_colour));
+
+  assert(m_colour[0] == (u8)FloatToInt(255.0f * values->X(), 255));
+  assert(m_colour[1] == (u8)FloatToInt(255.0f * values->Y(), 255));
+  assert(m_colour[2] == (u8)FloatToInt(255.0f * values->Z(), 255));
 }
 
 void ColourSingleSnap::Compress3(void* block)
 {
-  const float *eLUT = ComputeGammaLUT(false);
+  // just assign the end-points of index 2 (interpolant 1)
+  Col3 s = Col3(
+    sc_lookup_5_3[m_colour[0]].start,
+    sc_lookup_6_3[m_colour[1]].start,
+    sc_lookup_5_3[m_colour[2]].start);
+  Col3 e = Col3(
+    sc_lookup_5_3[m_colour[0]].end,
+    sc_lookup_6_3[m_colour[1]].end,
+    sc_lookup_5_3[m_colour[2]].end);
 
-  // just assign the end-points of index 1
-  m_start = Vec3(
-    eLUT[sc_lookup_5_3[m_colour[0]].start],
-    eLUT[sc_lookup_6_3[m_colour[1]].start],
-    eLUT[sc_lookup_5_3[m_colour[2]].start]);
-  m_end = Vec3(
-    eLUT[sc_lookup_5_3[m_colour[0]].end],
-    eLUT[sc_lookup_6_3[m_colour[1]].end],
-    eLUT[sc_lookup_5_3[m_colour[2]].end]);
+  m_start = Vec3(s) * (1.0f / 255.0f);
+  m_end   = Vec3(e) * (1.0f / 255.0f);
 
   // build the block
-  u8 idx = 1, indices[16];
+  u8 idx = 2, indices[16];
   m_colours->RemapIndices(&idx, indices);
 
   // save the block
@@ -91,20 +97,21 @@ void ColourSingleSnap::Compress3(void* block)
 
 void ColourSingleSnap::Compress4(void* block)
 {
-  const float *eLUT = ComputeGammaLUT(false);
+  // just assign the end-points of index 2 (interpolant 1)
+  Col3 s = Col3(
+    sc_lookup_5_4[m_colour[0]].start,
+    sc_lookup_6_4[m_colour[1]].start,
+    sc_lookup_5_4[m_colour[2]].start);
+  Col3 e = Col3(
+    sc_lookup_5_4[m_colour[0]].end,
+    sc_lookup_6_4[m_colour[1]].end,
+    sc_lookup_5_4[m_colour[2]].end);
 
-  // find the best end-points and index
-  m_start = Vec3(
-    eLUT[sc_lookup_5_4[m_colour[0]].start],
-    eLUT[sc_lookup_6_4[m_colour[1]].start],
-    eLUT[sc_lookup_5_4[m_colour[2]].start]);
-  m_end = Vec3(
-    eLUT[sc_lookup_5_4[m_colour[0]].end],
-    eLUT[sc_lookup_6_4[m_colour[1]].end],
-    eLUT[sc_lookup_5_4[m_colour[2]].end]);
+  m_start = Vec3(s) * (1.0f / 255.0f);
+  m_end   = Vec3(e) * (1.0f / 255.0f);
 
   // build the block
-  u8 idx = 1, indices[16];
+  u8 idx = 2, indices[16];
   m_colours->RemapIndices(&idx, indices);
 
   // save the block

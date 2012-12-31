@@ -51,7 +51,7 @@ private:
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
 
-  u8   m_colour[3];
+  u8   m_colour[4];
   Vec3 m_start;
   Vec3 m_end;
 };
