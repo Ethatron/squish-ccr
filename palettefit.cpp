@@ -47,11 +47,11 @@ static const int maps[2][64] = {
     4 << SBSTART | 4 << SBEND, 5 << SBSTART | 5 << SBEND, // 100|100 + 101|101
     6 << SBSTART | 6 << SBEND, 7 << SBSTART | 7 << SBEND} // 110|110 + 111|111
   ,
-  { 0 << SBSTART | 0 << SBEND, 
-			       1 << SBSTART | 0 << SBEND, 0 << SBSTART | 1 << SBEND, 1 << SBSTART | 1 << SBEND, 
+  { 0 << SBSTART | 0 << SBEND,
+			       1 << SBSTART | 0 << SBEND, 0 << SBSTART | 1 << SBEND, 1 << SBSTART | 1 << SBEND,
 
-    0 << SBSTART | 2 << SBEND, 
-    2 << SBSTART | 0 << SBEND, 
+    0 << SBSTART | 2 << SBEND,
+    2 << SBSTART | 0 << SBEND,
     2 << SBSTART | 2 << SBEND,
 			       1 << SBSTART | 2 << SBEND, 0 << SBSTART | 3 << SBEND, 1 << SBSTART | 3 << SBEND,
                                3 << SBSTART | 0 << SBEND, 2 << SBSTART | 1 << SBEND, 3 << SBSTART | 1 << SBEND,
@@ -60,14 +60,14 @@ static const int maps[2][64] = {
     0 << SBSTART | 4 << SBEND,
     0 << SBSTART | 6 << SBEND,
     2 << SBSTART | 4 << SBEND,
-    2 << SBSTART | 6 << SBEND, 
+    2 << SBSTART | 6 << SBEND,
     4 << SBSTART | 0 << SBEND,
-    4 << SBSTART | 2 << SBEND, 
+    4 << SBSTART | 2 << SBEND,
     4 << SBSTART | 4 << SBEND,
-    4 << SBSTART | 6 << SBEND, 
-    6 << SBSTART | 0 << SBEND, 
-    6 << SBSTART | 2 << SBEND, 
-    6 << SBSTART | 4 << SBEND, 
+    4 << SBSTART | 6 << SBEND,
+    6 << SBSTART | 0 << SBEND,
+    6 << SBSTART | 2 << SBEND,
+    6 << SBSTART | 4 << SBEND,
     6 << SBSTART | 6 << SBEND,
                                5 << SBSTART | 4 << SBEND, 4 << SBSTART | 5 << SBEND, 5 << SBSTART | 5 << SBEND,
                                5 << SBSTART | 0 << SBEND, 4 << SBSTART | 1 << SBEND, 5 << SBSTART | 1 << SBEND,
@@ -122,7 +122,7 @@ int PaletteFit::GetPartitionBits(int mode) {
 
 int PaletteFit::GetIndexBits(int mode) {
   return
-    PBcfg[mode].IB | (PBcfg[mode].IB2 << 16);
+    PBcfg[mode].IB + (PBcfg[mode].IB2 << 16);
 }
 
 int PaletteFit::GetRotationBits(int mode) {
@@ -207,7 +207,7 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
   // initialize the best error
   m_besterror = Scr4(FLT_MAX);
   m_best = false;
-  
+
   m_mode = ((m_flags & kVariableCodingModes) >> 24) - 1;
   m_sharedmap = GetSharedMap(m_mode);
   m_swapindex = swap;
@@ -289,7 +289,7 @@ void PaletteFit::SumError(u8 (&closest)[4][16], vQuantizer &q, int mode, Scr4 &e
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  
+
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
   assume(((isets    +    asets) <= 3));
@@ -314,7 +314,7 @@ void PaletteFit::SumError(u8 (&closest)[4][16], vQuantizer &q, int mode, Scr4 &e
     // snap floating-point-values to the integer-lattice
     Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);
     Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
-    
+
     // resolve "metric * (value - code)" to "metric * value - metric * code"
     CodebookP(codes, kb, metric * start, metric * end);
 
@@ -337,7 +337,7 @@ void PaletteFit::Decompress(u8 *rgba, vQuantizer &q, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  
+
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
   assume(((isets    +    asets) <= 3));
@@ -364,23 +364,23 @@ void PaletteFit::Decompress(u8 *rgba, vQuantizer &q, int mode)
 	case  3: if (s <         isets) fstart.Set<2>(1.0f), fend.Set<2>(1.0f); break;
       }
     }
-    
+
     // snap floating-point-values to the integer-lattice
     Col4 istart = q.QuantizeToInt(fstart, sb, 1 << SBSTART);
     Col4 iend   = q.QuantizeToInt(fend  , sb, 1 << SBEND);
-    
+
     istart = Col4(
-      (istart.R() << (8 - cb)) | (istart.R() >> (cb - (8 - cb))),
-      (istart.G() << (8 - cb)) | (istart.G() >> (cb - (8 - cb))),
-      (istart.B() << (8 - cb)) | (istart.B() >> (cb - (8 - cb))),
-      (istart.A() << (8 - ab)) | (istart.A() >> (ab - (8 - ab)))
+      (istart.R() << (8 - cb)) + (istart.R() >> (cb - (8 - cb))),
+      (istart.G() << (8 - cb)) + (istart.G() >> (cb - (8 - cb))),
+      (istart.B() << (8 - cb)) + (istart.B() >> (cb - (8 - cb))),
+      (istart.A() << (8 - ab)) + (istart.A() >> (ab - (8 - ab)))
     );
-    
+
     iend = Col4(
-      (iend.R() << (8 - cb)) | (iend.R() >> (cb - (8 - cb))),
-      (iend.G() << (8 - cb)) | (iend.G() >> (cb - (8 - cb))),
-      (iend.B() << (8 - cb)) | (iend.B() >> (cb - (8 - cb))),
-      (iend.A() << (8 - ab)) | (iend.A() >> (ab - (8 - ab)))
+      (iend.R() << (8 - cb)) + (iend.R() >> (cb - (8 - cb))),
+      (iend.G() << (8 - cb)) + (iend.G() >> (cb - (8 - cb))),
+      (iend.B() << (8 - cb)) + (iend.B() >> (cb - (8 - cb))),
+      (iend.A() << (8 - ab)) + (iend.A() >> (ab - (8 - ab)))
     );
 
     int ccs;
@@ -398,7 +398,7 @@ void PaletteFit::Decompress(u8 *rgba, vQuantizer &q, int mode)
     case 2: for (int i = 0; i < 16; ++i) std::swap(rgba[4 * i + 1], rgba[4 * i + 3]); break;
     case 3: for (int i = 0; i < 16; ++i) std::swap(rgba[4 * i + 2], rgba[4 * i + 3]); break;
   }
-  
+
   if (!m_palette->IsTransparent()) {
     for (int i = 0; i < 16; ++i) {
       assert(rgba[4 * i + 3] == 0xFF);

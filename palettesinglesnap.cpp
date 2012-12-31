@@ -77,7 +77,7 @@ Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, int cb, in
 #define sp_lookup_4u1_8_ck_    sp_lookup_5_8
 #else
   // merge start and end shared bits
-  int lb = (sb & 1) | ((sb >> (SBEND - 1)) & 2);
+  int lb = (sb & 1) + ((sb >> (SBEND - 1)) & 2);
 
   // allow bailout if whole == -1
 #define sp_lookup_5u1_4_sb_    (SK(sb) ? sp_lookup_6_4  : sp_lookup_5u1_4[lb])

@@ -255,8 +255,8 @@ struct SSourceBlock
     interleaved = ((255 - std::abs(start - end)) << 8) & 0x00FFFF00;
     interleaved = ((255 - std::abs(start - end)) << 0) & 0x0000FFFF;
 
-    interleaved = ((start << 8) | (end << 0)) & 0x0000FFFF;
-    interleaved = ((start << 8) | (std::abs(start - end) << 0)) & 0x0000FFFF;
+    interleaved = ((start << 8) + (end << 0)) & 0x0000FFFF;
+    interleaved = ((start << 8) + (std::abs(start - end) << 0)) & 0x0000FFFF;
   }
 
   void setValue(int _index, int _error) {
@@ -573,7 +573,7 @@ struct ASourceBlock
     start = _start;
     end   = _stop;
 
-    interleaved  =    ((start << 8) | (end << 0))   & 0x0000FFFF;
+    interleaved  =    ((start << 8) + (end << 0))   & 0x0000FFFF;
     interleaved |= (std::max(errorS, errorE) << 24) & 0xFF000000;
     interleaved |= (std::min(errorS, errorE) << 16) & 0x00FF0000;
   }
@@ -822,9 +822,9 @@ static void GenerateDataRtg( std::string const& name, int bits, int sharedbits, 
 	if (i >= j) {
 	  // lowest error, lowest values, lowest index
 	  ASourceSet const& cset = asets[k];
-	  std::set<ASourceBlock, struct A>::iterator val = cset.values[(i << 8) | (j)].begin();
+	  std::set<ASourceBlock, struct A>::iterator val = cset.values[(i << 8) + (j)].begin();
 
-	  if (val != cset.values[(i << 8) | (j)].end())
+	  if (val != cset.values[(i << 8) + (j)].end())
 	    std::cout << "{"
 	    << (val->start <= 99 ? " " : "") << (val->start <= 9 ? " " : "") << val->start  << ","
 	    << (val->end   <= 99 ? " " : "") << (val->end   <= 9 ? " " : "") << val->end    << ","

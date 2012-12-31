@@ -70,7 +70,7 @@ public:
   {
     return Col3( -x, -y, -z );
   }
-  
+
   Col3& operator>>=( const int n )
   {
     x >>= n;
@@ -135,7 +135,7 @@ public:
     z /= t;
     return *this;
   }
-  
+
   friend Col3 operator>>( Col3::Arg left, int n  )
   {
     Col3 copy( left );
@@ -217,12 +217,12 @@ public:
       std::max<int>( left.z, right.z )
       );
   }
-  
+
   friend void PackBytes(Col3::Arg v, int &loc )
   {
     loc  = v.b; loc <<= 8;
-    loc |= v.g; loc <<= 8;
-    loc |= v.r; loc <<= 0;
+    loc += v.g; loc <<= 8;
+    loc += v.r; loc <<= 0;
   }
 
   // clamp the output to [0, 1]
@@ -274,7 +274,7 @@ public:
       a( _a )
   {
   }
-  
+
   Col4( int _r, int _g, int _b )
     : r( _r ),
       g( _g ),
@@ -541,7 +541,7 @@ public:
       bb[0] = 0;
     }
     else {
-      bb[1] = (ba[1] << (n)) | (ba[0] >> (64 - n));
+      bb[1] = (ba[1] << (n)) + (ba[0] >> (64 - n));
       bb[0] = (ba[0] << (n));
     }
 
@@ -566,7 +566,7 @@ public:
       bb[1] = 0;
     }
     else {
-      bb[0] = (ba[0] >> (n)) | (ba[1] << (64 - n));
+      bb[0] = (ba[0] >> (n)) + (ba[1] << (64 - n));
       bb[1] = (ba[1] >> (n));
     }
 
@@ -702,16 +702,16 @@ public:
     if (!p)
       return MaskBits<n, 0>(right);
     if ((p + n) >= 64)
-      return (left) | ShiftLeftHalf<p>(right);
+      return (left) + ShiftLeftHalf<p>(right);
 
-    return MaskBits<p, 0>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+    return MaskBits<p, 0>(left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
   }
 
   friend Col4 CopyBits(Col4::Arg left, Col4 right, const int n, const int p )
   {
-    return MaskBits(left, p, 0) | MaskBits(ShiftLeftHalf(right, p), n, p);
+    return MaskBits(left, p, 0) + MaskBits(ShiftLeftHalf(right, p), n, p);
   }
-  
+
   template<const int n, const int p>
   friend Col4 KillBits(Col4::Arg a )
   {
@@ -721,7 +721,7 @@ public:
       return a;
 
     Col4 b;
-    
+
     unsigned__int64 base1 =  (0xFFFFFFFFFFFFFFFFULL << (     (p + 0) & 63));
     unsigned__int64 base2 =  (0xFFFFFFFFFFFFFFFFULL >> (64 - (p + n) & 63));
     unsigned__int64 *bb = (unsigned__int64 *)&b.r;
@@ -739,12 +739,12 @@ public:
       return a;
 
     Col4 b;
-    
+
     unsigned__int64 base1 =  (0xFFFFFFFFFFFFFFFFULL << (     (p + 0) & 63));
     unsigned__int64 base2 =  (0xFFFFFFFFFFFFFFFFULL >> (64 - (p + n) & 63));
     unsigned__int64 *bb = (unsigned__int64 *)&b.r;
     unsigned__int64 *ba = (unsigned__int64 *)&a.r;
-    
+
     bb[0] = (ba[0] & (base1 ^ base2));
     bb[1] = (ba[1] &        0       );
 
@@ -759,14 +759,14 @@ public:
     if (!p)
       return MaskBits<n, 0>(right);
     if ((p + n) >= 64)
-      return (left) | ShiftLeftHalf<p>(right);
+      return (left) + ShiftLeftHalf<p>(right);
 
-    return KillBits<n, p>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+    return KillBits<n, p>(left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
   }
 
   friend Col4 InjtBits(Col4::Arg left, Col4 right, const int n, const int p )
   {
-    return KillBits(left, n, p) | MaskBits(ShiftLeftHalf(right, p), n, p);
+    return KillBits(left, n, p) + MaskBits(ShiftLeftHalf(right, p), n, p);
   }
 
   template<const int n, const int p>
@@ -798,7 +798,7 @@ public:
   {
     right  = ShiftLeft<32>( right );
     if (n > 0)
-      right |= ExtrBits<n, p>( left );
+      right += ExtrBits<n, p>( left );
   }
 
   template<const int n, const int p>
@@ -962,9 +962,9 @@ public:
   friend void PackBytes(Col4::Arg v, int &loc )
   {
     loc  = v.a; loc <<= 8;
-    loc |= v.b; loc <<= 8;
-    loc |= v.g; loc <<= 8;
-    loc |= v.r; loc <<= 0;
+    loc += v.b; loc <<= 8;
+    loc += v.g; loc <<= 8;
+    loc += v.r; loc <<= 0;
   }
 
   // clamp the output to [0, 1]
@@ -1098,15 +1098,15 @@ public:
   Vec3() {}
 
   explicit Vec3(float _s) { x = _s; y = _s; z = _s; }
-  
+
   Vec3(const float *_x, const float *_y, const float *_z) { x = *_x;  y = *_y;  z = *_z; }
   Vec3(float  _x, float  _y, float  _z) { x = _x;   y = _y;   z = _z; }
   Vec3(Vec3   _x, Vec3   _y, Vec3   _z) { x = _x.x; y = _y.x; z = _z.x; }
-  
+
   void StoreX(float *_x) const { *_x = x; }
   void StoreY(float *_y) const { *_y = y; }
   void StoreZ(float *_z) const { *_z = z; }
-	
+
   float X() const { return x; }
   float Y() const { return y; }
   float Z() const { return z; }
@@ -1191,7 +1191,7 @@ public:
   {
     return CompareFirstGreaterThan(left, right);
   }
-  
+
   friend int operator==(Vec3::Arg left, Vec3::Arg right  )
   {
     return CompareFirstEqualTo(left, right);
@@ -1281,13 +1281,13 @@ public:
 //  if (b.z == c)
       return Vec3(a.z);
   }
-  
+
   template<const int n>
   friend Vec3 RotateLeft( Arg a )
   {
     return Vec3(
-      n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)), 
-      n == 1 ? a.z : (n == 2 ? a.w : (n == 3 ? a.x : a.y)), 
+      n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)),
+      n == 1 ? a.z : (n == 2 ? a.w : (n == 3 ? a.x : a.y)),
       n == 1 ? a.w : (n == 2 ? a.x : (n == 3 ? a.y : a.z))
     );
   }
@@ -1368,7 +1368,7 @@ public:
 
     return Min(one, Max(zero, *this));
   }
-  
+
   template<const bool round>
   friend Col3 FloatToInt(Vec3::Arg v)
   {
@@ -1426,7 +1426,7 @@ public:
       left.y > right.y ||
       left.z > right.z;
   }
-  
+
   friend bool CompareAllEqualTo(Vec3::Arg left, Vec3::Arg right)
   {
     return
@@ -1444,7 +1444,7 @@ public:
   {
     return left.x > right.x;
   }
-  
+
   friend int CompareFirstEqualTo(Vec3::Arg left, Vec3::Arg right)
   {
     return left.x == right.x;
@@ -1470,14 +1470,14 @@ public:
 
   explicit Vec4(float _s) : x(_s), y(_s), z(_s), w(_s) {}
   explicit Vec4(int   _s) : x( (float) _s ), y( (float) _s ), z( (float) _s ), w( (float) _s ) {}
-  
+
   Vec4(const float *_x, const float *_y, const float *_z, const float *_w) : x(*_x), y(*_y), z(*_z), w(*_w) {}
   Vec4(const float *_x, const float *_y, const float *_z                 ) : x(*_x), y(*_y), z(*_z), w(0.0f) {}
-	
+
   Vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
   Vec4(float _x, float _y, float _z          ) : x(_x), y(_y), z(_z), w(0.0f) {}
   Vec4(float _x, float _y                    ) : x(_x), y(_y), z(0.0f), w(0.0f) {}
-  
+
   Vec4(Vec4 _x, Vec4 _y, Vec4 _z, Vec4 _w) : x(_x.x), y(_y.x), z(_z.x), w(_w.x) {}
   Vec4(Vec4 _x, Vec4 _y, Vec4 _z         ) : x(_x.x), y(_y.x), z(_z.x), w(0.0f) {}
   Vec4(Vec4 _x, Vec4 _y                  ) : x(_x.x), y(_y.x), z(0.0f), w(0.0f) {}
@@ -1490,12 +1490,12 @@ public:
   {
     return Vec3( x, y, z );
   }
-  
+
   void StoreX(float *_x) const { *_x = x; }
   void StoreY(float *_y) const { *_y = y; }
   void StoreZ(float *_z) const { *_z = z; }
   void StoreW(float *_w) const { *_w = w; }
-	
+
   float X() const { return x; }
   float Y() const { return y; }
   float Z() const { return z; }
@@ -1529,7 +1529,7 @@ public:
     z = (float)(1 << (inv ? inv - _z : _z));
     w = (float)(1 << (inv ? inv - _w : _w));
   }
-  
+
   template<const int p>
   void Set( const float val )
   {
@@ -1621,7 +1621,7 @@ public:
     *this *= Reciprocal( Vec4( v ) );
     return *this;
   }
-  
+
   Vec4& operator/=(Vec4 v)
   {
     *this *= Reciprocal( v );
@@ -1784,14 +1784,14 @@ public:
 //  if (b.w == c)
       return Vec4(a.w);
   }
-  
+
   template<const int n>
   friend Vec4 RotateLeft( Arg a )
   {
     return Vec4(
-      n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)), 
-      n == 1 ? a.z : (n == 2 ? a.w : (n == 3 ? a.x : a.y)), 
-      n == 1 ? a.w : (n == 2 ? a.x : (n == 3 ? a.y : a.z)), 
+      n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)),
+      n == 1 ? a.z : (n == 2 ? a.w : (n == 3 ? a.x : a.y)),
+      n == 1 ? a.w : (n == 2 ? a.x : (n == 3 ? a.y : a.z)),
       n == 1 ? a.x : (n == 2 ? a.y : (n == 3 ? a.z : a.w))
     );
   }
@@ -1884,7 +1884,7 @@ public:
 
     return Min(one, Max(zero, *this));
   }
-  
+
   template<const bool round>
   friend Col4 FloatToInt(Vec4::Arg v)
   {

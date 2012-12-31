@@ -63,7 +63,7 @@ void CompressAlphaBtc2(u8 const* rgba, int mask, void* block)
       quant2 = 0;
 
     // pack into the byte
-    bytes[i] = (u8)(quant1 | (quant2 << 4));
+    bytes[i] = (u8)((quant1 << 0) + (quant2 << 4));
   }
 }
 
@@ -81,8 +81,8 @@ void DecompressAlphaBtc2(u8* rgba, void const* block)
     u8 hi = quant & 0xF0;
 
     // convert back up to bytes
-    rgba[8 * i + 3] = lo | (lo << 4);
-    rgba[8 * i + 7] = hi | (hi >> 4);
+    rgba[8 * i + 3] = (lo << 0) + (lo << 4);
+    rgba[8 * i + 7] = (hi << 0) + (hi >> 4);
   }
 }
 
@@ -148,7 +148,7 @@ static void WriteAlphaBlock(int alpha0, int alpha1, u8 const* indices, void* blo
     int value = 0;
     for (int j = 0; j < 8; ++j) {
       int index = *src++;
-      value |= (index << 3 * j);
+      value += (index << 3 * j);
     }
 
     // store in 3 bytes
@@ -156,6 +156,9 @@ static void WriteAlphaBlock(int alpha0, int alpha1, u8 const* indices, void* blo
       int byte = (value >> 8 * j) & 0xFF;
       *dest++ = (u8)byte;
     }
+
+    // 77766655.54443332.22111000, FFFEEEDD.DCCCBBBA.AA999888
+    // 22111000.54443332.77766655, AA999888.DCCCBBBA.FFFEEEDD
   }
 }
 
@@ -723,7 +726,7 @@ void DecompressAlphaBtc3(u8* rgba, void const* block)
     int value = 0;
     for (int j = 0; j < 3; ++j) {
       int byte = *src++;
-      value |= (byte << 8 * j);
+      value += (byte << 8 * j);
     }
 
     // unpack 8 3-bit values from it
@@ -820,20 +823,20 @@ static void WriteAlphaBlock(tile_barrier barrier, const int thread, lineA2 alpha
   threaded_cse(0) {
     // write the first two bytes
     block[0] =
-      (alpha  [ASTRT] <<  0) |
-      (alpha  [ASTOP] <<  8) |
-      (indices[ 0] << 16) | (indices[ 1] << 19) |
-      (indices[ 2] << 22) | (indices[ 3] << 25) |
-      (indices[ 4] << 28) | (indices[ 5] << 31);
+      (alpha  [ASTRT] <<  0) +
+      (alpha  [ASTOP] <<  8) +
+      (indices[ 0] << 16) + (indices[ 1] << 19) +
+      (indices[ 2] << 22) + (indices[ 3] << 25) +
+      (indices[ 4] << 28) + (indices[ 5] << 31);
 
     // pack the indices with 3 bits each
     block[1] =
-      (indices[ 5] >>  1) |
-      (indices[ 6] <<  2) | (indices[ 7] <<  5) |
-      (indices[ 8] <<  8) | (indices[ 9] << 11) |
-      (indices[10] << 14) | (indices[11] << 17) |
-      (indices[12] << 20) | (indices[13] << 23) |
-      (indices[14] << 26) | (indices[15] << 29);
+      (indices[ 5] >>  1) +
+      (indices[ 6] <<  2) + (indices[ 7] <<  5) +
+      (indices[ 8] <<  8) + (indices[ 9] << 11) +
+      (indices[10] << 14) + (indices[11] << 17) +
+      (indices[12] << 20) + (indices[13] << 23) +
+      (indices[14] << 26) + (indices[15] << 29);
   }
 }
 
@@ -995,7 +998,7 @@ void CompressAlphaBtc3(tile_barrier barrier, const int thread, pixel16 rgba, int
 //  const int step = 5 + (ewch * 2);
 
     // set up the 5-alpha code book
-    acodes[ERR5][2 + es] = (ccr8)(((4 - es) * aline[ERR5][ASTRT] + (1 + es) * aline[ERR5][ASTOP]) / 5) & (es == 4 ? 0 : 255) | (es == 5 ? 255 : 0);
+    acodes[ERR5][2 + es] = (ccr8)(((4 - es) * aline[ERR5][ASTRT] + (1 + es) * aline[ERR5][ASTOP]) / 5) & (es == 4 ? 0 : 255) + (es == 5 ? 255 : 0);
     // set up the 7-alpha code book
     acodes[ERR7][2 + es] = (ccr8)(((6 - es) * aline[ERR7][ASTRT] + (1 + es) * aline[ERR7][ASTOP]) / 7);
   }
@@ -1078,8 +1081,8 @@ void CompressAlphaBtc2(tile_barrier barrier, const int thread, pixel16 rgba, int
   // AMP: final reduction (make the merge)
   threaded_cse(0) {
     // save the block
-    block[0] = frags[1] | frags[0];
-    block[1] = frags[3] | frags[2];
+    block[0] = frags[1] + frags[0];
+    block[1] = frags[3] + frags[2];
   }
 }
 #endif

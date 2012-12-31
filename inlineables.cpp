@@ -64,23 +64,25 @@ static doinline int passreg FloatTo565(Vec3::Arg colour) ccr_restricted
   // get the components in the correct range
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
   Col3 rgb = q.LatticeToIntClamped(colour);
-  
+
   int r = rgb.R();
   int g = rgb.G();
   int b = rgb.B();
 
+  /* not necessarily true
   assert(r == FloatToInt(31.0f * colour.X(), 31));
   assert(g == FloatToInt(63.0f * colour.Y(), 63));
   assert(b == FloatToInt(31.0f * colour.Z(), 31));
-  
+   */
+
   // pack into a single value
-  return (r << 11) | (g << 5) | b;
+  return (r << 11) + (g << 5) + b;
 }
 
 static doinline int passreg Unpack565(u8 const* packed, u8* colour) ccr_restricted
 {
   // build the packed value
-  int value = (int)packed[0] | ((int)packed[1] << 8);
+  int value = ((int)packed[0] << 0) + ((int)packed[1] << 8);
 
   // get the components in the stored range
   u8 red   = (u8)((value >> 11) & 0x1F);
@@ -88,9 +90,9 @@ static doinline int passreg Unpack565(u8 const* packed, u8* colour) ccr_restrict
   u8 blue  = (u8)( value        & 0x1F);
 
   // scale up to 8 bits
-  colour[0] = (red   << 3) | (red   >> 2);
-  colour[1] = (green << 2) | (green >> 4);
-  colour[2] = (blue  << 3) | (blue  >> 2);
+  colour[0] = (red   << 3) + (red   >> 2);
+  colour[1] = (green << 2) + (green >> 4);
+  colour[2] = (blue  << 3) + (blue  >> 2);
   colour[3] = 255;
 
   // return the value
@@ -119,7 +121,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
     ab + eb + sb,
     eb + sb ? 0 : ~0
   );
-  
+
   // pack into a single value
           field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1 << 0);
           field[0][COLORA] = field[0][COLORA] >> (eb + sb);
@@ -236,7 +238,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
     ab + eb + sb,
     eb + sb ? 0 : ~0
   );
-  
+
   // pack into a single value
           field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1 << 0);
           field[1][COLORA] = q.QuantizeToInt(colour[1], bitset, 1 << 1);
@@ -371,7 +373,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
     ab + eb + sb,
     eb + sb ? 0 : ~0
   );
-  
+
   // pack into a single value
           field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1 << 0);
           field[1][COLORA] = q.QuantizeToInt(colour[1], bitset, 1 << 1);
@@ -763,7 +765,7 @@ static int passreg CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg e
 
   codes[0] = start;
   codes[j] = end;
-  
+
   // the quantizer is not equi-distant, but it is symmetric
   for (int i = 1; i < j; i++) {
     Vec4 s = weights_V4[bits][j - i] * start;
@@ -885,7 +887,7 @@ static int FloatTo565(float3 colour) amp_restricted
   int3 quant = QuantizeFloatToInt(colour, int3(31, 63, 31));
 
   // pack into a single value
-  return (quant.r << 11) | (quant.g << 5) | quant.b;
+  return (quant.r << 11) + (quant.g << 5) + (quant.b << 0);
 }
 
 static void FloatTo565(lineC2 colour, out lineI2 values) amp_restricted
@@ -898,8 +900,8 @@ static void FloatTo565(lineC2 colour, out lineI2 values) amp_restricted
   quant[CSTOP] = QuantizeFloatToInt(colour[CSTOP], int3(31, 63, 31));
 
   // pack into a single value
-  values[CSTRT] = (quant[CSTRT].r << 11) | (quant[CSTRT].g << 5) | quant[CSTRT].b;
-  values[CSTOP] = (quant[CSTOP].r << 11) | (quant[CSTOP].g << 5) | quant[CSTOP].b;
+  values[CSTRT] = (quant[CSTRT].r << 11) + (quant[CSTRT].g << 5) + quant[CSTRT].b;
+  values[CSTOP] = (quant[CSTOP].r << 11) + (quant[CSTOP].g << 5) + quant[CSTOP].b;
 #else
   // AMP: prefer vectorized (saves 1 instruction)
   int4 quantr;
@@ -920,8 +922,8 @@ static void FloatTo565(lineC2 colour, out lineI2 values) amp_restricted
   quantb = quantb <<  0;
 
   // pack into a single value
-  values[CSTRT] = (quantr.x) | (quantg.x) | (quantb.z);
-  values[CSTOP] = (quantr.y) | (quantg.y) | (quantb.w);
+  values[CSTRT] = (quantr.x) + (quantg.x) + (quantb.z);
+  values[CSTOP] = (quantr.y) + (quantg.y) + (quantb.w);
 #endif
 }
 
@@ -934,9 +936,9 @@ static int3 Unpack565(int value) amp_restricted
 
   // scale up to 8 bits & return the value
   return int3(
-    (red   << 3) | (red   >> 2),
-    (green << 2) | (green >> 4),
-    (blue  << 3) | (blue  >> 2)
+    (red   << 3) + (red   >> 2),
+    (green << 2) + (green >> 4),
+    (blue  << 3) + (blue  >> 2)
   );
 }
 #endif

@@ -34,6 +34,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #define _CRT_SECURE_NO_WARNINGS
+
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -693,7 +694,7 @@ static void Benchmark(std::string const& sourceFileName, int flags)
   int stride = sourceImage.GetStride();
   bool colour = sourceImage.IsColour();
   bool alpha = sourceImage.IsAlpha();
-  
+
   // create the target rows
   PngRows targetRows(width, height, 4);
 
@@ -714,19 +715,19 @@ static void Benchmark(std::string const& sourceFileName, int flags)
   int bytesPerBlock = 16;
   int benchDataSize = bytesPerBlock * width * height / 16;
   Mem benchData(benchDataSize);
-  
+
   int num = std::max(1, 8192 / width) * std::max(1, 8192 / width) * 2;
 #if _MSC_VER >= 1700
 //high_resolution_clock::time_point start;
 //high_resolution_clock::time_point end;
 //duration<double> curduration;
-  
+
   LARGE_INTEGER start;
   LARGE_INTEGER end;
   LARGE_INTEGER performanceFrequency; QueryPerformanceFrequency(&performanceFrequency);
   double frequencyToMicroseconds = (double)performanceFrequency.QuadPart / 1000000.;
   double microsecondsToSeconds = 1000000.;
-  
+
   double curduration;
   double minduration;
 #else
@@ -735,7 +736,7 @@ static void Benchmark(std::string const& sourceFileName, int flags)
   double curduration;
   double minduration;
 #endif
-  
+
   minduration = DBL_MAX;
   for (int l = 0; l < num; l += 1) {
     u8* targetBlock = benchData.Get();
@@ -782,7 +783,7 @@ static void Benchmark(std::string const& sourceFileName, int flags)
 	targetBlock += bytesPerBlock;
       }
     }
-    
+
 #if _MSC_VER >= 1700
 //  end = high_resolution_clock::now();
 //  curduration = duration_cast< duration<double> >(end - start);
@@ -802,7 +803,7 @@ static void Benchmark(std::string const& sourceFileName, int flags)
 
   std::cout << "time taken: " << minduration << " seconds" << std::endl;
   std::cout << "compression speed: " << ((double) (width * height) / (minduration * 1024 * 1024)) << " MPixel/s" << std::endl;
-  
+
   minduration = DBL_MAX;
   for (int l = 0; l < num; l += 1) {
     u8 const* sourceBlock = benchData.Get();
@@ -836,7 +837,7 @@ static void Benchmark(std::string const& sourceFileName, int flags)
 	sourceBlock += bytesPerBlock;
       }
     }
-    
+
 #if _MSC_VER >= 1700
 //  end = high_resolution_clock::now();
 //  curduration = duration_cast< duration<double> >(end - start);
@@ -971,7 +972,7 @@ int main(int argc, char* argv[]) {
     // do the work
     switch (mode) {
       case kCompress:
-	Compress(sourceFileName, targetFileName, paint, method | metric | fit | alpha | extra);
+	Compress(sourceFileName, targetFileName, paint, method + metric + fit + alpha + extra);
 	break;
 
       case kDecompress:
@@ -983,7 +984,7 @@ int main(int argc, char* argv[]) {
 	break;
 
       case kBenchmark:
-	Benchmark(sourceFileName, method | metric | fit | alpha | extra);
+	Benchmark(sourceFileName, method + metric + fit + alpha + extra);
 	break;
 
       default:

@@ -48,10 +48,12 @@ static void WriteColourBlock(int a, int b, u8* indices, void* block)
   for (int i = 0; i < 4; ++i) {
     u8 const* ind = indices + 4 * i;
 
-    bytes[4 + i] = 
-      (ind[0] << 0) | 
-      (ind[1] << 2) | 
-      (ind[2] << 4) | 
+    // [3-0] [7-4] [11-8] [15-12] big endian dword
+    // [15-12] [11-8] [7-4] [3-0] little endian dword
+    bytes[4 + i] =
+      (ind[0] << 0) +
+      (ind[1] << 2) +
+      (ind[2] << 4) +
       (ind[3] << 6);
   }
 }
@@ -170,10 +172,10 @@ static void WriteColourBlock(tile_barrier barrier, const int thread, lineI2 colo
       ((colour[CSTOP] /*& 0xFFFF*/) << 16);
 
     block[1] =
-      (((indices[ 0] << 0) | (indices[ 1] << 2) | (indices[ 2] << 4) | (indices[ 3] << 6)) <<  0) |
-      (((indices[ 4] << 0) | (indices[ 5] << 2) | (indices[ 6] << 4) | (indices[ 7] << 6)) <<  8) |
-      (((indices[ 8] << 0) | (indices[ 9] << 2) | (indices[10] << 4) | (indices[11] << 6)) << 16) |
-      (((indices[12] << 0) | (indices[13] << 2) | (indices[14] << 4) | (indices[15] << 6)) << 24);
+      (((indices[ 0] << 0) + (indices[ 1] << 2) + (indices[ 2] << 4) + (indices[ 3] << 6)) <<  0) +
+      (((indices[ 4] << 0) + (indices[ 5] << 2) + (indices[ 6] << 4) + (indices[ 7] << 6)) <<  8) +
+      (((indices[ 8] << 0) + (indices[ 9] << 2) + (indices[10] << 4) + (indices[11] << 6)) << 16) +
+      (((indices[12] << 0) + (indices[13] << 2) + (indices[14] << 4) + (indices[15] << 6)) << 24);
   }
 }
 

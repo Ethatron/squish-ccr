@@ -337,13 +337,13 @@ public:
 		if (!p)
 			return MaskBits<n, 0>(right);
 		if ((p + n) >= 64)
-			return (left) | ShiftLeftHalf<p>(right);
+			return (left) + ShiftLeftHalf<p>(right);
 
 #if ( SQUISH_USE_XSSE == 4 )
 		return Col3( _mm_inserti_si64( left.m_v, right.m_v, n, p ) );
 #else
-		return MaskBits<p, 0>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
-	//	return               (left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+		return MaskBits<p, 0>(left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
+	//	return               (left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
 #endif
 	}
 
@@ -351,13 +351,13 @@ public:
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ---bl xxxx xxxx */
-		const int val = (p << 8) | (n << 0);
+		const int val = (p << 8) + (n << 0);
 
 		right.m_v = _mm_unpacklo_epi64( right.m_v, _mm_cvtsi32_si128( val ) );
 		return Col3( _mm_insert_si64( left.m_v, right.m_v ) );
 #else
-		return MaskBits(left, p, 0) | MaskBits(ShiftLeftHalf(right, p), n, p);
-	//	return         (left      ) | MaskBits(ShiftLeftHalf(right, p), n, p);
+		return MaskBits(left, p, 0) + MaskBits(ShiftLeftHalf(right, p), n, p);
+	//	return         (left      ) + MaskBits(ShiftLeftHalf(right, p), n, p);
 #endif
 	}
 
@@ -382,7 +382,7 @@ public:
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ----- ---- ---bl */
-		const int val = (p << 8) | (n << 0);
+		const int val = (p << 8) + (n << 0);
 
 		return Col3( _mm_extract_si64( a.m_v, _mm_cvtsi32_si128( val ) ) );
 #else
@@ -401,7 +401,7 @@ public:
 	{
 		right  = ShiftLeft<32>( right );
 		if (n > 0)
-			right |= ExtrBits<n, p>( left );
+			right += ExtrBits<n, p>( left );
 	}
 
 	template<const int n, const int p>
@@ -690,7 +690,7 @@ public:
 	{
 		return Col3( m_v );
 	}
-	
+
 	int GetM8() const
 	{
 		return _mm_movemask_epi8 ( m_v );
@@ -750,11 +750,11 @@ public:
 
 		m_v = _mm_cvttps_epi32( _mm_castsi128_ps( v ) );
 	}
-	
+
 	template<const int inv>
 	void SetRGBApow2( int c ) {
 		__m128i v = _mm_shuffle_epi32( _mm_cvtsi32_si128( c ), SQUISH_SSE_SPLAT( 0 ) );
-		
+
 		if (inv) {
 			v = _mm_sub_epi32( _mm_set1_epi32( inv ), v );
 		}
@@ -938,7 +938,7 @@ public:
 
 		return Col4( _mm_and_si128( a.m_v, mask ) );
 	}
-	
+
 	friend Col4 MaskBits( Col4::Arg a, const int n, const int p )
 	{
 		const int val = 64 - (p + n);
@@ -954,7 +954,7 @@ public:
 		// (0xFFFFFFFFFFFFFFFFULL >> (64 - (p + n) & 63))
 		return Col4( _mm_and_si128( a.m_v, mask ) );
 	}
-	
+
 	template<const int n, const int p>
 	friend Col4 CopyBits( Col4::Arg left, Col4::Arg right )
 	{
@@ -963,13 +963,13 @@ public:
 		if (!p)
 			return MaskBits<n, 0>(right);
 		if ((p + n) >= 64)
-			return (left) | ShiftLeftHalf<p>(right);
+			return (left) + ShiftLeftHalf<p>(right);
 
 #if ( SQUISH_USE_XSSE == 4 )
 		return Col4( _mm_inserti_si64( left.m_v, right.m_v, n, p ) );
 #else
-		return MaskBits<p, 0>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
-	//	return               (left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+		return MaskBits<p, 0>(left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
+	//	return               (left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
 #endif
 	}
 
@@ -977,13 +977,13 @@ public:
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ---bl xxxx xxxx */
-		const int val = (p << 8) | (n << 0);
+		const int val = (p << 8) + (n << 0);
 
 		right.m_v = _mm_unpacklo_epi64( right.m_v, _mm_cvtsi32_si128( val ) );
 		return Col4( _mm_insert_si64( left.m_v, right.m_v ) );
 #else
-		return MaskBits(left, p, 0) | MaskBits(ShiftLeftHalf(right, p), n, p);
-	//	return         (left      ) | MaskBits(ShiftLeftHalf(right, p), n, p);
+		return MaskBits(left, p, 0) + MaskBits(ShiftLeftHalf(right, p), n, p);
+	//	return         (left      ) + MaskBits(ShiftLeftHalf(right, p), n, p);
 #endif
 	}
 
@@ -1007,7 +1007,7 @@ public:
 
 		return Col4( _mm_and_si128( a.m_v, mask ) );
 	}
-	
+
 	friend Col4 KillBits( Col4::Arg a, const int n, const int p )
 	{
 		const int val1 =      (p + 0);
@@ -1029,7 +1029,7 @@ public:
 
 		return Col4( _mm_and_si128( a.m_v, _mm_xor_si128( mask1, mask2 ) ) );
 	}
-	
+
 	template<const int n, const int p>
 	friend Col4 InjtBits( Col4::Arg left, Col4::Arg right )
 	{
@@ -1038,13 +1038,13 @@ public:
 		if (!p)
 			return MaskBits<n, 0>(right);
 		if ((p + n) >= 64)
-			return (left) | ShiftLeftHalf<p>(right);
+			return (left) + ShiftLeftHalf<p>(right);
 
 #if ( SQUISH_USE_XSSE == 4 )
 		return Col4( _mm_inserti_si64( left.m_v, right.m_v, n, p ) );
 #else
-		return KillBits<n, p>(left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
-	//	return               (left) | MaskBits<n, p>(ShiftLeftHalf<p>(right));
+		return KillBits<n, p>(left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
+	//	return               (left) + MaskBits<n, p>(ShiftLeftHalf<p>(right));
 #endif
 	}
 
@@ -1052,16 +1052,16 @@ public:
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ---bl xxxx xxxx */
-		const int val = (p << 8) | (n << 0);
+		const int val = (p << 8) + (n << 0);
 
 		right.m_v = _mm_unpacklo_epi64( right.m_v, _mm_cvtsi32_si128( val ) );
 		return Col4( _mm_insert_si64( left.m_v, right.m_v ) );
 #else
-		return KillBits(left, n, p) | MaskBits(ShiftLeftHalf(right, p), n, p);
-	//	return         (left      ) | MaskBits(ShiftLeftHalf(right, p), n, p);
+		return KillBits(left, n, p) + MaskBits(ShiftLeftHalf(right, p), n, p);
+	//	return         (left      ) + MaskBits(ShiftLeftHalf(right, p), n, p);
 #endif
 	}
-	
+
 	template<const int n, const int p>
 	friend Col4 ExtrBits( Col4::Arg a )
 	{
@@ -1083,7 +1083,7 @@ public:
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ----- ---- ---bl */
-		const int val = (p << 8) | (n << 0);
+		const int val = (p << 8) + (n << 0);
 
 		return Col4( _mm_extract_si64( a.m_v, _mm_cvtsi32_si128( val ) ) );
 #else
@@ -1102,7 +1102,7 @@ public:
 	{
 		right  = ShiftLeft<32>( right );
 		if (n > 0)
-			right |= ExtrBits<n, p>( left );
+			right += ExtrBits<n, p>( left );
 	}
 
 	template<const int n, const int p>
@@ -1404,7 +1404,7 @@ public:
 
 	explicit Vec3(float s) : m_v( _mm_set1_ps( s ) ) {}
 	explicit Vec3(int s) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
-	
+
 	Vec3( const float *x, const float *y, const float *z ) {
 	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
 	  m_v = _mm_movelh_ps(m_v, _mm_load_ss(z));
@@ -1413,11 +1413,11 @@ public:
 	Vec3( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec3( Vec3 x, Vec3 y, Vec3 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), y.m_v ) ) {}
 	Vec3( Vec3 x, Vec3 y ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_set1_ps( 0.0f ) ) ) {}
-	
+
 	void StoreX(float *x) const { _mm_store_ss(x, m_v); }
 	void StoreY(float *y) const { _mm_store_ss(y, _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 1 ) )); }
 	void StoreZ(float *z) const { _mm_store_ss(z, _mm_movehl_ps( m_v, m_v ) ); }
-	
+
 	float X() const { return ((float *)&m_v)[0]; }
 	float Y() const { return ((float *)&m_v)[1]; }
 	float Z() const { return ((float *)&m_v)[2]; }
@@ -1504,12 +1504,12 @@ public:
 	{
 		return CompareFirstGreaterThan(left, right);
 	}
-	
+
 	friend int operator==( Vec3::Arg left, Vec3::Arg right  )
 	{
 		return CompareFirstEqualTo(left, right);
 	}
-	
+
 	friend Vec3 operator&( Vec3::Arg left, Vec3::Arg right  )
 	{
 		return Vec3( _mm_and_ps( left.m_v, right.m_v ) );
@@ -1598,7 +1598,7 @@ public:
 			(t == 3 ? f : (f == 3 ? t : 3))
 		) ) ) );
 	}
-	
+
 	template<const int n>
 	friend Vec3 RotateLeft( Arg a )
 	{
@@ -1874,7 +1874,7 @@ public:
 	{
 		return _mm_comigt_ss( left.m_v, right.m_v );
 	}
-	
+
 	friend int CompareFirstEqualTo( Vec3::Arg left, Vec3::Arg right )
 	{
 		return _mm_comieq_ss( left.m_v, right.m_v );
@@ -1923,30 +1923,30 @@ public:
 
 	explicit Vec4(float s) : m_v( _mm_set1_ps( s ) ) {}
 	explicit Vec4(int   s) : m_v( _mm_cvtepi32_ps( _mm_set1_epi32 ( s ) ) ) {}
-	
+
 	Vec4( const float *x, const float *y, const float *z, const float *w ) {
 	  __m128 m_w;
-	  
+
 	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
 	  m_w = _mm_unpacklo_ps(_mm_load_ss(z), _mm_load_ss(w));
 	  m_v = _mm_movelh_ps(m_v, m_w);
 	}
-	
+
 	Vec4( const float *x, const float *y, const float *z ) {
 	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
 	  m_v = _mm_movelh_ps(m_v, _mm_load_ss(z));
 	}
-	
+
 	Vec4( const float *x, const float *y ) {
 	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
 	  m_v = _mm_movelh_ps(m_v, _mm_set1_ps( 0.0f ));
 	}
-	
+
 	Vec4( const float *x ) {
 	  m_v = _mm_load_ss(x);
 	  m_v = _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 0 ) );
 	}
-	
+
 	Vec4( bool x, bool y, bool z, bool w ) : m_v( _mm_castsi128_ps( _mm_setr_epi32( x ? ~0 : 0, y ? ~0 : 0, z ? ~0 : 0, w ? ~0 : 0 ) ) ) {}
 
 	Vec4( float x, float y, float z, float w ) : m_v( _mm_setr_ps( x, y, z, w ) ) {}
@@ -1970,7 +1970,7 @@ public:
 	void StoreY(float *y) const { _mm_store_ss(y, _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 1 ) )); }
 	void StoreZ(float *z) const { _mm_store_ss(z, _mm_movehl_ps( m_v, m_v ) ); }
 	void StoreW(float *w) const { _mm_store_ss(w, _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 3 ) )); }
-	
+
 	float X() const { return ((float *)&m_v)[0]; }
 	float Y() const { return ((float *)&m_v)[1]; }
 	float Z() const { return ((float *)&m_v)[2]; }
@@ -2023,7 +2023,7 @@ public:
 
 		m_v = _mm_castsi128_ps( v );
 	}
-	
+
 	template<const int p>
 	void Set( const float val )
 	{
@@ -2061,7 +2061,7 @@ public:
 		m_v = _mm_mul_ps( m_v, v.m_v );
 		return *this;
 	}
-	
+
 	Vec4& operator/=( Vec4 v )
 	{
 		*this *= Reciprocal( v );
@@ -2089,12 +2089,12 @@ public:
 	{
 		return CompareFirstGreaterThan(left, right);
 	}
-	
+
 	friend int operator==( Vec4::Arg left, Vec4::Arg right  )
 	{
 		return CompareFirstEqualTo(left, right);
 	}
-	
+
 	friend Vec4 operator&( Vec4::Arg left, Vec4::Arg right  )
 	{
 		return Vec4( _mm_and_ps( left.m_v, right.m_v ) );
@@ -2183,7 +2183,7 @@ public:
 			(t == 3 ? f : (f == 3 ? t : 3))
 		) ) ) );
 	}
-	
+
 	template<const int n>
 	friend Vec4 RotateLeft( Arg a )
 	{
@@ -2194,7 +2194,7 @@ public:
 			(n + 3) % 4
 		) ) );
 	}
-	
+
 	friend Vec4 Select( Arg a, Arg b, Arg c )
 	{
 #if 0
@@ -2319,7 +2319,7 @@ public:
 	{
 		return Vec4( _mm_sqrt_ps( v.m_v ) );
 	}
-	
+
 	friend Vec4 Length( Arg left )
 	{
 		Vec4 sum = HorizontalAdd( Vec4( _mm_mul_ps( left.m_v, left.m_v ) ) );
@@ -2449,14 +2449,14 @@ public:
 		int value = _mm_movemask_ps( bits );
 		return value != 0;
 	}
-	
+
 	friend bool CompareAllEqualTo( Vec4::Arg left, Vec4::Arg right )
 	{
 		__m128 bits = _mm_cmpeq_ps( left.m_v, right.m_v );
 		int value = _mm_movemask_ps( bits );
 		return (value & 0xF) == 0xF;
 	}
-	
+
 	friend Col4 CompareAllEqualTo_M8( Vec4::Arg left, Vec4::Arg right )
 	{
 		return Col4( _mm_cmpeq_epi8( _mm_castps_si128 ( left.m_v ), _mm_castps_si128 ( right.m_v ) ) );
@@ -2471,7 +2471,7 @@ public:
 	{
 		return _mm_comigt_ss( left.m_v, right.m_v );
 	}
-	
+
 	friend int CompareFirstEqualTo( Vec4::Arg left, Vec4::Arg right )
 	{
 		return _mm_comieq_ss( left.m_v, right.m_v );
@@ -2513,7 +2513,7 @@ public:
 	{
 		return Vec4( _mm_and_ps( left.m_v, _mm_castsi128_ps ( _mm_setr_epi32(  0,  0,  0, ~0 ) ) ) );
 	}
-	
+
 	void SwapXYZW( Vec4 &with )
 	{
 		/* inplace swap based on xors */
