@@ -99,6 +99,7 @@ const unsigned int blockxor[64][/*6*/5][4] = {
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0xffffffff,0x00000000,0x00000000}, {0x00000000,0x00000000,0xffffffff,0xffffffff}, {0x000000ff,0x000000ff,0x000000ff,0x000000ff}, {0x0000ff00,0x0000ff00,0x0000ff00,0x0000ff00}, {0xffff0000,0xffff0000,0xffff0000,0xffff0000} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0x00000000,0x00000000,0x00000000}, {0x00000000,0xffffffff,0xffffffff,0xffffffff}, {0x0000ffff,0x000000ff,0x00000000,0x00000000}, {0xffff0000,0x00ffff00,0x0000ffff,0x000000ff}, {0x00000000,0xff000000,0xffff0000,0xffffff00} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0xffffffff,0xffffffff,0x00000000}, {0x00000000,0x00000000,0x00000000,0xffffffff}, {0x0000ffff,0x00ffff00,0xffff0000,0xff000000}, {0xffff0000,0xff000000,0x00000000,0x00000000}, {0x00000000,0x000000ff,0x0000ffff,0x00ffffff} },
+
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0xffffff00,0xff000000,0x00000000}, {0x00000000,0x000000ff,0x00ffffff,0xffffffff}, {0x00ffffff,0x0000ffff,0x000000ff,0x00000000}, {0xff000000,0xffff0000,0x00ffff00,0x0000ffff}, {0x00000000,0x00000000,0xff000000,0xffff0000} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x000000ff,0x00ffffff,0xffffffff,0xffffffff}, {0xffffff00,0xff000000,0x00000000,0x00000000}, {0x000000ff,0x0000ffff,0x00ffff00,0xffff0000}, {0xffffff00,0xffff0000,0xff000000,0x00000000}, {0x00000000,0x00000000,0x000000ff,0x0000ffff} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0xffffffff,0xffffff00,0xff000000}, {0x00000000,0x00000000,0x000000ff,0x00ffffff}, {0xffffffff,0x00000000,0x00000000,0x00000000}, {0x00000000,0x0000ffff,0x0000ffff,0x0000ffff}, {0x00000000,0xffff0000,0xffff0000,0xffff0000} },
@@ -115,6 +116,7 @@ const unsigned int blockxor[64][/*6*/5][4] = {
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0x00000000,0x00000000,0xffffffff}, {0x00000000,0xffffffff,0xffffffff,0x00000000}, {0xff0000ff,0xff0000ff,0x00ffff00,0x00000000}, {0x00ffff00,0x00ffff00,0x00000000,0x00000000}, {0x00000000,0x00000000,0xff0000ff,0xffffffff} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x000000ff,0x00ffffff,0xffffff00,0xff000000}, {0xffffff00,0xff000000,0x000000ff,0x00ffffff}, {0x0000ffff,0x000000ff,0x000000ff,0x0000ffff}, {0xffff0000,0x0000ff00,0x0000ff00,0xffff0000}, {0x00000000,0xffff0000,0xffff0000,0x00000000} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x0000ffff,0x00ffff00,0x00ffff00,0xffff0000}, {0xffff0000,0xff0000ff,0xff0000ff,0x0000ffff}, {0xffffffff,0xffffff00,0x00000000,0x00000000}, {0x00000000,0x00000000,0xffff0000,0xff000000}, {0x00000000,0x000000ff,0x0000ffff,0x00ffffff} },
+
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x00ff00ff,0x00ff00ff,0x00ff00ff,0x00ff00ff}, {0xff00ff00,0xff00ff00,0xff00ff00,0xff00ff00}, {0xffffffff,0x00ffffff,0x00000000,0x00000000}, {0x00000000,0x00000000,0x0000ffff,0x000000ff}, {0x00000000,0xff000000,0xffff0000,0xffffff00} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0x00000000,0xffffffff,0x00000000}, {0x00000000,0xffffffff,0x00000000,0xffffffff}, {0x000000ff,0x0000ffff,0x0000ffff,0x0000ffff}, {0x00000000,0x00000000,0x00ff0000,0xffff0000}, {0xffffff00,0xffff0000,0xff000000,0x00000000} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x00ff00ff,0xff00ff00,0x00ff00ff,0xff00ff00}, {0xff00ff00,0x00ff00ff,0xff00ff00,0x00ff00ff}, {0x0000ffff,0x0000ffff,0x0000ffff,0x000000ff}, {0xffff0000,0x00ff0000,0x00000000,0x00000000}, {0x00000000,0xff000000,0xffff0000,0xffffff00} },
@@ -131,6 +133,7 @@ const unsigned int blockxor[64][/*6*/5][4] = {
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x0000ffff,0xffff0000,0xffff0000,0x0000ffff}, {0xffff0000,0x0000ffff,0x0000ffff,0xffff0000}, {0xff0000ff,0x00000000,0xff0000ff,0x00000000}, {0x00000000,0xff0000ff,0x00000000,0xff0000ff}, {0x00ffff00,0x00ffff00,0x00ffff00,0x00ffff00} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xff0000ff,0xff0000ff,0x00ffff00,0x00ffff00}, {0x00ffff00,0x00ffff00,0xff0000ff,0xff0000ff}, {0x00ff00ff,0x00000000,0x00000000,0x00ff00ff}, {0xff00ff00,0x00000000,0x00000000,0xff00ff00}, {0x00000000,0xffffffff,0xffffffff,0x00000000} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0xff0000ff,0xff0000ff,0xffffffff}, {0x00000000,0x00ffff00,0x00ffff00,0x00000000}, {0xffffffff,0x00000000,0x00000000,0x00000000}, {0x00000000,0xff00ff00,0xff00ff00,0xff00ff00}, {0x00000000,0x00ff00ff,0x00ff00ff,0x00ff00ff} },
+
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffff00ff,0xff000000,0xffff00ff,0xffffffff}, {0x0000ff00,0x00ffffff,0x0000ff00,0x00000000}, {0x00ff00ff,0x00ff00ff,0x00ff00ff,0x00000000}, {0xff00ff00,0xff00ff00,0xff00ff00,0x00000000}, {0x00000000,0x00000000,0x00000000,0xffffffff} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xff00ffff,0x000000ff,0xff00ffff,0xffffffff}, {0x00ff0000,0xffffff00,0x00ff0000,0x00000000}, {0x000000ff,0x000000ff,0x000000ff,0x000000ff}, {0x00000000,0xffffff00,0x00000000,0xffffff00}, {0xffffff00,0x00000000,0xffffff00,0x00000000} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffffffff,0xff00ffff,0x000000ff,0xff00ffff}, {0x00000000,0x00ff0000,0xffffff00,0x00ff0000}, {0x00ffffff,0x00000000,0x00ffffff,0x00000000}, {0x00000000,0x00ffffff,0x00000000,0x00ffffff}, {0xff000000,0xff000000,0xff000000,0xff000000} },
@@ -167,6 +170,7 @@ const int shorterindex[64][/*6*/5] = {
   { /*0,*/  /*0,*/15,  /*0,*/ 5,15,  /*0,*/ 5,15},
   { /*0,*/  /*0,*/15,  /*0,*/ 3,15,  /*0,*/ 3,15},
   { /*0,*/  /*0,*/15,  /*0,*/ 3, 8,  /*0,*/ 3, 8},
+
   { /*0,*/  /*0,*/15,  /*0,*/ 3,15,  /*0,*/ 3,15},
   { /*0,*/  /*0,*/ 2,  /*0,*/ 3, 8,  /*0,*/ 3, 8},
   { /*0,*/  /*0,*/ 8,  /*0,*/ 8,15,  /*0,*/ 8,15},
@@ -183,6 +187,7 @@ const int shorterindex[64][/*6*/5] = {
   { /*0,*/  /*0,*/ 8,  /*0,*/ 5,15,  /*0,*/ 5,15},
   { /*0,*/  /*0,*/ 2,  /*0,*/15,10,  /*0,*/10,15},
   { /*0,*/  /*0,*/ 2,  /*0,*/15, 8,  /*0,*/ 8,15},
+
   { /*0,*/  /*0,*/15,  /*0,*/ 8,15,  /*0,*/ 8,15},
   { /*0,*/  /*0,*/15,  /*0,*/15, 3,  /*0,*/ 3,15},
   { /*0,*/  /*0,*/ 6,  /*0,*/ 3,15,  /*0,*/ 3,15},
@@ -199,6 +204,7 @@ const int shorterindex[64][/*6*/5] = {
   { /*0,*/  /*0,*/15,  /*0,*/15, 6,  /*0,*/ 6,15},
   { /*0,*/  /*0,*/15,  /*0,*/15, 6,  /*0,*/ 6,15},
   { /*0,*/  /*0,*/ 6,  /*0,*/15, 8,  /*0,*/ 8,15},
+
   { /*0,*/  /*0,*/ 6,  /*0,*/ 3,15,  /*0,*/ 3,15},
   { /*0,*/  /*0,*/ 2,  /*0,*/15, 3,  /*0,*/ 3,15},
   { /*0,*/  /*0,*/ 6,  /*0,*/ 5,15,  /*0,*/ 5,15},
@@ -425,17 +431,17 @@ static void passreg WritePaletteBlock(int partition, Col4 (&idx)[2], Col4 &blkl,
  */
 #define	ihibit	(1 << (ibits - 1))
 #define	ihimsk	((1 << ibits) - 1)
-#define	ihixor	Col4((ihimsk << 24) | (ihimsk << 16) | (ihimsk << 8) | (ihimsk << 0))
+#define	ihixor	Col4((ihimsk << 24) + (ihimsk << 16) + (ihimsk << 8) + (ihimsk << 0))
 
 #define	ahibit	(1 << (abits - 1))
 #define	ahimsk	((1 << abits) - 1)
-#define	ahixor	Col4((ahimsk << 24) | (ahimsk << 16) | (ahimsk << 8) | (ahimsk << 0))
+#define	ahixor	Col4((ahimsk << 24) + (ahimsk << 16) + (ahimsk << 8) + (ahimsk << 0))
 
 template<const int set>
 static void passreg ExchangeBits(int &sharedbits) {
   const int setbit = (1 << set);
-  int switched = ((sharedbits & setbit) << SBEND) | ((sharedbits >> SBEND) & setbit);
-  sharedbits = sharedbits & (~((setbit << SBEND) | (setbit << SBSTART))) | switched;
+  int switched = ((sharedbits & setbit) << SBEND) + ((sharedbits >> SBEND) & setbit);
+  sharedbits = sharedbits & (~((setbit << SBEND) + (setbit << SBSTART))) + switched;
 }
 
 template<const int ibits>
@@ -692,7 +698,7 @@ void WritePaletteBlock3_m1(int partition, Vec4 const (&start)[3], Vec4 const (&e
    * [ 45 bits index ................................................................... ]
    */
 
-  blkl = blkl.SetLong((partition << 1) | (1 << 0));		// 1 mode bit, 4 partition bits
+  blkl = blkl.SetLong((partition << 1) + (1 << 0));		// 1 mode bit, 4 partition bits
 
   blkl = CopyBits<24,  5 -  0>(blkl,                a[0][C] );	// 24 bits set 1-3 red   start/stop
   blkl = CopyBits<24, 29 -  0>(blkl, ShiftRight<32>(a[0][C]));	// 24 bits set 1-3 green start/stop
@@ -766,7 +772,7 @@ void WritePaletteBlock3_m2(int partition, Vec4 const (&start)[2], Vec4 const (&e
    * [ 46 bits index ................................................................... ]
    */
 
-  blkl = blkl.SetLong((partition << 2) | (1 << 1));		// 2 mode bit, 6 partition bits
+  blkl = blkl.SetLong((partition << 2) + (1 << 1));		// 2 mode bit, 6 partition bits
 
   blkl = CopyBits<24,  8 -  0>(blkl,                a[0][C] );	// 24 bits set 1-2 red   start/stop
   blkl = CopyBits<24, 32 -  0>(blkl, ShiftRight<32>(a[0][C]));	// 24 bits set 1-2 green start/stop
@@ -832,7 +838,7 @@ void WritePaletteBlock3_m3(int partition, Vec4 const (&start)[3], Vec4 const (&e
    * [ 29 bits index ................................................................... ]
    */
 
-  blkl = blkl.SetLong((partition << 3) | (1 << 2));		// 3 mode bit, 6 partition bits
+  blkl = blkl.SetLong((partition << 3) + (1 << 2));		// 3 mode bit, 6 partition bits
 
   blkl = CopyBits<30,  9 -  0>(blkl,                a[0][C] );	// 30 bits set 1-3 red   start/stop
   blkl = CopyBits<25, 39 -  0>(blkl, ShiftRight<32>(a[0][C]));	// 25 bits set 1-3 green start/stop
@@ -899,7 +905,7 @@ void WritePaletteBlock3_m4(int partition, Vec4 const (&start)[2], Vec4 const (&e
    * [ 30 bits index ................................................................... ]
    */
 
-  blkl = blkl.SetLong((partition << 4) | (1 << 3));		// 4 mode bit, 6 partition bits
+  blkl = blkl.SetLong((partition << 4) + (1 << 3));		// 4 mode bit, 6 partition bits
 
   blkl = CopyBits<28, 10 -  0>(blkl,                a[0][C] );	// 28 bits set 1-2 red   start/stop
   blkl = CopyBits<26, 38 -  0>(blkl, ShiftRight<32>(a[0][C]));	// 26 bits set 1-2 green start/stop
@@ -972,7 +978,7 @@ void WritePaletteBlock4_m5(int r, int ix, Vec4 const (&start)[1], Vec4 const (&e
    * [ 47 bits index ................................................................... ]
    */
 
-  blkl = blkl.SetLong((ix << 7) | (r << 5) | (1 << 4));		// 5 mode bit, 2 rotation bits, 1 index bit
+  blkl = blkl.SetLong((ix << 7) + (r << 5) + (1 << 4));		// 5 mode bit, 2 rotation bits, 1 index bit
 
   blkl = CopyBits<10,  8 -  0>(blkl,                a[0][C] );	// 10 bits set 1 red   start/stop
   blkl = CopyBits<10, 18 -  0>(blkl, ShiftRight<32>(a[0][C]));	// 10 bits set 1 green start/stop
@@ -1038,7 +1044,7 @@ void WritePaletteBlock4_m6(int rotation, Vec4 const (&start)[1], Vec4 const (&en
    * [ 31 bits index ................................................................... ]
    */
 
-  blkl = blkl.SetLong((rotation << 6) | (1 << 5));		// 6 mode bit, 2 rotation bits
+  blkl = blkl.SetLong((rotation << 6) + (1 << 5));		// 6 mode bit, 2 rotation bits
 
   blkl = CopyBits<14,  8 -  0>(blkl,                 a[0][C] );	// 14 bits set 1 red   start/stop
   blkl = CopyBits<14, 22 -  0>(blkl, ShiftRight< 32>(a[0][C]));	// 14 bits set 1 green start/stop
@@ -1102,7 +1108,7 @@ void WritePaletteBlock4_m7(int partition, Vec4 const (&start)[1], Vec4 const (&e
    * [ 63 bits index ................................................................... ]
    */
 
-//blkl = blkl.SetLong((partition << 7) | (1 << 6));		// 7 mode bit, 0 partition bits
+//blkl = blkl.SetLong((partition << 7) + (1 << 6));		// 7 mode bit, 0 partition bits
   blkl = Col4(1 << 6, 0, 0, 0);					// 7 mode bit, 0 partition bits
 
   blkl = CopyBits<14,  7 -  0>(blkl,                a[0][C] );	// 14 bits set 1 red   start/stop
@@ -1173,7 +1179,7 @@ void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&e
    * [ 30 bits index ................................................................... ]
    */
 
-  blkl = blkl.SetLong((partition << 8) | (1 << 7));		// 8 mode bit, 6 partition bits
+  blkl = blkl.SetLong((partition << 8) + (1 << 7));		// 8 mode bit, 6 partition bits
 
   blkl = CopyBits<20, 14 -  0>(blkl,                a[0][C] );	// 20 bits set 1-2 red   start/stop
   blkl = CopyBits<20, 34 -  0>(blkl, ShiftRight<32>(a[0][C]));	// 20 bits set 1-2 green start/stop
@@ -1212,6 +1218,7 @@ const u8 whichsetinpartition[64][/*3*/2][16] = {
 { /*{0},*/ {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1},{0,1,2,2,0,1,2,2,0,1,2,2,0,1,2,2}},
 { /*{0},*/ {0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1},{0,0,1,1,0,1,1,2,1,1,2,2,1,2,2,2}},
 { /*{0},*/ {0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1},{0,0,1,1,2,0,0,1,2,2,0,0,2,2,2,0}},
+
 { /*{0},*/ {0,0,0,0,1,0,0,0,1,1,1,0,1,1,1,1},{0,0,0,1,0,0,1,1,0,1,1,2,1,1,2,2}},
 { /*{0},*/ {0,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0},{0,1,1,1,0,0,1,1,2,0,0,1,2,2,0,0}},
 { /*{0},*/ {0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,0},{0,0,0,0,1,1,2,2,1,1,2,2,1,1,2,2}},
@@ -1228,6 +1235,7 @@ const u8 whichsetinpartition[64][/*3*/2][16] = {
 { /*{0},*/ {0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0},{0,1,1,0,0,1,1,0,2,0,0,2,2,2,2,2}},
 { /*{0},*/ {0,1,1,1,0,0,0,1,1,0,0,0,1,1,1,0},{0,0,1,1,0,1,2,2,0,1,2,2,0,0,1,1}},
 { /*{0},*/ {0,0,1,1,1,0,0,1,1,0,0,1,1,1,0,0},{0,0,0,0,2,0,0,0,2,2,1,1,2,2,2,1}},
+
 { /*{0},*/ {0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1},{0,0,0,0,0,0,0,2,1,1,2,2,1,2,2,2}},
 { /*{0},*/ {0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1},{0,2,2,2,0,0,2,2,0,0,1,2,0,0,1,1}},
 { /*{0},*/ {0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0},{0,0,1,1,0,0,1,2,0,0,2,2,0,2,2,2}},
@@ -1244,6 +1252,7 @@ const u8 whichsetinpartition[64][/*3*/2][16] = {
 { /*{0},*/ {0,0,1,1,1,1,0,0,1,1,0,0,0,0,1,1},{0,2,2,0,1,2,2,1,0,2,2,0,1,2,2,1}},
 { /*{0},*/ {0,1,1,0,0,1,1,0,1,0,0,1,1,0,0,1},{0,1,0,1,2,2,2,2,2,2,2,2,0,1,0,1}},
 { /*{0},*/ {0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0},{0,0,0,0,2,1,2,1,2,1,2,1,2,1,2,1}},
+
 { /*{0},*/ {0,1,0,0,1,1,1,0,0,1,0,0,0,0,0,0},{0,1,0,1,0,1,0,1,0,1,0,1,2,2,2,2}},
 { /*{0},*/ {0,0,1,0,0,1,1,1,0,0,1,0,0,0,0,0},{0,2,2,2,0,1,1,1,0,2,2,2,0,1,1,1}},
 { /*{0},*/ {0,0,0,0,0,0,1,0,0,1,1,1,0,0,1,0},{0,0,0,2,1,1,1,2,0,0,0,2,1,1,1,2}},
@@ -2393,10 +2402,10 @@ static void WritePaletteBlock(tile_barrier barrier, const int thread, lineI2 pal
       ((palette[CSTOP] /*& 0xFFFF*/) << 16);
 
     block[1] =
-      (((indices[ 0] << 0) | (indices[ 1] << 2) | (indices[ 2] << 4) | (indices[ 3] << 6)) <<  0) |
-      (((indices[ 4] << 0) | (indices[ 5] << 2) | (indices[ 6] << 4) | (indices[ 7] << 6)) <<  8) |
-      (((indices[ 8] << 0) | (indices[ 9] << 2) | (indices[10] << 4) | (indices[11] << 6)) << 16) |
-      (((indices[12] << 0) | (indices[13] << 2) | (indices[14] << 4) | (indices[15] << 6)) << 24);
+      (((indices[ 0] << 0) + (indices[ 1] << 2) + (indices[ 2] << 4) + (indices[ 3] << 6)) <<  0) +
+      (((indices[ 4] << 0) + (indices[ 5] << 2) + (indices[ 6] << 4) + (indices[ 7] << 6)) <<  8) +
+      (((indices[ 8] << 0) + (indices[ 9] << 2) + (indices[10] << 4) + (indices[11] << 6)) << 16) +
+      (((indices[12] << 0) + (indices[13] << 2) + (indices[14] << 4) + (indices[15] << 6)) << 24);
   }
 }
 
