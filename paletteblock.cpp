@@ -441,7 +441,7 @@ template<const int set>
 static void passreg ExchangeBits(int &sharedbits) {
   const int setbit = (1 << set);
   int switched = ((sharedbits & setbit) << SBEND) + ((sharedbits >> SBEND) & setbit);
-  sharedbits = sharedbits & (~((setbit << SBEND) + (setbit << SBSTART))) + switched;
+  sharedbits = (sharedbits & (~((setbit << SBEND) + (setbit << SBSTART)))) + switched;
 }
 
 template<const int ibits>
