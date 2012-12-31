@@ -97,9 +97,9 @@
  * only if all checks are inlined
  *
  * first hit improvements:    thorough search:
- *   ib=2: x2.64		ib=2: x10.73	mse: 1.175e-4 vs. 4.146e-5
- *   ib=3: x3.39		ib=3:  x9.93	mse: 0.001409 vs. 4.403e-4
- *   ib=4: x3.45		ib=4:  x?.?
+ *   ib=2: x2.64		ib=2: x8.27	mse: 1.135e-4 vs. 4.221e-5
+ *   ib=3: x3.39		ib=3: x7.22	mse: 1.360e-3 vs. 4.924e-4
+ *   ib=4: x3.45		ib=4: x47.5	mse: 2.768e-5 vs. 7.118e-6
  */
 #define	FEATURE_INDEXFIT_INLINED
 #define	FEATURE_INDEXFIT_THOROUGH	true
@@ -123,15 +123,14 @@
  * 0) ensure shared bit of 1 for opaque merged-alpha cases only (*1)
  * 1) trial shared bits for all cases when block is transparent (*4,*4*2^6)
  * 2) trial shared bits for transparent and low-precision cases (*4,*4*2^6,*4^3*2^4)
- * 3) check all start/stop up/down combinations (*256 tries), incomplete implementation!
- *
- * normally this is not worth it in the current state
+ * 3) trial all shared bits
+ * 4) check all start/stop up/down combinations (*256 tries), incomplete implementation!
  */
 #define	SHAREDBITS_TRIAL_ALPHAONLYOPAQUE	0
 #define	SHAREDBITS_TRIAL_ALPHAONLY		1
 #define	SHAREDBITS_TRIAL_LOWPRC			2
 #define	SHAREDBITS_TRIAL_ALL			3
-#define	SHAREDBITS_TRIAL_PERMUTE		3
+#define	SHAREDBITS_TRIAL_PERMUTE		4
 
 #define	FEATURE_SHAREDBITS_TRIALS		SHAREDBITS_TRIAL_LOWPRC
 
@@ -144,7 +143,7 @@
 
 // adjustments working in "Debug" or "Release" builds:
 // throw the quantized rgba values back into the input.image
-#define	VERIFY_QUANTIZER
+#undef	VERIFY_QUANTIZER
 // throw the decoded rgba values back into the input-image
 #undef	VERIFY_ENCODER
 
@@ -155,7 +154,7 @@
 #undef	DEBUG_DETAILS
 
 // print out lots of information about the algorithm behaviour
-#define	TRACK_STATISTICS
+#undef	TRACK_STATISTICS
 
 #endif // NDEBUG
 
