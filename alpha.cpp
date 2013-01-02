@@ -263,7 +263,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 	int cb7 = (((7 - f) * min7 + f * max7) / 7);
 
 	if (f >= 6) cb5 = 0x00;
-	if (f >= 7) cb7 = 0xFF;
+	if (f >= 7) cb5 = 0xFF;
 
 	int d5 = cb5 - rgba[4 * v + 3]; d5 *= d5;
 	int d7 = cb7 - rgba[4 * v + 3]; d7 *= d7;
