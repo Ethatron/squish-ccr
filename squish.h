@@ -77,8 +77,9 @@ enum
 
 	//! Use a fast but low quality colour compressor.
 	kColourRangeFit	= ( 1 << 14 ),
-	//! Use a slow but high quality alpha/gray compressor.
+	//! Use a slow but high quality alpha/gray/normal compressor.
 	kAlphaIterativeFit = ( 1 << 15 ),
+	kNormalIterativeFit = ( 1 << 15 ),
 	//! Use a slow but high quality colour compressor (the default).
 	kColourClusterFit = ( 1 << 16 ),
 	//! Use a very slow but very high quality colour compressor.
@@ -116,6 +117,8 @@ enum
 typedef unsigned char u8;
 //! Typedef a quantity that is a single unsigned short.
 typedef unsigned short u16;
+//! Typedef a quantity that is a single floating point.
+typedef float f23;
 
 // -----------------------------------------------------------------------------
 
@@ -148,8 +151,9 @@ typedef unsigned short u16;
 	rendered using alpha blending, this can significantly increase the
 	perceived quality.
 */
-void Compress( u8 const* rgba, void* block, int flags );
-void Compress( u16 const* rgb, void* block, int flags );
+void Compress( u8  const* rgba, void* block, int flags );
+void Compress( u16 const* rgb , void* block, int flags );
+void Compress( f23 const* rgba, void* block, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -190,8 +194,9 @@ void Compress( u16 const* rgb, void* block, int flags );
 	rendered using alpha blending, this can significantly increase the
 	perceived quality.
 */
-void CompressMasked( u8 const* rgba, int mask, void* block, int flags );
-void CompressMasked( u16 const* rgb, int mask, void* block, int flags );
+void CompressMasked( u8  const* rgba, int mask, void* block, int flags );
+void CompressMasked( u16 const* rgb , int mask, void* block, int flags );
+void CompressMasked( f23 const* rgba, int mask, void* block, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -210,8 +215,9 @@ void CompressMasked( u16 const* rgb, int mask, void* block, int flags );
 	however, DXT1/BC1 will be used by default if none is specified. All other flags
 	are ignored.
 */
-void Decompress( u8* rgba, void const* block, int flags );
-void Decompress( u16* rgb, void const* block, int flags );
+void Decompress( u8 * rgba, void const* block, int flags );
+void Decompress( u16* rgb , void const* block, int flags );
+void Decompress( f23* rgba, void const* block, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -268,8 +274,9 @@ int GetStorageRequirements( int width, int height, int flags );
 	much memory is required in the compressed image, use
 	squish::GetStorageRequirements.
 */
-void CompressImage( u8 const* rgba, int width, int height, void* blocks, int flags );
-void CompressImage( u16 const* rgb, int width, int height, void* blocks, int flags );
+void CompressImage( u8  const* rgba, int width, int height, void* blocks, int flags );
+void CompressImage( u16 const* rgb , int width, int height, void* blocks, int flags );
+void CompressImage( f23 const* rgba, int width, int height, void* blocks, int flags );
 
 // -----------------------------------------------------------------------------
 
@@ -292,8 +299,9 @@ void CompressImage( u16 const* rgb, int width, int height, void* blocks, int fla
 
 	Internally this function calls squish::Decompress for each block.
 */
-void DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags );
-void DecompressImage( u16* rgb, int width, int height, void const* blocks, int flags );
+void DecompressImage( u8 * rgba, int width, int height, void const* blocks, int flags );
+void DecompressImage( u16* rgb , int width, int height, void const* blocks, int flags );
+void DecompressImage( f23* rgba, int width, int height, void const* blocks, int flags );
 #endif
 
 /* *****************************************************************************
