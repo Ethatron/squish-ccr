@@ -279,7 +279,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
-
+      
       // accumulate the error
       error += dist * freq[0];
     }
@@ -287,7 +287,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
     else if (count == 2) {
       // find the closest codes (it's just two)
       Scr4 dist = StretchEndPoints(s, metric, q, sb, kb, closest[s]);
-
+      
       // accumulate the error
       error += dist;
     }
@@ -347,6 +347,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 	// accumulate the error
 	error += dist * freq[i];
       }
+
 #elif	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_PERMUTE)
       // if we have a down-forced bit we need to check 2 versions, the +2bt as well
       // if we have a up-forced bit we need to check 2 versions, the -2bt as well
@@ -439,7 +440,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
       case  3: for (int a = 0; a <         isets; a++) m_start[a].Set<2>(1.0f), m_end[a].Set<2>(1.0f); break;
     }
   }
-
+  
 #ifndef NDEBUG
   // kill late if this scheme looses
   Scr4 verify_error = Scr4(0.0f); SumError(closest, q, mode, verify_error);
