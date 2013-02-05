@@ -138,6 +138,67 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
     }
   }
 
+#ifdef FEATURE_IGNORE_ALPHA0
+  if (!isBtc1 && weightByAlpha) {
+    if (!m_count) {
+      Vec3 sum = Vec3(0);
+
+      for (int i = 0; i < 16; ++i) {
+	/* assign blanked out pixels when weighting
+	 */
+	if (!___a[i]) {
+	  m_remap[i] = 0;
+
+	  u8 *rgbvalue = &rgbx[4 * i + 0];
+
+	  // normalize coordinates to [0,1]
+	  const float *r = &rgbLUT[rgbvalue[0]];
+	  const float *g = &rgbLUT[rgbvalue[1]];
+	  const float *b = &rgbLUT[rgbvalue[2]];
+
+	  sum += Vec3(r, g, b);
+	}
+      }
+
+      // add the point
+      m_count = 1;
+      m_points[0] = sum * (1.0f / 16.0f);
+      m_weights[0] = 1.0f;
+      m_unweighted = true;
+#ifdef	FEATURE_EXACT_ERROR
+      m_frequencies[0] = 16;
+#endif
+    }
+    else if (m_transparent) {
+      for (int i = 0, index; i < 16; ++i) {
+	/* assign blanked out pixels when weighting
+	 */
+	if (!___a[i]) {
+	  u8 *rgbvalue = &rgbx[4 * i + 0];
+
+	  // normalize coordinates to [0,1]
+	  const float *r = &rgbLUT[rgbvalue[0]];
+	  const float *g = &rgbLUT[rgbvalue[1]];
+	  const float *b = &rgbLUT[rgbvalue[2]];
+
+	  // loop over previous matches for a match
+	  Scr3 d = Scr3(FLT_MAX);
+	  for (index = 0; index < m_count; ++index) {
+	    Vec3 diff = m_points[index] - Vec3(r, g, b);
+	    Scr3 dist = Dot(diff, diff);
+
+	    if (d > dist) {
+	      d = dist;
+
+	      m_remap[i] = index;
+	    }
+	  }
+	}
+      }
+    }
+  }
+#endif
+
 #ifdef FEATURE_WEIGHTS_ROOTED
   // square root the weights
   for (int i = 0; i < m_count; ++i)
