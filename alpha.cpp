@@ -132,6 +132,241 @@ static int FitCodes(u8 const* rgba, int mask, u8 const* codes, u8* indices)
   return err;
 }
 
+template<const int steps>
+static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
+#if	(SQUISH_USE_SIMD > 0) && 0
+  float r = (float)((maxS - minS) >> 1);	// max 127
+
+  Scr4 errC  = Scr4(errS);
+  Vec4 s     = Vec4(minS);
+  Vec4 e     = Vec4(maxS);
+  Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
+
+  while (range > Vec4(0.0f)) {
+    // s + os, s + os, s + os - r, s + os + r
+    // e - oe - r, e - oe + r, e - oe, e - oe
+    Vec4 rssmp = s + range;
+    Vec4 rmpee = e + range.Swap();
+
+    Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
+    Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
+
+    Vec4 errors = Vec4(0.0f);
+    for (int v = 0; v < 16; v++) {
+      // find the closest code
+      Vec4 val = Vec4(rgba[4 * v + 3]);
+      Vec4 dists = Vec4(255.0f * 255.0f);
+
+      // for all possible codebook-entries
+      Vec4 _cb0, _cb1, _cb2, _cb3,
+	   _cb4, _cb5, _cb6, _cb7;
+
+      if (steps == 5) {
+	_cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
+	_cb1 = (cssmp * Vec4(4.0f / 5.0f)) + (cmpee * Vec4(1.0f / 5.0f)); _cb1 = Truncate(_cb1);
+	_cb2 = (cssmp * Vec4(3.0f / 5.0f)) + (cmpee * Vec4(2.0f / 5.0f)); _cb2 = Truncate(_cb2);
+	_cb3 = (cssmp * Vec4(2.0f / 5.0f)) + (cmpee * Vec4(3.0f / 5.0f)); _cb3 = Truncate(_cb3);
+	_cb4 = (cssmp * Vec4(1.0f / 5.0f)) + (cmpee * Vec4(4.0f / 5.0f)); _cb4 = Truncate(_cb4);
+	_cb5 =                                cmpee                     ; //b5 = Truncate(_cb5);
+	_cb6 = Vec4(0.0f);
+	_cb7 = Vec4(255.0f);
+      }
+      else if (steps == 7) {
+	_cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
+	_cb1 = (cssmp * Vec4(6.0f / 7.0f)) + (cmpee * Vec4(1.0f / 7.0f)); _cb1 = Truncate(_cb1);
+	_cb2 = (cssmp * Vec4(5.0f / 7.0f)) + (cmpee * Vec4(2.0f / 7.0f)); _cb2 = Truncate(_cb2);
+	_cb3 = (cssmp * Vec4(4.0f / 7.0f)) + (cmpee * Vec4(3.0f / 7.0f)); _cb3 = Truncate(_cb3);
+	_cb4 = (cssmp * Vec4(3.0f / 7.0f)) + (cmpee * Vec4(4.0f / 7.0f)); _cb4 = Truncate(_cb4);
+	_cb5 = (cssmp * Vec4(2.0f / 7.0f)) + (cmpee * Vec4(5.0f / 7.0f)); _cb5 = Truncate(_cb5);
+	_cb6 = (cssmp * Vec4(1.0f / 7.0f)) + (cmpee * Vec4(6.0f / 7.0f)); _cb6 = Truncate(_cb6);
+	_cb7 =                                cmpee                     ; //b7 = Truncate(_cb7);
+      }
+      else
+	abort();
+
+      _cb0 = _cb0 - val; dists = Min(dists, _cb0 * _cb0);
+      _cb1 = _cb1 - val; dists = Min(dists, _cb1 * _cb1);
+      _cb2 = _cb2 - val; dists = Min(dists, _cb2 * _cb2);
+      _cb3 = _cb3 - val; dists = Min(dists, _cb3 * _cb3);
+      _cb4 = _cb4 - val; dists = Min(dists, _cb4 * _cb4);
+      _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
+      _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
+      _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
+
+      // accumulate the error
+      errors = errors + dists;
+    }
+
+    Scr4 merr = HorizontalMin(errors);
+    if (!(merr < errC))
+      range = Truncate(range * Vec4(0.5f));
+    else {
+      int value = CompareEqualTo(errors, merr);
+
+      // e -= r;// range up
+      /**/ if (value & 0x8) e = rmpee.SplatW();
+      // s += r;// range dn
+      else if (value & 0x1) s = rssmp.SplatX();
+      // e += r;// range up
+      else if (value & 0x4) e = rmpee.SplatZ();
+      // s -= r;// range dn
+      else if (value & 0x2) s = rssmp.SplatY();
+
+      errC = merr;
+    }
+
+    // lossless
+    if (!(errC > Vec4(0.0f)))
+      break;
+  }
+
+#if defined(TRACK_STATISTICS)
+  /* there is a clear skew towards unweighted clusterfit (all weights == 1)
+    *
+    * C == 3, numset ==
+    *  [0]	0x00f796e0 {124800, 15616}
+    */
+  if (steps == 5) {
+    gstat.alpha[0] += errS;
+    gstat.alpha[2] += 1;
+  }
+  else if (steps == 7) {
+    gstat.alpha[3] += errS;
+    gstat.alpha[5] += 1;
+  }
+#endif
+
+  // final match
+  minS = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
+  maxS = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
+  errS = FloatToInt<false>(errC).GetLong();
+
+#if defined(TRACK_STATISTICS)
+  /* there is a clear skew towards unweighted clusterfit (all weights == 1)
+    *
+    * C == 3, numset ==
+    *  [0]	0x00f796e0 {124800, 15616}
+    */
+  if (steps == 5)
+    gstat.alpha[1] += errS;
+  else if (steps == 7)
+    gstat.alpha[4] += errS;
+#endif
+#else
+  // binary search, tangent-fitting
+  int error0 = errS;
+  int s = minS;
+  int e = maxS;
+  int r = (e - s) >> 1;	// max 127
+
+  while (r != 0) {
+    int ms = std::max(std::min(s - r, 0xFF), 0x00);  // os - r
+    int cs = std::max(std::min(s    , 0xFF), 0x00);  // os
+    int ps = std::max(std::min(s + r, 0xFF), 0x00);  // os + r
+    int me = std::max(std::min(e - r, 0xFF), 0x00);  // oe + r
+    int ce = std::max(std::min(e    , 0xFF), 0x00);  // oe
+    int pe = std::max(std::min(e + r, 0xFF), 0x00);  // oe - r
+
+    int error1 = 0;
+    int error2 = 0;
+    int error3 = 0;
+    int error4 = 0;
+    for (int v = 0; v < 16; v++) {
+      // find the closest code
+      int dist1, dist2,
+	  dist3, dist4;
+
+      dist1 = dist2 =
+      dist3 = dist4 = 0xFFFF;
+
+      // for all possible codebook-entries
+      for (int f = 0; f < 8; f++) {
+	int cb1, cb2, cb3, cb4;
+
+	if (steps == 5) {
+	  cb1 = (((5 - f) * cs + f * me) / 5);
+	  cb2 = (((5 - f) * cs + f * pe) / 5);
+	  cb3 = (((5 - f) * ms + f * ce) / 5);
+	  cb4 = (((5 - f) * ps + f * ce) / 5);
+
+	  if (f >= 6) cb1 = cb2 = cb3 = cb4 = 0x00;
+	  if (f >= 7) cb1 = cb2 = cb3 = cb4 = 0xFF;
+	}
+	else if (steps == 7) {
+	  cb1 = (((7 - f) * cs + f * me) / 7);
+	  cb2 = (((7 - f) * cs + f * pe) / 7);
+	  cb3 = (((7 - f) * ms + f * ce) / 7);
+	  cb4 = (((7 - f) * ps + f * ce) / 7);
+	}
+
+	int d1 = cb1 - rgba[4 * v + 3]; d1 *= d1;
+	int d2 = cb2 - rgba[4 * v + 3]; d2 *= d2;
+	int d3 = cb3 - rgba[4 * v + 3]; d3 *= d3;
+	int d4 = cb4 - rgba[4 * v + 3]; d4 *= d4;
+
+	if (dist1 > d1) dist1 = d1;
+	if (dist2 > d2) dist2 = d2;
+	if (dist3 > d3) dist3 = d3;
+	if (dist4 > d4) dist4 = d4;
+      }
+
+      // accumulate the error
+      error1 += dist1;
+      error2 += dist2;
+      error3 += dist3;
+      error4 += dist4;
+    }
+
+    int                merr = error0;
+    if (merr > error1) merr = error1;
+    if (merr > error4) merr = error4;
+    if (merr > error2) merr = error2;
+    if (merr > error3) merr = error3;
+
+    /**/ if (merr == error0) r >>= 1;	// half range
+    else if (merr == error1) e -= r;	// range up
+    else if (merr == error4) s += r;	// range dn
+    else if (merr == error2) e += r;	// range up
+    else if (merr == error3) s -= r;	// range dn
+
+    // lossless
+    error0 = merr;
+    if (!error0)
+      break;
+  }
+
+#if defined(TRACK_STATISTICS)
+  /* way better!
+    * [0]	17302780	int
+    * [1]	3868483		int
+    * [2]	69408		int
+    */
+  if (steps == 5) {
+    gstat.alpha[0] += errS;
+    gstat.alpha[2] += 1;
+  }
+  else if (steps == 7) {
+    gstat.alpha[3] += errS;
+    gstat.alpha[5] += 1;
+  }
+#endif
+
+  // final match
+  minS = std::max(s, 0x00);
+  maxS = std::min(e, 0xFF);
+  errS = error0;
+
+#if defined(TRACK_STATISTICS)
+  if (steps == 5)
+    gstat.alpha[1] += errS;
+  else if (steps == 7)
+    gstat.alpha[4] += errS;
+#endif
+#endif
+
+  return errS;
+}
+
 static void WriteAlphaBlock(int alpha0, int alpha1, u8 const* indices, void* block)
 {
   u8* bytes = reinterpret_cast< u8* >(block);
@@ -217,10 +452,8 @@ static void WriteAlphaBlock7(int alpha0, int alpha1, u8 const* indices, void* bl
 void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 {
   // get the range for 5-alpha and 7-alpha interpolation
-  int min5 = 255;
-  int max5 = 0;
-  int min7 = 255;
-  int max7 = 0;
+  int min5 = 255, max5 = 0;
+  int min7 = 255, max7 = 0;
 
   for (int i = 0; i < 16; ++i) {
     // check this pixel is valid
@@ -234,24 +467,23 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
       min7 = value;
     if (value > max7)
       max7 = value;
-    if (value != 0 && value < min5)
+    if ((value != 0x00) && (value < min5))
       min5 = value;
-    if (value != 255 && value > max5)
+    if ((value != 0xFF) && (value > max5))
       max5 = value;
   }
 
   // handle the case that no valid range was found
-  if (min5 > max5)
-    min5 = max5;
-  if (min7 > max7)
-    min7 = max7;
+  if (min5 > max5) min5 = max5;
+  if (min7 > max7) min7 = max7;
 
   // do the iterative tangent search
   if (flags & kAlphaIterativeFit) {
     // initial values
     int err5 = 0;
     int err7 = 0;
-
+    
+#if defined(TRACK_STATISTICS)
     for (int v = 0; v < 16; v++) {
       // find the closest code
       int dist5, dist7;
@@ -277,384 +509,18 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
       err7 += dist7;
     }
 
-#if	(SQUISH_USE_SIMD > 0)
     // binary search, tangent-fitting
     int errM = std::min(err5, err7);
 
-    // !lossless
-    if (errM) {
-      float r = (float)((max5 - min5) >> 1);	// max 127
-
-      Scr4 errC  = Scr4(err5);
-      Vec4 s     = Vec4(min5);
-      Vec4 e     = Vec4(max5);
-      Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
-
-      while (range > Vec4(0.0f)) {
-	// s + os, s + os, s + os - r, s + os + r
-	// e - oe - r, e - oe + r, e - oe, e - oe
-	Vec4 rssmp = s + range;
-	Vec4 rmpee = e + range.Swap();
-
-	Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
-	Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
-
-	Vec4 errors = Vec4(0.0f);
-	for (int v = 0; v < 16; v++) {
-	  // find the closest code
-	  Vec4 val = Vec4(rgba[4 * v + 3]);
-	  Vec4 dists = Vec4(255.0f * 255.0f);
-
-	  // for all possible codebook-entries
-	  Vec4 _cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
-	  Vec4 _cb1 = (cssmp * Vec4(4.0f / 5.0f)) + (cmpee * Vec4(1.0f / 5.0f)); _cb1 = Truncate(_cb1);
-	  Vec4 _cb2 = (cssmp * Vec4(3.0f / 5.0f)) + (cmpee * Vec4(2.0f / 5.0f)); _cb2 = Truncate(_cb2);
-	  Vec4 _cb3 = (cssmp * Vec4(2.0f / 5.0f)) + (cmpee * Vec4(3.0f / 5.0f)); _cb3 = Truncate(_cb3);
-	  Vec4 _cb4 = (cssmp * Vec4(1.0f / 5.0f)) + (cmpee * Vec4(4.0f / 5.0f)); _cb4 = Truncate(_cb4);
-	  Vec4 _cb5 =                                cmpee                     ; //b5 = Truncate(_cb5);
-	  Vec4 _cb6 = Vec4(0.0f);
-	  Vec4 _cb7 = Vec4(255.0f);
-
-	  _cb0 = _cb0 - val; dists = Min(dists, _cb0 * _cb0);
-	  _cb1 = _cb1 - val; dists = Min(dists, _cb1 * _cb1);
-	  _cb2 = _cb2 - val; dists = Min(dists, _cb2 * _cb2);
-	  _cb3 = _cb3 - val; dists = Min(dists, _cb3 * _cb3);
-	  _cb4 = _cb4 - val; dists = Min(dists, _cb4 * _cb4);
-	  _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
-	  _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
-	  _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
-
-	  // accumulate the error
-	  errors = errors + dists;
-	}
-
-	Scr4 merr = HorizontalMin(errors);
-	if (!(merr < errC))
-	  range = Truncate(range * Vec4(0.5f));
-	else {
-	  int value = CompareEqualTo(errors, merr);
-
-	  // e -= r;// range up
-	  /**/ if (value & 0x8) e = rmpee.SplatW();
-	  // s += r;// range dn
-	  else if (value & 0x1) s = rssmp.SplatX();
-	  // e += r;// range up
-	  else if (value & 0x4) e = rmpee.SplatZ();
-	  // s -= r;// range dn
-	  else if (value & 0x2) s = rssmp.SplatY();
-
-	  errC = merr;
-	}
-
-	// lossless
-	if (!(errC > Vec4(0.0f)))
-	  break;
-      }
-
-#if defined(TRACK_STATISTICS)
-      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
-       *
-       * C == 3, numset ==
-       *  [0]	0x00f796e0 {124800, 15616}
-       */
-      gstat.alpha[0] += err5;
-      gstat.alpha[2] += 1;
-#endif
-
-      // final match
-      min5 = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-      max5 = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-      err5 = FloatToInt<false>(errC).GetLong();
-      errM = err5;
-
-#if defined(TRACK_STATISTICS)
-      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
-       *
-       * C == 3, numset ==
-       *  [0]	0x00f796e0 {124800, 15616}
-       */
-      gstat.alpha[1] += err5;
-#endif
-    }
-
-    // !lossless
-    if (errM) {
-      float r = (float)((max7 - min7) >> 1);	// max 127
-
-      Scr4 errC  = Scr4(err7);
-      Vec4 s     = Vec4(min7);
-      Vec4 e     = Vec4(max7);
-      Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
-
-      while (range > Vec4(0.0f)) {
-	// s + os, s + os, s + os - r, s + os + r
-	// e - oe - r, e - oe + r, e - oe, e - oe
-	Vec4 rssmp = s + range;
-	Vec4 rmpee = e + range.Swap();
-
-	Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
-	Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
-
-	Vec4 errors = Vec4(0.0f);
-	for (int v = 0; v < 16; v++) {
-	  // find the closest code
-	  Vec4 val = Vec4(rgba[4 * v + 3]);
-	  Vec4 dists = Vec4(255.0f * 255.0f);
-
-	  // for all possible codebook-entries
-	  Vec4 _cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
-	  Vec4 _cb1 = (cssmp * Vec4(6.0f / 7.0f)) + (cmpee * Vec4(1.0f / 7.0f)); _cb1 = Truncate(_cb1);
-	  Vec4 _cb2 = (cssmp * Vec4(5.0f / 7.0f)) + (cmpee * Vec4(2.0f / 7.0f)); _cb2 = Truncate(_cb2);
-	  Vec4 _cb3 = (cssmp * Vec4(4.0f / 7.0f)) + (cmpee * Vec4(3.0f / 7.0f)); _cb3 = Truncate(_cb3);
-	  Vec4 _cb4 = (cssmp * Vec4(3.0f / 7.0f)) + (cmpee * Vec4(4.0f / 7.0f)); _cb4 = Truncate(_cb4);
-	  Vec4 _cb5 = (cssmp * Vec4(2.0f / 7.0f)) + (cmpee * Vec4(5.0f / 7.0f)); _cb5 = Truncate(_cb5);
-	  Vec4 _cb6 = (cssmp * Vec4(1.0f / 7.0f)) + (cmpee * Vec4(6.0f / 7.0f)); _cb6 = Truncate(_cb6);
-	  Vec4 _cb7 =                                cmpee                     ; //b7 = Truncate(_cb7);
-
-	  _cb0 = _cb0 - val; dists = Min(dists, _cb0 * _cb0);
-	  _cb1 = _cb1 - val; dists = Min(dists, _cb1 * _cb1);
-	  _cb2 = _cb2 - val; dists = Min(dists, _cb2 * _cb2);
-	  _cb3 = _cb3 - val; dists = Min(dists, _cb3 * _cb3);
-	  _cb4 = _cb4 - val; dists = Min(dists, _cb4 * _cb4);
-	  _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
-	  _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
-	  _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
-
-	  // accumulate the error
-	  errors = errors + dists;
-	}
-
-	Scr4 merr = HorizontalMin(errors);
-	if (!(merr < errC))
-	  range = Truncate(range * Vec4(0.5f));
-	else {
-	  int value = CompareEqualTo(errors, merr);
-
-	  // e -= r;// range up
-	  /**/ if (value & 0x8) e = rmpee.SplatW();
-	  // s += r;// range dn
-	  else if (value & 0x1) s = rssmp.SplatX();
-	  // e += r;// range up
-	  else if (value & 0x4) e = rmpee.SplatZ();
-	  // s -= r;// range dn
-	  else if (value & 0x2) s = rssmp.SplatY();
-
-	  errC = merr;
-	}
-
-	// lossless
-	if (!(errC > Vec4(0.0f)))
-	  break;
-      }
-
-#if defined(TRACK_STATISTICS)
-      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
-       *
-       * C == 3, numset ==
-       *  [0]	0x00f796e0 {124800, 15616}
-       */
-      gstat.alpha[3] += err7;
-      gstat.alpha[5] += 1;
-#endif
-
-      // final match
-      min7 = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-      max7 = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-      err7 = FloatToInt<false>(errC).GetLong();
-      err7 = err5;
-
-#if defined(TRACK_STATISTICS)
-      /* there is a clear skew towards unweighted clusterfit (all weights == 1)
-       *
-       * C == 3, numset ==
-       *  [0]	0x00f796e0 {124800, 15616}
-       */
-      gstat.alpha[4] += err7;
-#endif
-    }
+    // !lossless, !lossless
+    if (errM) errM = FitError<5>(rgba, min5, max5, err5);
+    if (errM) errM = FitError<7>(rgba, min7, max7, err7);
 #else
     // binary search, tangent-fitting
-    int error0 = std::min(err5, err7);
-    int s;
-    int e;
-    int r;
-
+    int errM = FitError<5>(rgba, min5, max5, err5);
     // !lossless
-    if (error0) {
-      error0 = err5;
-      s = min5;
-      e = max5;
-      r = (e - s) >> 1;	// max 127
-
-      while (r != 0) {
-	int ms = std::max(std::min(s - r, 0xFF), 0x00);  // os - r
-	int cs = std::max(std::min(s    , 0xFF), 0x00);  // os
-	int ps = std::max(std::min(s + r, 0xFF), 0x00);  // os + r
-	int me = std::max(std::min(e - r, 0xFF), 0x00);  // oe + r
-	int ce = std::max(std::min(e    , 0xFF), 0x00);  // oe
-	int pe = std::max(std::min(e + r, 0xFF), 0x00);  // oe - r
-
-	int error1 = 0;
-	int error2 = 0;
-	int error3 = 0;
-	int error4 = 0;
-	for (int v = 0; v < 16; v++) {
-	  // find the closest code
-	  int dist1, dist2, dist3, dist4;
-	  dist1 = dist2 = dist3 = dist4 = 0xFFFF;
-
-	  // for all possible codebook-entries
-	  for (int f = 0; f < 8; f++) {
-	    int cb1 = (((5 - f) * cs + f * me) / 5);
-	    int cb2 = (((5 - f) * cs + f * pe) / 5);
-	    int cb3 = (((5 - f) * ms + f * ce) / 5);
-	    int cb4 = (((5 - f) * ps + f * ce) / 5);
-
-	    if (f >= 6) cb1 = cb2 = cb3 = cb4 = 0x00;
-	    if (f >= 7) cb1 = cb2 = cb3 = cb4 = 0xFF;
-
-	    int d1 = cb1 - rgba[4 * v + 3]; d1 *= d1;
-	    int d2 = cb2 - rgba[4 * v + 3]; d2 *= d2;
-	    int d3 = cb3 - rgba[4 * v + 3]; d3 *= d3;
-	    int d4 = cb4 - rgba[4 * v + 3]; d4 *= d4;
-
-	    if (dist1 > d1) dist1 = d1;
-	    if (dist2 > d2) dist2 = d2;
-	    if (dist3 > d3) dist3 = d3;
-	    if (dist4 > d4) dist4 = d4;
-	  }
-
-	  // accumulate the error
-	  error1 += dist1;
-	  error2 += dist2;
-	  error3 += dist3;
-	  error4 += dist4;
-	}
-
-	int                merr = error0;
-	if (merr > error1) merr = error1;
-	if (merr > error4) merr = error4;
-	if (merr > error2) merr = error2;
-	if (merr > error3) merr = error3;
-
-	/**/ if (merr == error0) r >>= 1;	// half range
-	else if (merr == error1) e -= r;	// range up
-	else if (merr == error4) s += r;	// range dn
-	else if (merr == error2) e += r;	// range up
-	else if (merr == error3) s -= r;	// range dn
-
-	// lossless
-	error0 = merr;
-	if (!error0)
-	  break;
-      }
-
-#if defined(TRACK_STATISTICS)
-      /* way better!
-       * [0]	17302780	int
-       * [1]	3868483		int
-       * [2]	69408		int
-       */
-      gstat.alpha[0] += err5;
-      gstat.alpha[2] += 1;
-#endif
-
-      // final match
-      min5 = std::max(s, 0x00);
-      max5 = std::min(e, 0xFF);
-      err5 = error0;
-
-#if defined(TRACK_STATISTICS)
-      gstat.alpha[1] += err5;
-#endif
-    }
-
-    // !lossless
-    if (error0) {
-      error0 = err7;
-      s = min7;
-      e = max7;
-      r = (e - s) >> 1;
-
-      while (r != 0) {
-	int ms = std::max(std::min(s - r, 0xFF), 0x00);  // os - r
-	int cs = std::max(std::min(s    , 0xFF), 0x00);  // os
-	int ps = std::max(std::min(s + r, 0xFF), 0x00);  // os + r
-	int me = std::max(std::min(e - r, 0xFF), 0x00);  // oe + r
-	int ce = std::max(std::min(e    , 0xFF), 0x00);  // oe
-	int pe = std::max(std::min(e + r, 0xFF), 0x00);  // oe - r
-
-	int error1 = 0;
-	int error2 = 0;
-	int error3 = 0;
-	int error4 = 0;
-	for (int v = 0; v < 16; v++) {
-	  // find the closest code
-	  int dist1, dist2, dist3, dist4;
-	  dist1 = dist2 = dist3 = dist4 = 0xFFFF;
-
-	  // for all possible codebook-entries
-	  for (int f = 0; f < 8; f++) {
-	    int cb1 = (((7 - f) * cs + f * me) / 7);
-	    int cb2 = (((7 - f) * cs + f * pe) / 7);
-	    int cb3 = (((7 - f) * ms + f * ce) / 7);
-	    int cb4 = (((7 - f) * ps + f * ce) / 7);
-
-	    int d1 = cb1 - rgba[4 * v + 3]; d1 *= d1;
-	    int d2 = cb2 - rgba[4 * v + 3]; d2 *= d2;
-	    int d3 = cb3 - rgba[4 * v + 3]; d3 *= d3;
-	    int d4 = cb4 - rgba[4 * v + 3]; d4 *= d4;
-
-	    if (dist1 > d1) dist1 = d1;
-	    if (dist2 > d2) dist2 = d2;
-	    if (dist3 > d3) dist3 = d3;
-	    if (dist4 > d4) dist4 = d4;
-	  }
-
-	  // accumulate the error
-	  error1 += dist1;
-	  error2 += dist2;
-	  error3 += dist3;
-	  error4 += dist4;
-	}
-
-	int                merr = error0;
-	if (merr > error1) merr = error1;
-	if (merr > error4) merr = error4;
-	if (merr > error2) merr = error2;
-	if (merr > error3) merr = error3;
-
-	/**/ if (merr == error0) r >>= 1;	// half range
-	else if (merr == error1) e -= r;	// range up
-	else if (merr == error4) s += r;	// range dn
-	else if (merr == error2) e += r;	// range up
-	else if (merr == error3) s -= r;	// range dn
-
-	// lossless
-	error0 = merr;
-	if (!error0)
-	  break;
-      }
-
-#if defined(TRACK_STATISTICS)
-      /* way better!
-       * [3]	6452753	int
-       * [4]	3856783	int
-       * [5]	61245	int
-       */
-      gstat.alpha[3] += err7;
-      gstat.alpha[5] += 1;
-#endif
-
-      // final match
-      min7 = std::max(s, 0x00);
-      max7 = std::min(e, 0xFF);
-      err7 = error0;
-
-#if defined(TRACK_STATISTICS)
-      gstat.alpha[4] += err7;
-#endif
-    }
+    if (errM)
+      errM = FitError<7>(rgba, min7, max7, err7);
 #endif
   }
 
