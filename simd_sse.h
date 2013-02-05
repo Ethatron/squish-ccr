@@ -83,6 +83,9 @@ public:
 	explicit Col3(float s) : m_v( _mm_cvttps_epi32( _mm_set1_ps ( s ) ) ) {}
 
 	Col3( int r, int g, int b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
+	Col3( int r, int g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
+	Col3( u8 r, u8 g, u8 b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
+	Col3( u8 r, u8 g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
 
 	explicit Col3( unsigned int s ) : m_v( _mm_set1_epi32( s ) ) {}
 	explicit Col3( const unsigned int (&_rgb)[3] ) : m_v( _mm_load_si128( (const __m128i *)&_rgb ) ) {}
@@ -145,6 +148,12 @@ public:
 		return *this;
 	}
 
+	Col3& operator%=( Arg v )
+	{
+		m_v = _mm_andnot_si128( m_v, v.m_v );
+		return *this;
+	}
+
 	Col3& operator^=( Arg v )
 	{
 		m_v = _mm_xor_si128( m_v, v.m_v );
@@ -191,6 +200,11 @@ public:
 	friend Col3 operator&( Col3::Arg left, Col3::Arg right  )
 	{
 		return Col3( _mm_and_si128( left.m_v, right.m_v ) );
+	}
+
+	friend Col3 operator%( Col3::Arg left, Col3::Arg right  )
+	{
+		return Col3( _mm_andnot_si128( left.m_v, right.m_v ) );
 	}
 
 	friend Col3 operator^( Col3::Arg left, Col3::Arg right  )
@@ -585,6 +599,11 @@ public:
 		return Col3( _mm_cmpgt_epi32( v.m_v, _mm_setzero_si128( ) ) );
 	}
 
+	friend Col3 IsZero( Col3::Arg v )
+	{
+		return Col3( _mm_cmpeq_epi32( v.m_v, _mm_setzero_si128( ) ) );
+	}
+
 	friend Col3 IsOne( Col3::Arg v )
 	{
 		return Col3( _mm_cmpeq_epi32( v.m_v, _mm_set1_epi32( 0x000000FF ) ) );
@@ -680,6 +699,7 @@ public:
 
 	Col4( int r, int g, int b, int a ) : m_v( _mm_setr_epi32( r, g, b, a ) ) {}
 	Col4( int r, int g, int b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
+	Col4( int r, int g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
 	Col4( Col3 &v, int w ) : m_v( v.m_v ) { m_v.m128i_i32[3] = w; }
 
 	explicit Col4( unsigned int s ) : m_v( _mm_set1_epi32( s ) ) {}
@@ -817,6 +837,11 @@ public:
 	friend Col4 operator&( Col4::Arg left, Col4::Arg right  )
 	{
 		return Col4( _mm_and_si128( left.m_v, right.m_v ) );
+	}
+	
+	friend Col4 operator%( Col4::Arg left, Col4::Arg right  )
+	{
+		return Col4( _mm_andnot_si128( left.m_v, right.m_v ) );
 	}
 
 	friend Col4 operator^( Col4::Arg left, Col4::Arg right  )
@@ -1275,6 +1300,11 @@ public:
 	{
 		return Col4( _mm_cmpgt_epi32( v.m_v, _mm_setzero_si128( ) ) );
 	}
+	
+	friend Col4 IsZero( Col4::Arg v )
+	{
+		return Col4( _mm_cmpeq_epi32( v.m_v, _mm_setzero_si128( ) ) );
+	}
 
 	friend Col4 IsOne( Col4::Arg v )
 	{
@@ -1411,9 +1441,10 @@ public:
 	}
 
 	Vec3( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
+	Vec3( float x, float y ) : m_v( _mm_setr_ps( x, y, 0.0f, 0.0f ) ) {}
 	Vec3( Vec3 x, Vec3 y, Vec3 z ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, z.m_v ), y.m_v ) ) {}
 	Vec3( Vec3 x, Vec3 y ) : m_v( _mm_unpacklo_ps( _mm_unpacklo_ps( x.m_v, y.m_v ), _mm_set1_ps( 0.0f ) ) ) {}
-	
+
 	Vec3( Col3 &c ) : m_v( _mm_cvtepi32_ps( c.m_v ) ) {}
 
 	void StoreX(float *x) const { _mm_store_ss(x, m_v); }
@@ -1757,6 +1788,34 @@ public:
 	friend Vec3 Normalize( Arg left )
 	{
 		return left * ReciprocalLength(left);
+	}
+
+	friend Vec3 Complement( Arg left )
+	{
+		__m128 res, rez;
+		
+		rez = _mm_set1_ps( 1.0f );
+		res = _mm_mul_ps( left.m_v, left.m_v );
+#if ( SQUISH_USE_SSE >= 3 )
+		res = _mm_hadd_ps( res, res );
+#else
+		res = _mm_add_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 0, 1, 0 ) ) );
+#endif
+		rez = _mm_sub_ps( rez, _mm_min_ps( rez, res ) );
+		rez = _mm_sqrt_ps( rez );
+		res = _mm_movelh_ps( left.m_v, rez );
+
+		// sqrt(1.0f - (x*x + y*y))
+		return Vec3( res );
+	}
+	
+	friend Vec3 Complement( Arg left, Arg right )
+	{
+		Vec3 one = Vec3(1.0f);
+		Vec3 llrr = left * left + right * right;
+
+		// sqrt(1.0f - (x*x + y*y))
+		return Sqrt(one - Min(one, llrr));
 	}
 
 	friend Vec3 Dot( Arg left, Arg right )
@@ -2344,6 +2403,40 @@ public:
 		Vec4 rsq = ReciprocalSqrt(sum);
 
 		return left * rsq;
+	}
+
+	template<const bool killw>
+	friend Vec4 Complement( Arg left )
+	{
+		__m128 res, rez;
+		
+		rez = _mm_set1_ps( 1.0f );
+		res = _mm_mul_ps( left.m_v, left.m_v );
+#if ( SQUISH_USE_SSE >= 3 )
+		res = _mm_hadd_ps( res, res );
+#else
+		res = _mm_add_ps( res, _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 0, 1, 0 ) ) );
+#endif
+		rez = _mm_sub_ps( rez, _mm_min_ps( rez, res ) );
+		rez = _mm_sqrt_ps( rez );
+
+		if (!killw) {
+		  res = _mm_shuffle_ps( left.m_v, rez, SQUISH_SSE_SHUF( 3, 3, 0, 0 ) );
+		  res = _mm_shuffle_ps( left.m_v, res, SQUISH_SSE_SHUF( 0, 1, 2, 0 ) );
+		}
+		else {
+		  res = _mm_movelh_ps( left.m_v, rez );
+		  res = _mm_and_ps( res, _mm_castsi128_ps ( _mm_setr_epi32( ~0, ~0, ~0,  0 ) ) );
+		}
+
+		// sqrt(1.0f - (x*x + y*y))
+		return Vec4( res );
+	}
+	
+	friend Vec4 Complement( Arg left, Arg right )
+	{
+		// sqrt(1.0f - (x*x + y*y))
+		return Sqrt(Vec4(1.0f) - Min(Vec4(1.0f), left * left + right * right));
 	}
 
 	friend Vec4 Dot( Arg left, Arg right )
