@@ -3,6 +3,7 @@
 
 #include "maths.cpp"
 #include "alpha.cpp"
+#include "normal.cpp"
 #include "colourblock.cpp"
 #include "paletteblock.cpp"
 
@@ -27,6 +28,7 @@
 
 #include "maths.h"
 #include "alpha.h"
+#include "normal.h"
 #include "colourblock.h"
 #include "paletteblock.h"
 
