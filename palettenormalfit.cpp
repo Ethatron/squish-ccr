@@ -200,14 +200,15 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
 
       for (int i = 0; i < count; ++i) {
 	// find the closest code
-	Scr4 dist = Scr4(FLT_MAX);
+	Scr4 dist = Scr4(-1.0f);
+	Vec4 nval = Normalize(values[i]);
 	int idx = 0;
 	
 	for (int j = 0; j < ccs; j += 0) {
-	  Scr4 a0 = Dot(Normalize(values[i]), Normalize(codes[j + 0]));
-	  Scr4 a1 = Dot(Normalize(values[i]), Normalize(codes[j + 1]));
-	  Scr4 a2 = Dot(Normalize(values[i]), Normalize(codes[j + 2]));
-	  Scr4 a3 = Dot(Normalize(values[i]), Normalize(codes[j + 3]));
+	  Scr4 a0 = Dot(nval, Normalize(codes[j + 0]));
+	  Scr4 a1 = Dot(nval, Normalize(codes[j + 1]));
+	  Scr4 a2 = Dot(nval, Normalize(codes[j + 2]));
+	  Scr4 a3 = Dot(nval, Normalize(codes[j + 3]));
 	  
 	  // measure angle-deviation (cosine)
 	  Scr4 d0 = a0 * a0;
