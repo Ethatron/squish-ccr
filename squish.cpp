@@ -47,6 +47,7 @@
 #include "hdrblock.h"
 
 #include "alpha.h"
+#include "normal.h"
 #include "coloursinglefit.h"
 #include "coloursinglesnap.h"
 #include "palettesinglefit.h"
@@ -463,6 +464,15 @@ void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
       CompressAlphaBtc2(rgba, mask, alphaBlock);
     else if ((flags & kBtc3) != 0)
       CompressAlphaBtc3(rgba, mask, alphaBlock, flags);
+  }
+  // 3Dc-type compression
+  else if (flags & (kBtc5 | kColourMetricUnit)) {
+    // get the block locations
+    void* plane1Block = block;
+    void* plane2Block = reinterpret_cast<u8*>(block) + 8;
+
+    // compress xy into plane 1/2
+    CompressNormalBtc5(rgba, mask, plane1Block, plane2Block, flags);
   }
   // ATI-type compression
   else if (flags & (kBtc4 | kBtc5)) {
