@@ -80,6 +80,7 @@ enum
 	//! Use a slow but high quality alpha/gray/normal compressor.
 	kAlphaIterativeFit = ( 1 << 15 ),
 	kNormalIterativeFit = ( 1 << 15 ),
+
 	//! Use a slow but high quality colour compressor (the default).
 	kColourClusterFit = ( 1 << 16 ),
 	//! Use a very slow but very high quality colour compressor.
@@ -108,6 +109,16 @@ enum
 	kVariableCodingMode14 = ( 14 << 24 ),
 	kVariableCodingModes  = ( 15 << 24 ),
 };
+
+/*! @brief Validates and corrects compressor flags before use.
+
+	@param flags	Compression flags.
+	
+	The flags should be verified before use for the compression
+	functions as the inner loop does not make any sanity checks.
+	Missing or wrongs flags will be set to the defaults.
+*/
+int SanitizeFlags(int flags);
 #endif
 
 // -----------------------------------------------------------------------------
@@ -117,6 +128,8 @@ enum
 typedef unsigned char u8;
 //! Typedef a quantity that is a single unsigned short.
 typedef unsigned short u16;
+//! Typedef a quantity that is a single half floating point.
+//typedef half f10;
 //! Typedef a quantity that is a single floating point.
 typedef float f23;
 
@@ -218,6 +231,31 @@ void CompressMasked( f23 const* rgba, int mask, void* block, int flags );
 void Decompress( u8 * rgba, void const* block, int flags );
 void Decompress( u16* rgb , void const* block, int flags );
 void Decompress( f23* rgba, void const* block, int flags );
+
+// -----------------------------------------------------------------------------
+
+struct sqio {
+  enum dtp {
+    DT_U8,
+    DT_U16,
+    DT_F23
+  };
+
+  int blockcount;
+  int blocksize;
+  int compressedsize;
+  int decompressedsize;
+  
+  typedef void (*enc)(void const* rgba, int mask, void* block, int flags);
+  typedef void (*dec)(void* rgba, void const* block, int flags);
+
+  dtp datatype;
+  int flags;
+  enc encoder;
+  dec decoder;
+};
+
+struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags);
 
 // -----------------------------------------------------------------------------
 

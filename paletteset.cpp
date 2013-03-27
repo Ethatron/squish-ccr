@@ -81,7 +81,7 @@ static const unsigned int partitionmasks_3[64] =
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
-void PaletteSet::GetMasks(int flags, int partition, int (&masks)[4]) {
+doinline void PaletteSet::GetMasks(int flags, int partition, int (&masks)[4]) {
   unsigned int partmask = 0;
   if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
       ((flags & kVariableCodingModes) == kVariableCodingMode4) ||
@@ -111,10 +111,7 @@ void PaletteSet::GetMasks(int flags, int partition, int (&masks)[4]) {
     masks[2] = ( 0xFFFFFFFF & 0xFFFF) & ( partmask >> 16);
 }
 
-PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags)
-  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
-    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
-{
+doinline int PaletteSet::SetMode(int flags) {
   /* build a single set only, we permute that later for specific partitions,
    * separate alpha is an exception as that is fixed for each mode
    */
@@ -141,88 +138,101 @@ PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags)
   if (m_numsets > 1)
     m_numsets = 1, flags &= ~kExcludeAlphaFromPalette;
 
+  return flags;
+}
+
+doinline int PaletteSet::SetMode(int flags, int partition, int rotation) {
+  /* determine the number of sets and select the partition
+  if ((0))
+    m_numsets = 1, m_partmask = partitionmasks_1[m_partid = 0]; */
+  if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode4) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode8))
+    m_numsets = 2, m_partmask = partitionmasks_2[m_partid = partition];
+  if (((flags & kVariableCodingModes) == kVariableCodingMode1) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode3))
+    m_numsets = 3, m_partmask = partitionmasks_3[m_partid = partition];
+  if (((flags & kVariableCodingModes) == kVariableCodingMode5) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode6))
+    m_seperatealpha = true, m_rotid = rotation;
+  if (((flags & kVariableCodingModes) == kVariableCodingMode7) ||
+      ((flags & kVariableCodingModes) == kVariableCodingMode8))
+    m_mergedalpha = true;
+
+  // partition_1 mask is: bit cleared -> set 1, bit set -> set 2
+  // partition_2 mask is: bit cleared -> set 1, bit set -> set 2, hi bit set -> set 3
+  if (m_numsets == 1)
+    m_mask[0] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// color-set
+    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// alpha-set
+    m_mask[2] = 0;
+  if (m_numsets == 2)
+    m_mask[0] = (~m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
+    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
+    m_mask[2] = 0;
+  if (m_numsets == 3)
+    m_mask[0] = (~m_partmask & 0xFFFF) & (~m_partmask >> 16),
+    m_mask[1] = ( m_partmask & 0xFFFF) & (~m_partmask >> 16),
+    m_mask[2] = ( 0xFFFFFFFF & 0xFFFF) & ( m_partmask >> 16);
+
+  return flags;
+}
+
+PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
+{
   // make the set (if succesive partition permutation, preserve alpha)
-  BuildSet(rgba, mask, flags);
+  BuildSet(rgba, mask, SetMode(flags));
+}
+
+PaletteSet::PaletteSet(u16 const* rgba, int mask, int flags)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
+{
+  // make the set (if succesive partition permutation, preserve alpha)
+  BuildSet(rgba, mask, SetMode(flags));
+}
+
+PaletteSet::PaletteSet(f23 const* rgba, int mask, int flags)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
+{
+  // make the set (if succesive partition permutation, preserve alpha)
+  BuildSet(rgba, mask, SetMode(flags));
 }
 
 PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation)
   : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
     m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
 {
-  /* determine the number of sets and select the partition
-  if ((0))
-    m_numsets = 1, m_partmask = partitionmasks_1[m_partid = 0]; */
-  if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode4) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode8))
-    m_numsets = 2, m_partmask = partitionmasks_2[m_partid = partition];
-  if (((flags & kVariableCodingModes) == kVariableCodingMode1) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode3))
-    m_numsets = 3, m_partmask = partitionmasks_3[m_partid = partition];
-  if (((flags & kVariableCodingModes) == kVariableCodingMode5) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode6))
-    m_seperatealpha = true, m_rotid = rotation;
-  if (((flags & kVariableCodingModes) == kVariableCodingMode7) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode8))
-    m_mergedalpha = true;
-
-  // partition_1 mask is: bit cleared -> set 1, bit set -> set 2
-  // partition_2 mask is: bit cleared -> set 1, bit set -> set 2, hi bit set -> set 3
-  if (m_numsets == 1)
-    m_mask[0] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// color-set
-    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// alpha-set
-    m_mask[2] = 0;
-  if (m_numsets == 2)
-    m_mask[0] = (~m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
-    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
-    m_mask[2] = 0;
-  if (m_numsets == 3)
-    m_mask[0] = (~m_partmask & 0xFFFF) & (~m_partmask >> 16),
-    m_mask[1] = ( m_partmask & 0xFFFF) & (~m_partmask >> 16),
-    m_mask[2] = ( 0xFFFFFFFF & 0xFFFF) & ( m_partmask >> 16);
-
   // make the set
-  BuildSet(rgba, mask, flags);
+  BuildSet(rgba, mask, SetMode(flags, partition, rotation));
+}
+
+PaletteSet::PaletteSet(u16 const* rgba, int mask, int flags, int partition, int rotation)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
+{
+  // make the set
+  BuildSet(rgba, mask, SetMode(flags, partition, rotation));
+}
+
+PaletteSet::PaletteSet(f23 const* rgba, int mask, int flags, int partition, int rotation)
+  : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
+    m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
+{
+  // make the set
+  BuildSet(rgba, mask, SetMode(flags, partition, rotation));
 }
 
 PaletteSet::PaletteSet(PaletteSet const &palette, int mask, int flags, int partition, int rotation)
   : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
     m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
 {
-  /* determine the number of sets and select the partition
-  if ((0))
-    m_numsets = 1, m_partmask = partitionmasks_1[m_partid = 0]; */
-  if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode4) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode8))
-    m_numsets = 2, m_partmask = partitionmasks_2[m_partid = partition];
-  if (((flags & kVariableCodingModes) == kVariableCodingMode1) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode3))
-    m_numsets = 3, m_partmask = partitionmasks_3[m_partid = partition];
-  if (((flags & kVariableCodingModes) == kVariableCodingMode5) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode6))
-    m_seperatealpha = true, m_rotid = rotation;
-  if (((flags & kVariableCodingModes) == kVariableCodingMode7) ||
-      ((flags & kVariableCodingModes) == kVariableCodingMode8))
-    m_mergedalpha = true;
+  flags = SetMode(flags, partition, rotation);
 
-  // partition_1 mask is: bit cleared -> set 1, bit set -> set 2
-  // partition_2 mask is: bit cleared -> set 1, bit set -> set 2, hi bit set -> set 3
-  if (m_numsets == 1)
-    m_mask[0] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// color-set
-    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),	// alpha-set
-    m_mask[2] = 0;
-  if (m_numsets == 2)
-    m_mask[0] = (~m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
-    m_mask[1] = ( m_partmask & 0xFFFF) & ( 0xFFFFFFFF >> 16),
-    m_mask[2] = 0;
-  if (m_numsets == 3)
-    m_mask[0] = (~m_partmask & 0xFFFF) & (~m_partmask >> 16),
-    m_mask[1] = ( m_partmask & 0xFFFF) & (~m_partmask >> 16),
-    m_mask[2] = ( 0xFFFFFFFF & 0xFFFF) & ( m_partmask >> 16);
-
-  // make the new set
-  if (m_rotid)
+  // make, permute or copy the new set
+  if (m_seperatealpha)
     BuildSet(palette, mask, flags);		// unpermutable
   else if (m_numsets > 1)
     PermuteSet(palette, mask, flags);		// permutable
@@ -294,6 +304,9 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   m_unweighted[0] = m_unweighted[1] =
   m_unweighted[2] = m_unweighted[3] = true;
 
+  // TODO: should not be necessary (VC bug?)
+  memset(m_remap, 0x00, sizeof(m_remap));
+
   // required for being able to reorder the contents of "rgbx"
   assert(m_numsets == 1);
   for (int s = 0; s < m_numsets; s++) {
@@ -340,7 +353,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  assume (index >= 0 && index < 16);
 
 	  // map to this point and increase the weight
-	  m_remap[s][i] = index;
+	  m_remap[s][i] = (char)index;
 	  m_weights[s][index] += Vec4(W);
 	  m_unweighted[s] = false;
 #ifdef	FEATURE_EXACT_ERROR
@@ -366,7 +379,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  const float *a = &caLUTs[3][rgbvalue[3]];
 
 	  // add the point
-	  m_remap[s][i] = index;
+	  m_remap[s][i] = (char)index;
 	  m_points[s][index] = Vec4(r, g, b, a);
 	  m_weights[s][index] = Vec4(W);
 	  m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
@@ -420,6 +433,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
         u8    w = rgba[4 * i + 3] | ___w;
         float W = (float)(w + 1) / 256.0f;
 
+#if 0
 #ifdef FEATURE_IGNORE_ALPHA0
         /* check for blanked out pixels when weighting
          */
@@ -427,6 +441,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  m_remap[a][i] = -1;
 	  continue;
         }
+#endif
 #endif
 
 	// loop over previous matches for a match
@@ -440,7 +455,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    assume (index >= 0 && index < 16);
 
 	    // map to this point and increase the weight
-	    m_remap[a][i] = index;
+	    m_remap[a][i] = (char)index;
 	    m_weights[a][index] += Vec4(W);
 	    m_unweighted[a] = false;
 #ifdef	FEATURE_EXACT_ERROR
@@ -463,7 +478,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    const float *c = &caLUTs[3][avalue[0]];
 
 	    // add the point
-	    m_remap[a][i] = index;
+	    m_remap[a][i] = (char)index;
 	    m_points[a][index] = Vec4(c);
 	    m_weights[a][index] = Vec4(W);
 	    m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
@@ -492,6 +507,16 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
   // clear if we're suppose to throw alway alpha
   m_transparent = m_transparent && !clearAlpha;
+}
+
+void PaletteSet::BuildSet(u16 const* rgba, int mask, int flags) {
+  /* TODO */
+  /*abort()*/;
+}
+
+void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
+  /* TODO */
+  /*abort()*/;
 }
 
 void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
@@ -565,8 +590,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	  assume (index >= 0 && index < 16);
 
 	  // map to this point and increase the weight
-	  m_remap[s][i] = index;
-	  m_weights[s][index] += Vec4(W);
+	  m_remap[s][i] = (char)index;
+	  m_weights[s][index] += W;
 	  m_unweighted[s] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][index] += 1;
@@ -582,9 +607,9 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	  m_count[s] = index + 1;
 
 	  // add the point
-	  m_remap[s][i] = index;
-	  m_points[s][index] = Vec4(rgbx);
-	  m_weights[s][index] = Vec4(W);
+	  m_remap[s][i] = (char)index;
+	  m_points[s][index] = rgbx;
+	  m_weights[s][index] = W;
 	  m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][index] = 1;
@@ -610,8 +635,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	    assume (index >= 0 && index < 16);
 
 	    // map to this point and increase the weight
-	    m_remap[a][i] = index;
-	    m_weights[a][index] += Vec4(W);
+	    m_remap[a][i] = (char)index;
+	    m_weights[a][index] += W;
 	    m_unweighted[a] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] += 1;
@@ -627,9 +652,9 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	    m_count[a] = index + 1;
 
 	    // add the point
-	    m_remap[a][i] = index;
-	    m_points[a][index] = Vec4(___a);
-	    m_weights[a][index] = Vec4(W);
+	    m_remap[a][i] = (char)index;
+	    m_points[a][index] = ___a;
+	    m_weights[a][index] = W;
 	    m_unweighted[a] = m_unweighted[a] && !CompareFirstLessThan(W, Vec4(1.0f));
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] = 1;
@@ -718,8 +743,8 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 	assume (index >= 0 && index < 16);
 
 	// map to this point and increase the weight
-	m_remap[s][i] = index;
-	m_weights[s][index] += Vec4(W);
+	m_remap[s][i] = (char)index;
+	m_weights[s][index] += W;
 	m_unweighted[s] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	m_frequencies[s][index] += 1;
@@ -729,12 +754,12 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
       
       {
 	// get the index of the match and advance
-	index = gotcha[uindex] = (char)(m_count[s]++);
+	gotcha[uindex] = (char)(index = m_count[s]++);
 
 	// add the point
-	m_remap[s][i] = index;
+	m_remap[s][i] = (char)index;
 	m_points[s][index] = rgba;
-	m_weights[s][index] = Vec4(W);
+	m_weights[s][index] = W;
 	m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
 #ifdef	FEATURE_EXACT_ERROR
 	m_frequencies[s][index] = 1;

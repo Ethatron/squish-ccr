@@ -33,10 +33,10 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
-static void WriteColourBlock(int a, int b, u8* indices, void* block)
+static void WriteColourBlock(int a, int b, u8 const* indices, void* block)
 {
   // get the block as bytes
-  u8* bytes = ( u8* )block;
+  u8* bytes = (u8*)block;
 
   // write the endpoints
   bytes[0] = (u8)(a & 0xff);
@@ -44,18 +44,35 @@ static void WriteColourBlock(int a, int b, u8* indices, void* block)
   bytes[2] = (u8)(b & 0xff);
   bytes[3] = (u8)(b >> 8);
 
-  // write the indices
   for (int i = 0; i < 4; ++i) {
     u8 const* ind = indices + 4 * i;
 
-    // [3-0] [7-4] [11-8] [15-12] big endian dword
-    // [15-12] [11-8] [7-4] [3-0] little endian dword
     bytes[4 + i] =
       (ind[0] << 0) +
       (ind[1] << 2) +
       (ind[2] << 4) +
       (ind[3] << 6);
   }
+}
+
+static void WriteColourBlock(int a, int b, Col4 const& indices, void* block)
+{
+  // get the block as ints
+  int* ints = (int*)block;
+
+  Col4 reindexed =
+    (indices      ) +
+    (indices >>  6) +
+    (indices >> 12) +
+    (indices >> 18);
+  
+  // write the endpoints
+  ints[0] = (b << 16) + (a);
+
+  // write the indices
+  // [3-0] [7-4] [11-8] [15-12] big endian dword
+  // [15-12] [11-8] [7-4] [3-0] little endian dword
+  PackBytes(reindexed & Col4(0x000000FF), ints[1]);
 }
 
 void WriteColourBlock3(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block)
@@ -65,24 +82,13 @@ void WriteColourBlock3(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* 
   int b = FloatTo565(end);
 
   // remap the indices
-  u8 remapped[16];
+  Col4 remapped = Col4(indices);
 
-  if (a <= b) {
-    // use the indices directly
-    for (int i = 0; i < 16; ++i)
-      remapped[i] = indices[i];
-  }
-  else {
+  if (a > b) {
     // swap a and b
     std::swap(a, b);
-    for (int i = 0; i < 16; ++i) {
-      if (indices[i] == 0)
-	remapped[i] = 1;
-      else if (indices[i] == 1)
-	remapped[i] = 0;
-      else
-	remapped[i] = indices[i];
-    }
+    // swap index 0 and 1
+    remapped ^= Col4(0x01010101) & CompareAllLessThan_M8(remapped, Col4(0x02020202));
   }
 
   // write the block
@@ -96,37 +102,33 @@ void WriteColourBlock4(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* 
   int b = FloatTo565(end);
 
   // remap the indices
-  u8 remapped[16];
+  Col4 remapped = Col4(indices);
 
   if (a < b) {
     // swap a and b
     std::swap(a, b);
-    for (int i = 0; i < 16; ++i)
-      remapped[i] = (indices[i] ^ 0x1) & 0x3;
+    // swap index 0 and 1, 2 and 3
+    remapped ^= Col4(0x01010101);
   }
   else if (a == b) {
     // use index 0
-    for (int i = 0; i < 16; ++i)
-      remapped[i] = 0;
+    remapped  = Col4(0x00000000);
   }
-  else {
-    // use the indices directly
-    for (int i = 0; i < 16; ++i)
-      remapped[i] = indices[i];
-  }
-
+  
   // write the block
   WriteColourBlock(a, b, remapped, block);
 }
 
-void DecompressColourBtc(u8* rgba, void const* block, bool isBtc1)
+void ReadColourBlock(
+  u8 (&codes  )[16],
+  u8 (&indices)[16],
+  void const* block,
+  bool isBtc1)
 {
   // get the block bytes
   u8 const* bytes = reinterpret_cast< u8 const* >(block);
 
   // unpack the endpoints
-  u8 codes[16];
-
   int a = Unpack565(bytes + 0, codes + 0);
   int b = Unpack565(bytes + 2, codes + 4);
 
@@ -137,7 +139,6 @@ void DecompressColourBtc(u8* rgba, void const* block, bool isBtc1)
     Codebook4(codes);
 
   // unpack the indices
-  u8 indices[16];
   for (int i = 0; i < 4; ++i) {
     u8* ind = indices + 4 * i;
     u8 packed = bytes[4 + i];
@@ -147,12 +148,59 @@ void DecompressColourBtc(u8* rgba, void const* block, bool isBtc1)
     ind[2] = (packed >> 4) & 0x3;
     ind[3] = (packed >> 6) & 0x3;
   }
+}
+
+void DecompressColoursBtc1(u8* rgba, void const* block, bool isBtc1)
+{
+  u8 codes[16];
+  u8 indices[16];
+
+  ReadColourBlock(codes, indices, block, isBtc1);
 
   // store out the colours
   for (int i = 0; i < 16; ++i) {
     u8 offset = 4 * indices[i];
-    for (int j = 0; j < 4; ++j)
-      rgba[4 * i + j] = codes[offset + j];
+
+    rgba[4 * i + 0] = codes[offset + 0] * (255 / 255);
+    rgba[4 * i + 1] = codes[offset + 1] * (255 / 255);
+    rgba[4 * i + 2] = codes[offset + 2] * (255 / 255);
+    rgba[4 * i + 3] = codes[offset + 3] * (255 / 255);
+  }
+}
+
+void DecompressColoursBtc1(u16* rgba, void const* block, bool isBtc1)
+{
+  u8 codes[16];
+  u8 indices[16];
+
+  ReadColourBlock(codes, indices, block, isBtc1);
+
+  // store out the colours
+  for (int i = 0; i < 16; ++i) {
+    u8 offset = 4 * indices[i];
+
+    rgba[4 * i + 0] = codes[offset + 0] * (65535 / 255);
+    rgba[4 * i + 1] = codes[offset + 1] * (65535 / 255);
+    rgba[4 * i + 2] = codes[offset + 2] * (65535 / 255);
+    rgba[4 * i + 3] = codes[offset + 3] * (65535 / 255);
+  }
+}
+
+void DecompressColoursBtc1(f23* rgba, void const* block, bool isBtc1)
+{
+  u8 codes[16];
+  u8 indices[16];
+
+  ReadColourBlock(codes, indices, block, isBtc1);
+
+  // store out the colours
+  for (int i = 0; i < 16; ++i) {
+    u8 offset = 4 * indices[i];
+
+    rgba[4 * i + 0] = codes[offset + 0] * (1.0f / 255.0f);
+    rgba[4 * i + 1] = codes[offset + 1] * (1.0f / 255.0f);
+    rgba[4 * i + 2] = codes[offset + 2] * (1.0f / 255.0f);
+    rgba[4 * i + 3] = codes[offset + 3] * (1.0f / 255.0f);
   }
 }
 #endif
@@ -233,7 +281,7 @@ void WriteColourBlock4(tile_barrier barrier, const int thread, lineC2 cline, ino
 
   // remap the indices
   wavefrnt_for(i, 16) {
-    indices[i] = (indices[i] ^ (sorted[CSTRT] == colour[CSTOP] ? 1 : 0)) & (sorted[CSTRT] == sorted[CSTOP] ? 0 : 3);
+    indices[i] = indices[i] ^ (sorted[CSTRT] == colour[CSTOP] ? 1 : 0);
   }
 
   // write the block

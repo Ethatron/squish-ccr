@@ -24,50 +24,59 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_ALPHA_H
-#define SQUISH_ALPHA_H
+#ifndef SQUISH_BITONESET_H
+#define SQUISH_BITONESET_H
 
 #include <squish.h>
-#include <limits.h>
+#include "maths.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-  void CompressAlphaBtc2(u8  const* rgba, int mask, void* block);
-  void CompressAlphaBtc3(u8  const* rgba, int mask, void* block, int flags);
-  
-  void CompressAlphaBtc2(u16 const* rgba, int mask, void* block);
-  void CompressAlphaBtc3(u16 const* rgba, int mask, void* block, int flags);
+/*! @brief Represents a set of block values
+ */
+class BitoneSet
+{
+public:
+  BitoneSet(u8  const* rgba, int mask, int flags);
+  BitoneSet(u16 const* rgba, int mask, int flags);
+  BitoneSet(f23 const* rgba, int mask, int flags);
 
-  void CompressAlphaBtc2(f23 const* rgba, int mask, void* block);
-  void CompressAlphaBtc3(f23 const* rgba, int mask, void* block, int flags);
+  bool IsUnweighted() const { return m_unweighted; }
 
-  void DecompressAlphaBtc2(u8 * rgba, void const* block);
-  void DecompressAlphaBtc3(u8 * rgba, void const* block);
-  
-  void DecompressAlphaBtc2(u16* rgba, void const* block);
-  void DecompressAlphaBtc3(u16* rgba, void const* block);
+  int GetCount() const { return m_count; }
+  Vec3 const* GetPoints() const { return m_points; }
+  float const* GetWeights() const { return m_weights; }
 
-  void DecompressAlphaBtc2(f23* rgba, void const* block);
-  void DecompressAlphaBtc3(f23* rgba, void const* block);
+  void RemapIndices(u8 const* source, u8* target) const;
+
+private:
+  bool  m_unweighted;
+  int   m_count;
+  Vec3  m_points[16];
+  float m_weights[16];
+  char  m_remap[16];
+
+#ifdef	FEATURE_EXACT_ERROR
+  /* --------------------------------------------------------------------------- */
+public:
+  u8 const* GetFrequencies() const {
+    return m_frequencies; }
+  u8 GetMaxFrequency() const {
+    u8 mx = 1; for (int i = 0; i < m_count; ++i)
+    mx = std::max(mx, m_frequencies[i]); return mx; }
+
+private:
+  u8    m_frequencies[16];
+#endif
+};
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-  void CompressAlphaBtc2(tile_barrier barrier, const int thread,
-			 pixel16 rgba, int mask, out code64 block,
-			 IndexBlockLUT yArr) amp_restricted;
-  void CompressAlphaBtc3(tile_barrier barrier, const int thread,
-			 pixel16 rgba, int mask, out code64 block,
-			 IndexBlockLUT yArr) amp_restricted;
-
-/*void DecompressAlphaBtc2(tile_barrier barrier, const int thread,
-			   out pixel16 rgba, code64 block) amp_restricted;
-  void DecompressAlphaBtc3(tile_barrier barrier, const int thread,
-			   out pixel16 rgba, code64 block) amp_restricted;*/
 #endif
 
-} // namespace squish
+} // namespace sqish
 
-#endif // ndef SQUISH_ALPHA_H
+#endif // ndef SQUISH_BITONESET_H

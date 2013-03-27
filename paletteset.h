@@ -42,13 +42,22 @@ class PaletteSet
 public:
   static void GetMasks(int flags, int partition, int (&masks)[4]);
 
+  int SetMode(int flags);
+  int SetMode(int flags, int partition, int rotation);
+
   // maximum number of different sets, aligned, the real limit is 3
 #define	PS_MAX	4
 
 public:
   // constructor for regular operation (with and without initial partition/rotation)
-  PaletteSet(u8 const* rgba, int mask, int flags);
-  PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation);
+  PaletteSet(u8  const* rgba, int mask, int flags);
+  PaletteSet(u8  const* rgba, int mask, int flags, int partition, int rotation);
+  
+  PaletteSet(u16 const* rgba, int mask, int flags);
+  PaletteSet(u16 const* rgba, int mask, int flags, int partition, int rotation);
+
+  PaletteSet(f23 const* rgba, int mask, int flags);
+  PaletteSet(f23 const* rgba, int mask, int flags, int partition, int rotation);
 
   // constructors for managing backups and permutations of palette-sets
   PaletteSet() {};
@@ -56,12 +65,14 @@ public:
   PaletteSet(PaletteSet const &palette, int mask, int flags, int partition, int rotation);
 
 private:
-  void BuildSet(u8 const* rgba, int mask, int flags);
+  void BuildSet(u8  const* rgba, int mask, int flags);
+  void BuildSet(u16 const* rgba, int mask, int flags);
+  void BuildSet(f23 const* rgba, int mask, int flags);
   void BuildSet(PaletteSet const &palette, int mask, int flags);
   void PermuteSet(PaletteSet const &palette, int mask, int flags);
 
 public:
-  // active attributes based the parameters passed on initializaton
+  // active attributes based on the parameters passed on initialization
   int GetSets() const { return m_numsets; }
   int GetRotation() const { return m_rotid; }
   int GetPartition() const { return m_partid; }
@@ -99,7 +110,7 @@ private:
   int   m_count[4];
   Vec4  m_points[4][16];
   Vec4  m_weights[4][16];
-  int   m_remap[4][16];
+  char  m_remap[4][16];
   
 #ifdef	FEATURE_TEST_LINES
   /* --------------------------------------------------------------------------- */
@@ -126,7 +137,8 @@ public:
   u8 const* GetFrequencies(int idx) const {
     return m_frequencies[idx]; }
   u8 GetMaxFrequency(int idx) const {
-    u8 mx = 1; for (int i = 0; i < m_count[idx]; ++i) mx = std::max(mx, m_frequencies[idx][i]); return mx; }
+    u8 mx = 1; for (int i = 0; i < m_count[idx]; ++i)
+    mx = std::max(mx, m_frequencies[idx][i]); return mx; }
 
 private:
   u8    m_frequencies[4][16];
@@ -182,6 +194,6 @@ private_hlsl
 
 #endif
 
-} // namespace sqish
+} // namespace squish
 
 #endif // ndef SQUISH_PALETTESET_H

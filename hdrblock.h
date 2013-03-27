@@ -53,8 +53,9 @@ namespace squish {
   void WriteDynamicBlock3_mC(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
   void WriteDynamicBlock3_mD(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
   void WriteDynamicBlock3_mE(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-
-  void DecompressDynamicBtc(u16* rgba, void const* block);
+  
+  void DecompressDynamicsBtc6(u16* rgba, void const* block);
+  void DecompressDynamicsBtc6(f23* rgba, void const* block);
 #endif
 
 // -----------------------------------------------------------------------------

@@ -23,26 +23,37 @@
 	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
    -------------------------------------------------------------------------- */
-
-#ifndef SQUISH_NORMAL_H
-#define SQUISH_NORMAL_H
+#ifndef SQUISH_COLOURNORMALFIT_H
+#define SQUISH_COLOURNORMALFIT_H
 
 #include <squish.h>
-#include <limits.h>
+#include "colourfit.h"
+#include "maths.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-  void CompressNormalBtc5(u8 const* xyzd, int mask, void* blockx, void* blocky, int flags);
+class ColourSet;
+class ColourNormalFit : public ColourFit
+{
+public:
+  ColourNormalFit(ColourSet const* colours, int flags);
 
-  void DecompressNormalBtc5(u8* xyzd, void const* blockx, void const* blocky);
+private:
+  virtual void Compress3(void* block);
+  virtual void Compress4(void* block);
+
+  Vec3 m_start;
+  Vec3 m_end;
+  Scr3 m_besterror;
+};
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #endif
 
-} // namespace squish
+} // squish
 
-#endif // ndef SQUISH_ALPHA_H
+#endif // ndef SQUISH_NORMALFIT_H

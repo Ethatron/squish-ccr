@@ -102,7 +102,7 @@ protected:
   Vec4 m_start[4];
   Vec4 m_end[4];
   a16 u8 m_indices[2][16];
-
+  
   Vec4 m_metric[3];
   Scr4 m_besterror;
   bool m_best;

@@ -59,7 +59,9 @@ namespace squish {
   void ReadPaletteBlock4_m7(u8* rgba, void const* block);
   void ReadPaletteBlock4_m8(u8* rgba, void const* block);
 
-  void DecompressPaletteBtc(u8* rgba, void const* block);
+  void DecompressPalettesBtc7(u8 * rgba, void const* block);
+  void DecompressPalettesBtc7(u16* rgba, void const* block);
+  void DecompressPalettesBtc7(f23* rgba, void const* block);
 #endif
 
 // -----------------------------------------------------------------------------

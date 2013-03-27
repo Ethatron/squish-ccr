@@ -30,6 +30,7 @@
 #pragma warning(disable: 4127)
 #pragma warning(disable: 4293)	// line 459
 #pragma warning(disable: 4505)	// line 954
+#pragma warning(disable: 4172)	// line 1130
 
 #if	!defined(SQUISH_USE_COMPUTE)
 #include <cmath>
@@ -48,18 +49,25 @@ public:
   {
   }
 
-  explicit Col3( int _s )
+  explicit Col3(int _s)
   {
     x = _s;
     y = _s;
     z = _s;
   }
 
-  Col3( int _x, int _y, int _z )
+  Col3(int _x, int _y, int _z)
   {
     x = _x;
     y = _y;
     z = _z;
+  }
+  
+  Col3(int _x, int _y)
+  {
+    x = _x;
+    y = _y;
+    z = 0;
   }
 
   int R() const { return x; }
@@ -319,6 +327,27 @@ public:
   {
     return Col3( r, g, b );
   }
+  
+  int GetM8() const
+  {
+    return
+      (r & 0x000000FF ? 0x0001 : 0x0000) +
+      (r & 0x0000FF00 ? 0x0002 : 0x0000) +
+      (r & 0x00FF0000 ? 0x0004 : 0x0000) +
+      (r & 0xFF000000 ? 0x0008 : 0x0000) +
+      (g & 0x000000FF ? 0x0010 : 0x0000) +
+      (g & 0x0000FF00 ? 0x0020 : 0x0000) +
+      (g & 0x00FF0000 ? 0x0040 : 0x0000) +
+      (g & 0xFF000000 ? 0x0080 : 0x0000) +
+      (b & 0x000000FF ? 0x0100 : 0x0000) +
+      (b & 0x0000FF00 ? 0x0200 : 0x0000) +
+      (b & 0x00FF0000 ? 0x0400 : 0x0000) +
+      (b & 0xFF000000 ? 0x0800 : 0x0000) +
+      (a & 0x000000FF ? 0x1000 : 0x0000) +
+      (a & 0x0000FF00 ? 0x2000 : 0x0000) +
+      (a & 0x00FF0000 ? 0x4000 : 0x0000) +
+      (a & 0xFF000000 ? 0x8000 : 0x0000);
+  }
 
   int GetLong() const
   {
@@ -341,7 +370,7 @@ public:
   Col4 SplatA() const { return Col4( a ); }
 
   template<const int inv>
-  void SetRGBA( int _r, int _g, int _b, int _a ) {
+  void SetRGBA(int _r, int _g, int _b, int _a) {
     r = (inv ? inv - _r : _r);
     g = (inv ? inv - _g : _g);
     b = (inv ? inv - _b : _b);
@@ -349,11 +378,19 @@ public:
   }
 
   template<const int inv>
-  void SetRGBApow2( int _r, int _g, int _b, int _a ) {
+  void SetRGBApow2(int _r, int _g, int _b, int _a) {
     r = 1 << (inv ? inv - _r : _r);
     g = 1 << (inv ? inv - _g : _g);
     b = 1 << (inv ? inv - _b : _b);
     a = 1 << (inv ? inv - _a : _a);
+  }
+  
+  template<const int inv>
+  void SetRGBApow2(int _v) {
+    r = 
+    g = 
+    b = 
+    a = 1 << (inv ? inv - _v : _v);
   }
 
   operator Col3() const
@@ -928,7 +965,7 @@ public:
       left.b == right.b &&
       left.a == right.a;
   }
-
+  
   friend Col4 IsNotZero(Col4::Arg v )
   {
     return Col4(
@@ -946,6 +983,16 @@ public:
       v.g == 0xFF ? ~0 : 0,
       v.b == 0xFF ? ~0 : 0,
       v.a == 0xFF ? ~0 : 0
+    );
+  }
+  
+  friend Col4 IsZero(Col4::Arg v )
+  {
+    return Col4(
+      v.r == 0x00 ? ~0 : 0,
+      v.g == 0x00 ? ~0 : 0,
+      v.b == 0x00 ? ~0 : 0,
+      v.a == 0x00 ? ~0 : 0
     );
   }
 
@@ -1048,6 +1095,7 @@ public:
   }
 
   friend class Vec4;
+  friend class Col8;
 
 #if	!defined(SQUISH_USE_AMP)
 private:
@@ -1086,6 +1134,164 @@ static float Abs(float v) {
   return std::abs(v);
 }
 
+class Col8
+{
+public:
+  typedef Col8 const& Arg;
+
+  Col8() {}
+
+  Col8( Col8 const& arg ) {
+    int i = 7; do { s[i] = arg.s[i]; } while (--i >= 0); }
+
+  Col8& operator=( Col8 const& arg ) {
+    int i = 7; do { s[i] = arg.s[i]; } while (--i >= 0);
+    return *this;
+  }
+
+  explicit Col8(Col4 &v) {
+    s[0] = s[1] = (short)v.r;
+    s[2] = s[3] = (short)v.g;
+    s[4] = s[5] = (short)v.b;
+    s[6] = s[7] = (short)v.a;
+  }
+
+  explicit Col8(int v) {
+    s[0] = s[1] = s[2] = s[3] = s[4] = s[5] = s[6] = s[7] = (short)v; }
+  explicit Col8(short v) {
+    s[0] = s[1] = s[2] = s[3] = s[4] = s[5] = s[6] = s[7] = v; }
+
+  Col8( int a, int b, int c, int d, int e, int f, int g, int h ) {
+    s[0] = (short)a; s[1] = (short)b; s[2] = (short)c; s[3] = (short)d;
+    s[4] = (short)e; s[5] = (short)f; s[6] = (short)g; s[7] = (short)h; }
+  Col8( u16 a, u16 b, u16 c, u16 d, u16 e, u16 f, u16 g, u16 h ) {
+    s[0] = a; s[1] = b; s[2] = c; s[3] = d; s[4] = e; s[5] = f; s[6] = g; s[7] = h; }
+
+  int Get0() const
+  {
+    return s[0];
+  }
+
+  const u16 &operator[]( int pos ) const
+  {
+    return s[pos];
+  }
+
+  Col8& operator*=( Arg v ) {
+    int i = 7; do { s[i] *= v.s[i]; } while (--i >= 0);
+    return *this;
+  }
+
+  friend Col8 operator>>( Col8::Arg left, int right ) {
+    Col8 res;
+    int i = 7; do { res.s[i] = left.s[i] >> right; } while (--i >= 0);
+    return res;
+  }
+
+  friend Col8 operator<<( Col8::Arg left, int right ) {
+    Col8 res;
+    int i = 7; do { res.s[i] = left.s[i] << right; } while (--i >= 0);
+    return res;
+  }
+
+  friend Col8 operator+( Col8::Arg left, Col8::Arg right ) {
+    Col8 res;
+    int i = 7; do { res.s[i] = left.s[i] + right.s[i]; } while (--i >= 0);
+    return res;
+  }
+
+  friend Col8 operator-( Col8::Arg left, Col8::Arg right ) {
+    Col8 res;
+    int i = 7; do { res.s[i] = left.s[i] - right.s[i]; } while (--i >= 0);
+    return res;
+  }
+
+  friend Col8 operator*( Col8::Arg left, Col8::Arg right ) {
+    Col8 res;
+    int i = 7; do { res.s[i] = left.s[i] * right.s[i]; } while (--i >= 0);
+    return res;
+  }
+
+  friend Col8 operator*( Col8::Arg left, int right ) {
+    Col8 res;
+    int i = 7; do { res.s[i] = (short)(left.s[i] * right); } while (--i >= 0);
+    return res;
+  }
+
+  friend Col8 HorizontalMin( Arg a )
+  {
+    Col8 res;
+
+    res.s[0] = std::min(a.s[0], a.s[1]);
+    res.s[2] = std::min(a.s[2], a.s[3]);
+    res.s[4] = std::min(a.s[4], a.s[5]);
+    res.s[6] = std::min(a.s[6], a.s[7]);
+
+    res.s[0] = std::min(res.s[0], res.s[2]);
+    res.s[4] = std::min(res.s[4], res.s[6]);
+
+    res.s[0] = std::min(res.s[0], res.s[4]);
+    res.s[1] = res.s[2] = res.s[3] = res.s[4] = res.s[5] = res.s[6] = res.s[7] = res.s[0];
+
+    return res;
+  }
+
+  friend Col8 HorizontalMax( Arg a )
+  {
+    Col8 res;
+
+    res.s[0] = std::max(a.s[0], a.s[1]);
+    res.s[2] = std::max(a.s[2], a.s[3]);
+    res.s[4] = std::max(a.s[4], a.s[5]);
+    res.s[6] = std::max(a.s[6], a.s[7]);
+
+    res.s[0] = std::max(res.s[0], res.s[2]);
+    res.s[4] = std::max(res.s[4], res.s[6]);
+
+    res.s[0] = std::max(res.s[0], res.s[4]);
+    res.s[1] = res.s[2] = res.s[3] = res.s[4] = res.s[5] = res.s[6] = res.s[7] = res.s[0];
+
+    return res;
+  }
+
+  friend Col4 Expand(Arg a, int ia) {
+    return Col4(
+      a.s[ia - 0],
+      a.s[ia - 1],
+      a.s[ia - 2],
+      a.s[ia - 3]);
+  }
+
+  friend Col4 Repeat(Arg a, int ia) {
+    return Col4(
+      a.s[ia],
+      a.s[ia],
+      a.s[ia],
+      a.s[ia]);
+  }
+
+  friend Col4 Interleave(Arg a, Arg b, int ia, int ib) {
+    return Col4(
+      a.s[ia],
+      b.s[ib],
+      a.s[ia],
+      b.s[ib]);
+  }
+
+  friend Col4 Replicate(Arg a, Arg b, int ia, int ib) {
+    return Col4(
+      a.s[ia],
+      a.s[ia],
+      b.s[ib],
+      b.s[ib]);
+  }
+
+#if	!defined(SQUISH_USE_AMP)
+private:
+#endif
+  short s[8];
+};
+
 #if	!defined(SQUISH_USE_COMPUTE)
 #define VEC4_CONST( X ) Vec4( X )
 
@@ -1102,6 +1308,8 @@ public:
   Vec3(const float *_x, const float *_y, const float *_z) { x = *_x;  y = *_y;  z = *_z; }
   Vec3(float  _x, float  _y, float  _z) { x = _x;   y = _y;   z = _z; }
   Vec3(Vec3   _x, Vec3   _y, Vec3   _z) { x = _x.x; y = _y.x; z = _z.x; }
+  
+  Vec3(Col3 &c) { x = (float)c.r; y = (float)c.g; z = (float)c.b; }
 
   void StoreX(float *_x) const { *_x = x; }
   void StoreY(float *_y) const { *_y = y; }
@@ -1286,9 +1494,9 @@ public:
   friend Vec3 RotateLeft( Arg a )
   {
     return Vec3(
-      n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)),
-      n == 1 ? a.z : (n == 2 ? a.w : (n == 3 ? a.x : a.y)),
-      n == 1 ? a.w : (n == 2 ? a.x : (n == 3 ? a.y : a.z))
+      n == 1 ? a.y : (n == 2 ? a.z : a.x),
+      n == 1 ? a.z : (n == 2 ? a.x : a.y),
+      n == 1 ? a.x : (n == 2 ? a.y : a.z)
     );
   }
 
@@ -1472,7 +1680,9 @@ public:
   explicit Vec4(int   _s) : x( (float) _s ), y( (float) _s ), z( (float) _s ), w( (float) _s ) {}
 
   Vec4(const float *_x, const float *_y, const float *_z, const float *_w) : x(*_x), y(*_y), z(*_z), w(*_w) {}
-  Vec4(const float *_x, const float *_y, const float *_z                 ) : x(*_x), y(*_y), z(*_z), w(0.0f) {}
+  Vec4(const float *_x, const float *_y, const float *_z                 ) : x(*_x), y(*_y), z(*_z), w(0.f) {}
+  Vec4(const float *_x, const float *_y                                  ) : x(*_x), y(*_y), z(0.f), w(0.f) {}
+  Vec4(const float *_a                                                   ) : x(*_a), y(*_a), z(*_a), w(*_a) {}
 
   Vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
   Vec4(float _x, float _y, float _z          ) : x(_x), y(_y), z(_z), w(0.0f) {}
@@ -1484,7 +1694,7 @@ public:
 
   Vec4(Vec3 _v, float _w) : x(_v.x), y(_v.y), z(_v.z), w(_w) {}
 
-  Vec4(Col4 _c) : x(_c.r), y(_c.g), z(_c.b), w(_c.a) {}
+  Vec4(Col4 _c) : x((float)_c.r), y((float)_c.g), z((float)_c.b), w((float)_c.a) {}
 
   Vec3 GetVec3() const
   {
@@ -1515,7 +1725,7 @@ public:
   Vec4 SplatW() const { return Vec4( w ); }
 
   template<const int inv>
-  void SetXYZW( int _x, int _y, int _z, int _w ) {
+  void SetXYZW(int _x, int _y, int _z, int _w) {
     x = (float)(inv ? inv - _x : _x);
     y = (float)(inv ? inv - _y : _y);
     z = (float)(inv ? inv - _z : _z);
@@ -1523,7 +1733,7 @@ public:
   }
 
   template<const int inv>
-  void SetXYZWpow2( int _x, int _y, int _z, int _w ) {
+  void SetXYZWpow2(int _x, int _y, int _z, int _w) {
     x = (float)(1 << (inv ? inv - _x : _x));
     y = (float)(1 << (inv ? inv - _y : _y));
     z = (float)(1 << (inv ? inv - _z : _z));
@@ -1531,7 +1741,7 @@ public:
   }
 
   template<const int p>
-  void Set( const float val )
+  void Set(const float val)
   {
     /**/ if (p == 0) x = val;
     else if (p == 1) y = val;
@@ -1546,6 +1756,11 @@ public:
     v.y = y;
     v.z = z;
     return v;
+  }
+  
+  operator Scr4() const
+  {
+    return x;
   }
 
   Vec4 operator-() const
@@ -1786,7 +2001,7 @@ public:
   }
 
   template<const int n>
-  friend Vec4 RotateLeft( Arg a )
+  friend Vec4 RotateLeft(Arg a)
   {
     return Vec4(
       n == 1 ? a.y : (n == 2 ? a.z : (n == 3 ? a.w : a.x)),
@@ -1795,8 +2010,17 @@ public:
       n == 1 ? a.x : (n == 2 ? a.y : (n == 3 ? a.z : a.w))
     );
   }
+  
+  friend Vec4 Threshold(Arg a, Arg b) {
+    return Vec4(
+      a.x >= b.x ? 1.0f : 0.0f,
+      a.y >= b.y ? 1.0f : 0.0f,
+      a.z >= b.z ? 1.0f : 0.0f,
+      a.w >= b.w ? 1.0f : 0.0f
+    );
+  }
 
-  friend Scr4 HorizontalMin( Arg a )
+  friend Scr4 HorizontalMin(Arg a)
   {
     return Scr4(
       std::min<float>( std::min<float>( a.x, a.y ), std::min<float>( a.z, a.w ) )
@@ -1957,6 +2181,30 @@ public:
   {
     return left.x > right.x;
   }
+  
+  friend Col4 CompareAllEqualTo_M8(Vec4::Arg left, Vec4::Arg right)
+  {
+    unsigned char *lc = (unsigned char *)&left.x;
+    unsigned char *rc = (unsigned char *)&right.x;
+    return Col4(
+      (lc[ 0] == rc[ 0] ? 0x000000FF : 0x00000000) +
+      (lc[ 1] == rc[ 1] ? 0x0000FF00 : 0x00000000) +
+      (lc[ 2] == rc[ 2] ? 0x00FF0000 : 0x00000000) +
+      (lc[ 3] == rc[ 3] ? 0xFF000000 : 0x00000000),
+      (lc[ 4] == rc[ 4] ? 0x000000FF : 0x00000000) +
+      (lc[ 5] == rc[ 5] ? 0x0000FF00 : 0x00000000) +
+      (lc[ 6] == rc[ 6] ? 0x00FF0000 : 0x00000000) +
+      (lc[ 7] == rc[ 7] ? 0xFF000000 : 0x00000000),
+      (lc[ 8] == rc[ 8] ? 0x000000FF : 0x00000000) +
+      (lc[ 9] == rc[ 9] ? 0x0000FF00 : 0x00000000) +
+      (lc[10] == rc[10] ? 0x00FF0000 : 0x00000000) +
+      (lc[11] == rc[11] ? 0xFF000000 : 0x00000000),
+      (lc[12] == rc[12] ? 0x000000FF : 0x00000000) +
+      (lc[13] == rc[13] ? 0x0000FF00 : 0x00000000) +
+      (lc[14] == rc[14] ? 0x00FF0000 : 0x00000000) +
+      (lc[15] == rc[15] ? 0xFF000000 : 0x00000000)
+    );
+  }
 
   Vec4 IsOne( ) const
   {
@@ -1978,6 +2226,30 @@ public:
     *((int *)&m.y) = (y != 1.0f ? ~0 : 0);
     *((int *)&m.z) = (z != 1.0f ? ~0 : 0);
     *((int *)&m.w) = (w != 1.0f ? ~0 : 0);
+
+    return m;
+  }
+  
+  Vec4 IsZero( ) const
+  {
+    Vec4 m;
+
+    *((int *)&m.x) = (x == 0.0f ? ~0 : 0);
+    *((int *)&m.y) = (y == 0.0f ? ~0 : 0);
+    *((int *)&m.z) = (z == 0.0f ? ~0 : 0);
+    *((int *)&m.w) = (w == 0.0f ? ~0 : 0);
+
+    return m;
+  }
+
+  Vec4 IsNotZero( ) const
+  {
+    Vec4 m;
+
+    *((int *)&m.x) = (x != 0.0f ? ~0 : 0);
+    *((int *)&m.y) = (y != 0.0f ? ~0 : 0);
+    *((int *)&m.z) = (z != 0.0f ? ~0 : 0);
+    *((int *)&m.w) = (w != 0.0f ? ~0 : 0);
 
     return m;
   }
@@ -2022,6 +2294,51 @@ public:
     std::swap(w, with.w);
   }
 
+  friend void LoadAligned(Vec4 &a, Vec4 &b, Vec4::Arg c )
+  {
+    a.x = c.x;
+    a.y = c.y;
+
+    b.z = c.z;
+    b.w = c.w;
+  }
+
+  friend void LoadAligned(Vec4 &a, void const *source )
+  {
+    a.x = ((float *)source)[0];
+    a.y = ((float *)source)[1];
+
+    a.z = ((float *)source)[2];
+    a.w = ((float *)source)[3];
+  }
+
+  friend void LoadAligned(Vec4 &a, Vec4 &b, void const *source )
+  {
+    a.x = ((float *)source)[0];
+    a.y = ((float *)source)[1];
+
+    b.z = ((float *)source)[2];
+    b.w = ((float *)source)[3];
+  }
+
+  friend void LoadUnaligned(Vec4 &a, void const *source )
+  {
+    a.x = ((float *)source)[0];
+    a.y = ((float *)source)[1];
+
+    a.z = ((float *)source)[2];
+    a.w = ((float *)source)[3];
+  }
+
+  friend void LoadUnaligned(Vec4 &a, Vec4 &b, void const *source )
+  {
+    a.x = ((float *)source)[0];
+    a.y = ((float *)source)[1];
+
+    b.z = ((float *)source)[2];
+    b.w = ((float *)source)[3];
+  }
+
 #if	!defined(SQUISH_USE_AMP)
 private:
 #endif
@@ -2034,23 +2351,34 @@ private:
 #if	!defined(SQUISH_USE_PRE)
 inline Scr3 LengthSquared(Vec3::Arg v )
 {
-  return Dot( v, v );
+  return Dot(v, v);
 }
 
-inline void LengthSquared(Vec3::Arg v , float *r )
+inline void LengthSquared(Vec3::Arg v, float *r)
 {
-  Dot( v, v, r );
+  Dot(v, v, r);
 }
 
-inline Scr3 LengthSquared(Vec4::Arg v)
+inline Scr4 LengthSquared(Vec4::Arg v)
 {
-  return Dot( v, v );
+  return Dot(v, v);
 }
 
-inline void LengthSquared( Vec4::Arg v , float *r )
+inline void LengthSquared(Vec4::Arg v, float *r)
 {
-  Dot( v, v, r );
+  Dot(v, v, r);
 }
+
+inline int CompareFirstLessThan(Scr4 left, Scr4 right)
+{
+  return left < right;
+}
+
+inline Scr4 Threshold(Scr4 a, Scr4 b)
+{
+  return a >= b ? 1.0f : 0.0f;
+}
+
 #endif
 #endif // ndef SQUISH_USE_COMPUTE
 

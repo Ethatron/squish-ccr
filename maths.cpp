@@ -554,14 +554,17 @@ void ComputePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out)
 void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
 {
   // compute the cubic coefficients
-  float c0 = smatrix[0]*smatrix[3]*smatrix[5]
-  + 2.0f*smatrix[1]*smatrix[2]*smatrix[4]
-  - smatrix[0]*smatrix[4]*smatrix[4]
-  - smatrix[3]*smatrix[2]*smatrix[2]
-  - smatrix[5]*smatrix[1]*smatrix[1];
-  float c1 = smatrix[0]*smatrix[3] + smatrix[0]*smatrix[5] + smatrix[3]*smatrix[5]
-  - smatrix[1]*smatrix[1] - smatrix[2]*smatrix[2] - smatrix[4]*smatrix[4];
-  float c2 = smatrix[0] + smatrix[3] + smatrix[5];
+  float c0 = 
+    smatrix[0] * smatrix[3] * smatrix[5]
+  + smatrix[1] * smatrix[2] * smatrix[4] * 2.0f
+  - smatrix[0] * smatrix[4] * smatrix[4]
+  - smatrix[3] * smatrix[2] * smatrix[2]
+  - smatrix[5] * smatrix[1] * smatrix[1];
+  float c1 = 
+    smatrix[0] * smatrix[3] + smatrix[0] * smatrix[5] + smatrix[3] * smatrix[5]
+  - smatrix[1] * smatrix[1] - smatrix[2] * smatrix[2] - smatrix[4] * smatrix[4];
+  float c2 = 
+    smatrix[0] + smatrix[3] + smatrix[5];
 
   // compute the quadratic coefficients
   float a = c1 - ( 1.0f/3.0f )*c2*c2;
@@ -627,72 +630,72 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
  *         16bit      8bit      8bit
  *
  * [ 0]        0         0         0
- * [ 1]    10855     10855        0
- * [ 2]    13404    792634 37707174
- * [ 3]   147487    571689 30087713
- * [ 4]   301039    341389 18500805
+ * [ 1]    10855     10855         0
+ * [ 2]    13404    792634  37707174
+ * [ 3]   147487    571689  30087713
+ * [ 4]   301039    341389  18500805
  *   =    472785   1716567  86295692
- * [ 5]   335015    194660 10656029
- * [ 6]   297186    112792  6337250
- * [ 7]   238783     68232  3904835
- * [ 8]   184111     42843  2561885
+ * [ 5]   335015    194660  10656029
+ * [ 6]   297186    112792   6337250
+ * [ 7]   238783     68232   3904835
+ * [ 8]   184111     42843   2561885
  *   =   1527880   2135094 109755691
  *
  * [ 9]   140932     28428   1718595
- * [10]   107016     19683  1207264
- * [11]    82490     14083   861012
- * [12]    64155     10192   633528
- * [13]    50592      7341   484082
- * [14]    40557      5815   368445
- * [15]    32226      4433   288080
- * [16]    26161      3554   239111
- * [17]    21705      2867   182662
- * [18]    18087      2360   152417
- * [19]    15273      1889   125116
- * [20]    12975      1575   104299
- * [21]    10988      1343    87505
- * [22]     9442      1135    75360
- * [23]     8345       976    63749
- * [24]     7246       803    56561
- * [25]     6122       734    52284
- * [26]     5474       605    42680
- * [27]     4805       556    36671
- * [28]     4327       464    33079
- * [29]     3875       411    32825
- * [30]     3491       369    25787
- * [31]     3116       334    23838
- * [32]     2816       286    21195
- * [33]     2530       239    19282
- * [34]     2258       261    18245
- * [35]     2064       226    16229
- * [36]     1843       182    14444
- * [37]     1774       189    13264
- * [38]     1599       172    12364
- * [39]     1453       150    10995
- * [40]     1369       129    11121
- * [41]     1197       128     9621
- * [42]     1129       106     8961
- * [43]     1131       113     7806
- * [44]     1036       105     7406
- * [45]      930        93     6796
- * [46]      895        72     6156
- * [47]      814        90     6051
- * [48]      718        86     5969
- * [49]      693        71     5102
- * [50]      710        57     4841
- * [51]      634        67     4426
- * [52]      594        58     4358
- * [53]      576        61     4100
- * [54]      533        54     3510
- * [55]      458        53     3579
- * [56]      451        35     3164
- * [57]      434        46     2948
- * [58]      441        42     2851
- * [59]      355        44     2767
- * [60]      373        52     2713
- * [61]      396        37     2415
- * [62]      327        48     2204
- * [63]     9401       816    47776
+ * [10]   107016     19683   1207264
+ * [11]    82490     14083    861012
+ * [12]    64155     10192    633528
+ * [13]    50592      7341    484082
+ * [14]    40557      5815    368445
+ * [15]    32226      4433    288080
+ * [16]    26161      3554    239111
+ * [17]    21705      2867    182662
+ * [18]    18087      2360    152417
+ * [19]    15273      1889    125116
+ * [20]    12975      1575    104299
+ * [21]    10988      1343     87505
+ * [22]     9442      1135     75360
+ * [23]     8345       976     63749
+ * [24]     7246       803     56561
+ * [25]     6122       734     52284
+ * [26]     5474       605     42680
+ * [27]     4805       556     36671
+ * [28]     4327       464     33079
+ * [29]     3875       411     32825
+ * [30]     3491       369     25787
+ * [31]     3116       334     23838
+ * [32]     2816       286     21195
+ * [33]     2530       239     19282
+ * [34]     2258       261     18245
+ * [35]     2064       226     16229
+ * [36]     1843       182     14444
+ * [37]     1774       189     13264
+ * [38]     1599       172     12364
+ * [39]     1453       150     10995
+ * [40]     1369       129     11121
+ * [41]     1197       128      9621
+ * [42]     1129       106      8961
+ * [43]     1131       113      7806
+ * [44]     1036       105      7406
+ * [45]      930        93      6796
+ * [46]      895        72      6156
+ * [47]      814        90      6051
+ * [48]      718        86      5969
+ * [49]      693        71      5102
+ * [50]      710        57      4841
+ * [51]      634        67      4426
+ * [52]      594        58      4358
+ * [53]      576        61      4100
+ * [54]      533        54      3510
+ * [55]      458        53      3579
+ * [56]      451        35      3164
+ * [57]      434        46      2948
+ * [58]      441        42      2851
+ * [59]      355        44      2767
+ * [60]      373        52      2713
+ * [61]      396        37      2415
+ * [62]      327        48      2204
+ * [63]     9401       816     47776
  *   =    721332    114118   7187609
  */
 #define POWER_ITERATION_COUNT	-1
@@ -715,8 +718,8 @@ void EstimatePrincipleComponent(Sym2x2 const& matrix, Vec4 &out)
 #else
   int i = 0; Vec4 d; do { d = v; i++;
 #endif
-    Scr4 x = HorizontalAdd(v * row0);
-    Scr4 y = HorizontalAdd(v * row1);
+    Scr4 x = Dot(v, row0);
+    Scr4 y = Dot(v, row1);
 
     v  = Vec4(x, y);
     v *= Reciprocal(HorizontalMax(Abs(v)));
@@ -752,9 +755,9 @@ void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec3 &out)
 #else
   int i = 0; Vec3 d; do { d = v; i++;
 #endif
-    Scr3 x = HorizontalAdd(v * row0);
-    Scr3 y = HorizontalAdd(v * row1);
-    Scr3 z = HorizontalAdd(v * row2);
+    Scr3 x = Dot(v, row0);
+    Scr3 y = Dot(v, row1);
+    Scr3 z = Dot(v, row2);
 
     v  = Vec3(x, y, z);
     v *= Reciprocal(HorizontalMax(Abs(v)));
@@ -790,9 +793,9 @@ void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec4 &out)
 #else
   int i = 0; Vec4 d; do { d = v; i++;
 #endif
-    Scr4 x = HorizontalAdd(v * row0);
-    Scr4 y = HorizontalAdd(v * row1);
-    Scr4 z = HorizontalAdd(v * row2);
+    Scr4 x = Dot(v, row0);
+    Scr4 y = Dot(v, row1);
+    Scr4 z = Dot(v, row2);
 
     v  = Vec4(x, y, z);
     v *= Reciprocal(HorizontalMax(Abs(v)));
@@ -831,10 +834,10 @@ void EstimatePrincipleComponent(Sym4x4 const& matrix, Vec4 &out)
 #else
   int i = 0; Vec4 d; do { d = v; i++;
 #endif
-    Scr4 x = HorizontalAdd(v * row0);
-    Scr4 y = HorizontalAdd(v * row1);
-    Scr4 z = HorizontalAdd(v * row2);
-    Scr4 w = HorizontalAdd(v * row3);
+    Scr4 x = Dot(v, row0);
+    Scr4 y = Dot(v, row1);
+    Scr4 z = Dot(v, row2);
+    Scr4 w = Dot(v, row3);
 
     v  = Vec4(x, y, z, w);
     v *= Reciprocal(HorizontalMax(Abs(v)));

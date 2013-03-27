@@ -99,6 +99,42 @@ static doinline int passreg Unpack565(u8 const* packed, u8* colour) ccr_restrict
   return value;
 }
 
+static doinline int passreg FloatTo88(Vec3::Arg colour) ccr_restricted
+{
+  // get the components in the correct range
+  Col3 rgb = FloatToInt<true>(colour * 255.0f);
+
+  int r = rgb.R();
+  int g = rgb.G();
+
+  /* not necessarily true
+  assert(r == FloatToInt(255.0f * colour.X(), 255));
+  assert(g == FloatToInt(255.0f * colour.Y(), 255));
+   */
+
+  // pack into a single value
+  return (r << 8) + g;
+}
+
+static doinline int passreg Unpack88(u8 const* packed, u8* colour) ccr_restricted
+{
+  // build the packed value
+  int value = ((int)packed[0] << 0) + ((int)packed[1] << 8);
+
+  // get the components in the stored range
+  u8 red   = (u8)((value >> 8) & 0xFF);
+  u8 green = (u8)( value       & 0xFF);
+
+  // scale up to 8 bits
+  colour[0] = (red  );
+  colour[1] = (green);
+  colour[2] = 0;
+  colour[3] = 255;
+
+  // return the value
+  return value;
+}
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  */
 #define	COLORA	0
@@ -720,6 +756,42 @@ static doinline void passreg Codebook4(u8 (&codes)[4*4]) ccr_restricted
   codes[12 + 3] = 255;
 }
 
+static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    int c = codes[0 + i];
+    int d = codes[1 + i];
+
+    {
+      codes[2 + i] = (u8)((4*c + 1*d) / 5);
+      codes[3 + i] = (u8)((3*c + 2*d) / 5);
+      codes[4 + i] = (u8)((2*c + 3*d) / 5);
+      codes[5 + i] = (u8)((1*c + 4*d) / 5);
+      codes[6 + i] = (u8)0;
+      codes[7 + i] = (u8)255;
+    }
+  }
+}
+
+static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    int c = codes[0 + i];
+    int d = codes[1 + i];
+
+    {
+      codes[2 + i] = (u8)((6*c + 1*d) / 7);
+      codes[3 + i] = (u8)((5*c + 2*d) / 7);
+      codes[4 + i] = (u8)((4*c + 3*d) / 7);
+      codes[5 + i] = (u8)((3*c + 4*d) / 7);
+      codes[6 + i] = (u8)((2*c + 5*d) / 7);
+      codes[7 + i] = (u8)((1*c + 6*d) / 7);
+    }
+  }
+}
+
 static int passreg CodebookP(u8 *codes, int bits) ccr_restricted
 {
   // generate the midpoints
@@ -759,6 +831,58 @@ static doinline void passreg Codebook4(Vec3 (&codes)[4], Vec3::Arg start, Vec3::
   codes[3] = (1.0f / 3.0f) * start + (2.0f / 3.0f) * end;
 }
 
+static doinline void passreg Codebook6(Vec4 (&codes)[8], Vec4::Arg start, Vec4::Arg end) ccr_restricted
+{
+  codes[0] = start;
+  codes[1] = end;
+  codes[2] = (4.0f / 5.0f) * start + (1.0f / 5.0f) * end;
+  codes[3] = (3.0f / 5.0f) * start + (2.0f / 5.0f) * end;
+  codes[4] = (2.0f / 5.0f) * start + (3.0f / 5.0f) * end;
+  codes[5] = (1.0f / 5.0f) * start + (4.0f / 5.0f) * end;
+  codes[6] = Vec4(0.0f);
+  codes[7] = Vec4(255.0f);
+}
+
+static doinline void passreg Codebook8(Vec4 (&codes)[8], Vec4::Arg start, Vec4::Arg end) ccr_restricted
+{
+  codes[0] = start;
+  codes[1] = end;
+  codes[2] = (6.0f / 7.0f) * start + (1.0f / 7.0f) * end;
+  codes[3] = (5.0f / 7.0f) * start + (2.0f / 7.0f) * end;
+  codes[4] = (4.0f / 7.0f) * start + (3.0f / 7.0f) * end;
+  codes[5] = (3.0f / 7.0f) * start + (4.0f / 7.0f) * end;
+  codes[4] = (2.0f / 7.0f) * start + (5.0f / 7.0f) * end;
+  codes[5] = (1.0f / 7.0f) * start + (6.0f / 7.0f) * end;
+}
+
+// http://embeddedgurus.com/stack-overflow/2009/06/division-of-integers-by-constants/
+// Divide by 5:  (((uint32_t)A * (uint32_t)0xCCCD) >> 16) >> 2
+// Divide by 7: ((((uint32_t)A * (uint32_t)0x2493) >> 16) + A) >> 1) >> 2
+static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg end) ccr_restricted
+{
+  Col8 smul = Col8(0x05, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00);
+  Col8 emul = Col8(0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00);
+  Col8 mask = Col8(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF);
+
+  // range [0,2*5*255]
+  Col8 ipol = (smul * start) + (emul * end);
+
+  codes = ((ipol * 0xCCCD) >> 2) + mask;
+}
+
+static doinline void passreg Codebook8(Col8 &codes, Col8::Arg start, Col8::Arg end) ccr_restricted
+{
+  Col8 smul = Col8(0x07, 0x00, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01);
+  Col8 emul = Col8(0x00, 0x07, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
+
+  // range [0,2*7*255]
+  Col8 ipol = (smul * start) + (emul * end);
+
+  codes = (((ipol * 0x2493) + ipol) >> 3);
+}
+
+/* -----------------------------------------------------------------------------
+ */
 static int passreg CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg end) ccr_restricted
 {
   const int j = (1 << bits) - 1;
@@ -777,8 +901,6 @@ static int passreg CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg e
   return (1 << bits);
 }
 
-/* -----------------------------------------------------------------------------
- */
 static int passreg CodebookP(Col4 *codes, int bits, Col4::Arg start, Col4::Arg end) ccr_restricted
 {
   const int j = (1 << bits) - 1;

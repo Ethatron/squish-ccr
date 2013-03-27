@@ -48,8 +48,8 @@ void PaletteIndexFit::ErrorEndPoints(int set, Vec4 const &metric, vQuantizer &q,
   Vec4 end   = m_qend   = q.SnapToLatticeClamped(values[1], sb, 1 << SBEND);
 
   // error-sum of the two values
-  Vec4 serror = LengthSquared(metric * (values[0] - start)) * freq[0];
-  Vec4 eerror = LengthSquared(metric * (values[1] - end  )) * freq[1];
+  Scr4 serror = LengthSquared(metric * (values[0] - start)) * freq[0];
+  Scr4 eerror = LengthSquared(metric * (values[1] - end  )) * freq[1];
       
   // return combined error
   m_qerror = Vec4(serror + eerror, serror, eerror);
@@ -80,8 +80,8 @@ Scr4 PaletteIndexFit::ErrorInterpolants(Vec4 const &metric, vQuantizer &q, int s
   Vec4 ecode = weights_V4[ib][idxs - closest1] * start + weights_V4[ib][closest1] * end;
 
   // error-sum of the two values
-  Vec4 serror = LengthSquared(metric * (values[0] - scode)) * freq[0];
-  Vec4 eerror = LengthSquared(metric * (values[1] - ecode)) * freq[1];
+  Scr4 serror = LengthSquared(metric * (values[0] - scode)) * freq[0];
+  Scr4 eerror = LengthSquared(metric * (values[1] - ecode)) * freq[1];
       
   // return combined error
   return (serror + eerror);
@@ -98,8 +98,8 @@ Scr4 PaletteIndexFit::ErrorInterpolantsS(Vec4 const &metric, vQuantizer &q, int 
   Vec4 scode = weights_V4[ib][idxs - closest0] * start + weights_V4[ib][closest0] * end;
 
   // error-sum of the two values
-  Vec4 serror = LengthSquared(metric * (values[0] - scode)) * freq[0];
-  Vec4 eerror = m_qerror.SplatZ();
+  Scr4 serror = LengthSquared(metric * (values[0] - scode)) * freq[0];
+  Scr4 eerror = m_qerror.SplatZ();
       
   // return combined error
   return (serror + eerror);
@@ -116,8 +116,8 @@ Scr4 PaletteIndexFit::ErrorInterpolantsE(Vec4 const &metric, vQuantizer &q, int 
   Vec4 ecode = weights_V4[ib][idxs - closest1] * start + weights_V4[ib][closest1] * end;
 
   // error-sum of the two values
-  Vec4 serror = m_qerror.SplatY();
-  Vec4 eerror = LengthSquared(metric * (values[1] - ecode)) * freq[1];
+  Scr4 serror = m_qerror.SplatY();
+  Scr4 eerror = LengthSquared(metric * (values[1] - ecode)) * freq[1];
       
   // return combined error
   return (serror + eerror);

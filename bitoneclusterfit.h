@@ -25,22 +25,22 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_COLOURCLUSTERFIT_H
-#define SQUISH_COLOURCLUSTERFIT_H
+#ifndef SQUISH_BITONECLUSTERFIT_H
+#define SQUISH_BITONECLUSTERFIT_H
 
 #include <squish.h>
 #include "maths.h"
 #include "simd.h"
-#include "colourfit.h"
+#include "bitonefit.h"
 
 namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-class ColourClusterFit : public ColourFit
+class BitoneClusterFit : public BitoneFit
 {
 public:
-  ColourClusterFit(ColourSet const* colours, int flags);
+  BitoneClusterFit(BitoneSet const* bitones, int flags);
 
 public:
   enum {
@@ -60,18 +60,13 @@ public:
 private:
   bool ConstructOrdering(Vec3 const& axis, int iteration);
 
-  void ClusterFit3Constant(void* block);
   void ClusterFit4Constant(void* block);
-
-  void ClusterFit3(void* block);
   void ClusterFit4(void* block);
 
-  virtual void Compress3(void* block);
   virtual void Compress4(void* block);
 
   int  m_iterationCount;
   Vec3 m_principle;
-  Vec4 m_metric;
   Scr4 m_besterror;
   Vec4 m_xsum_wsum;
   Vec4 m_points_weights[16];
@@ -83,50 +78,8 @@ private:
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-struct ClusterFit_CCR : inherit_hlsl ColourFit_CCR
-{
-public_hlsl
-  void AssignSet (tile_barrier barrier, const int thread,
-                  ColourSet_CCRr m_colours, const int metric, const int fit) amp_restricted;
-  void Compress  (tile_barrier barrier, const int thread,
-                  ColourSet_CCRr m_colours, out code64 block, const bool trans,
-                  IndexBlockLUT yArr) amp_restricted;
-
-protected_hlsl
-  void Compress3 (tile_barrier barrier, const int thread,
-                  ColourSet_CCRr m_colours, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
-  void Compress4 (tile_barrier barrier, const int thread,
-                  ColourSet_CCRr m_colours, out code64 block,
-                  IndexBlockLUT yArr) amp_restricted;
-
-private_hlsl
-  bool ConstructOrdering(tile_barrier barrier, const int thread,
-                  ColourSet_CCRr m_colours, float3r axis, int iteration) amp_restricted;
-
-#define	kMaxIterations	8
-
-#if	!defined(SQUISH_USE_COMPUTE)
-  int m_iterationCount;
-  float3 m_principle;
-  ccr8 m_order[kMaxIterations][16];
-  float4 m_points_weights[16];
-  float4 m_xsum_wsum;
-  float4 m_metric4;
-  float m_besterror;
 #endif
-};
 
-#if	defined(SQUISH_USE_COMPUTE)
-  tile_static int m_iterationCount;
-  tile_static float3 m_principle;
-  tile_static ccr8 m_order[kMaxIterations][16];
-  tile_static float4 m_points_weights[16];
-  tile_static float4 m_xsum_wsum;
-  tile_static float4 m_metric4;
-  tile_static float m_besterror;
-#endif
-#endif
 } // namespace squish
 
-#endif // ndef SQUISH_COLOURCLUSTERFIT_H
+#endif // ndef SQUISH_BITONECLUSTERFIT_H

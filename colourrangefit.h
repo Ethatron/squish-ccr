@@ -24,8 +24,8 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_RANGEFIT_H
-#define SQUISH_RANGEFIT_H
+#ifndef SQUISH_COLOURRANGEFIT_H
+#define SQUISH_COLOURRANGEFIT_H
 
 #include <squish.h>
 #include "colourfit.h"
@@ -87,4 +87,4 @@ private_hlsl
 
 } // squish
 
-#endif // ndef SQUISH_RANGEFIT_H
+#endif // ndef SQUISH_COLOURRANGEFIT_H

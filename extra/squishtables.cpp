@@ -1,7 +1,80 @@
 #include <stdio.h>
+#include <assert.h>
 #include <math.h>
 #include <set>
 #include <map>
+
+struct qerror {
+  
+  /* calculate the largest left-aligned multiplier which repeats
+   * values at most "codebits" long:
+   *  codebits = 8 -> 0x01010101 (repeated 4 times)
+   *  codebits = 6 -> 0x04104104 (repeated 5 times)
+   *  codebits = 4 -> 0x11111111 (repeated 8 times)
+   */
+  static unsigned int reconstructor(const int numbits, const int codebits) {
+    if (numbits >= codebits)
+      return (1U << (numbits - codebits)) + reconstructor(numbits - codebits, codebits);
+    return 0U;
+  }
+  
+  /* calculate a reconstruction of value p with "codebits" length
+   * with "precisionbits" length at left-aligned "position":
+   *  position = 16, precision 8: 0b0000000000000000RRRRRRRR00000000
+   *  position = 12, precision 6: 0b00000000000000000000RRRRRR000000
+   *  position =  6, precision 8: 0b00000000000000000000000000RRRRRRrr
+   */
+  template<const int position, const int codebits, const int precisionbits>
+  static unsigned int reconstruct(unsigned int p) {
+    const unsigned int rec = reconstructor(32, codebits);
+    const unsigned int msk = (~0U) << (32 - precisionbits);
+    const unsigned int val = (rec * p) >> (32 - position);
+    const unsigned int cot = (msk    ) >> (32 - position);
+
+    if (cot > ((1U << precisionbits) - 1))
+      return val & cot;
+    return val;
+  }
+  
+  /* shovel the highest possible number off the given error-value
+   * which fits into "codebits" at left-aligned "position",
+   * the value is precisely reconstructed/evaluated as defined by the
+   * block-coding spec.
+   */
+  template<const int position, const int codebits, const int precisionbits>
+  static unsigned int code(unsigned int &e) {
+    assert(codebits      <= 8);
+    assert(precisionbits <= 8);
+    assert(codebits      <= precisionbits);
+
+    // dropbits
+    const int CB =            codebits;
+    const int DB = position - codebits;
+    const int NB = position           ;
+    const int NR = (1 << NB);
+
+    // ...ggggg?........ 14 - 6
+    // ........bbbb?.... 14 - 5 - 5
+    // ............rrrrr 14 - 0
+    // ...gggggbbbbrrrrr
+
+    // top bits
+    assert(e < NR);
+    unsigned int top = (e >> DB);
+
+    // reconstruction
+    unsigned int rec = reconstruct<NB,CB,precisionbits>(  top);
+    // ensure truncation to next lower reconstruction value
+    if (rec > e) rec = reconstruct<NB,CB,precisionbits>(--top);
+
+    // reduce remaining error
+    assert(e >= rec);
+    e -= rec;
+
+    // return raw unreconstructed top value
+    return top;
+  }
+};
 
 // Associated to partition -1, 16 * 0 bit
 static const unsigned int partitionmasks_1[1] =
@@ -414,7 +487,7 @@ int main(int argc, char **argv) {
   }
 #endif
 
-#if 1
+#if 0
   float qLUT[3][9][256];
 
   // checking out the quantizer
@@ -744,4 +817,176 @@ int main(int argc, char **argv) {
   s += os;
   e -= oe;
 #endif
+  
+#if 0
+template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 4>
+struct distributed1x1D {
+
+public:
+  static const int fragments    = 1;
+  static const int size		= sizeof(DataType) * 8;
+  static const int precision    = -(overlap * (fragments - 1)) + payload0;
+
+  /* ...XXXXXXXXXXXXXX	  original number
+   * ............00000?	  bits of fragment 0, with overlap bit
+   * ............00000	  combined number
+   */
+
+};
+  
+template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 8, const int payload1 = 8>
+struct distributed2x1D {
+
+public:
+  static const int fragments    = 2;
+  static const int size		= sizeof(DataType) * 8;
+  static const int precision    = -(overlap * (fragments - 1)) + payload0 + payload1;
+  
+  /* ...XXXXXXXXXXXXXX	  original number
+   * ........1111?....	  bits of fragment 1, with overlap bit
+   * ............00000?	  bits of fragment 0, with overlap bit
+   * ........111100000	  combined number
+   */
+
+};
+  
+template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 5, const int payload1 = 6, const int payload2 = 5>
+struct distributed3x1D {
+
+public:
+  static const int fragments    = 3;
+  static const int size		= sizeof(DataType) * 8;
+  static const int precision    = -(overlap * (fragments - 1)) + payload0 + payload1 + payload2;
+  
+  /* ...XXXXXXXXXXXXXX	  original number
+   * ...22222?........	  bits of fragment 2, with overlap bit
+   * ........1111?....	  bits of fragment 1, with overlap bit
+   * ............00000?	  bits of fragment 0, with overlap bit
+   * ...22222111100000	  combined number
+   */
+
+};
+  
+template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 4, const int payload1 = 4, const int payload2 = 4, const int payload3 = 4>
+struct distributed4x1D {
+
+public:
+  static const int fragments    = 4;
+  static const int size		= sizeof(DataType) * 8;
+  static const int precision    = -(overlap * (fragments - 1)) + payload0 + payload1 + payload2 + payload3;
+  
+  /* ....XXXXXXXXXXXXX	  original number
+   * ....333?.........	  bits of fragment 3, with overlap bit
+   * .......222?......	  bits of fragment 2, with overlap bit
+   * ..........111?...	  bits of fragment 1, with overlap bit
+   * .............0000?	  bits of fragment 0, with overlap bit
+   * ....3332221110000	  combined number
+   */
+  
+private:
+  /* ---------------------------------------------------------------------------
+   */
+  inline void import(const DataType tht) {
+  }
+};
+#endif
+  
+  unsigned int ming = 0xFFFFFFFF, maxg = 0x00000000;
+  unsigned int minb = 0xFFFFFFFF, maxb = 0x00000000;
+  unsigned int minr = 0xFFFFFFFF, maxr = 0x00000000;
+
+#define NB  14
+  for (int i = 0; i < (1 << NB); i++) {
+    // can be 0 or 1, this makes you see
+    int testofs = 0;
+
+    // ...ggggg?........ 14 - 6
+    // ........bbbb?.... 14 - 5 - 5
+    // ............rrrrr 14 - 0
+    // ...gggggbbbbrrrrr
+    int e = i;
+    unsigned int ee, ge, be, re;
+
+    // top 6/5 bit
+    assert(e < (1 << (NB - 0)));
+    int gp = (i >> (NB - 6)) & (~0); gp += testofs;
+    bool gt = false;
+
+    // reconstruction
+//  int gr = (gp * ((1 << 12) + (1 << 6) + (1 << 0))) >> ((3 * 6) - (NB - 0));
+    int gr = ((gp << 2) + (gp >> 4)) << (NB - 8);
+
+    int tt = qerror::reconstruct<NB,6,8>(gp);
+    assert(gr == tt);
+    ee = e; ge = qerror::code<NB,6,8>(ee);
+
+    // ensure truncation to next lower reconstruction value
+    if (gt = gr > e) gp -= 1, 
+//    gr = (gp * ((1 << 12) + (1 << 6) + (1 << 0))) >> ((3 * 6) - (NB - 0));
+      gr = ((gp << 2) + (gp >> 4)) << (NB - 8);
+
+    // error
+    e = e - gr;
+    assert(ee == e);
+    assert(ge == gp);
+    ming = std::min(ming, ee);
+    maxg = std::max(maxg, ee);
+//  fprintf(stderr, "0x%04x - (0x%04x                  ) => 0x%04x\n", i, gr, e);
+
+    // middle 5/4 bit
+    assert(e < (1 << (NB - 5 - 0)));
+    int bp = (e >> (NB - 5 - 5)) & (~0); bp += testofs;
+    bool bt = false;
+
+    // reconstruction
+//  int br = (bp * ((1 << 5) + (1 << 0))) >> ((2 * 5) - (NB - 5));
+    int br = ((bp << 3) + (bp >> 2)) << (NB - 5 - 8);
+
+    int gg = qerror::reconstruct<NB-5,5,8>(bp);
+    assert(br == gg);
+    ee = e; be = qerror::code<NB-5,5,8>(ee);
+
+    // ensure truncation to next lower reconstruction value
+    if (bt = br > e) bp -= 1, 
+//    br = (bp * ((1 << 5) + (1 << 0))) >> ((2 * 5) - (NB - 5));
+      br = ((bp << 3) + (bp >> 2)) << (NB - 5 - 8);
+
+    // error
+    e = e - br;
+    assert(ee == e);
+    assert(be == bp);
+    minb = std::min(minb, ee);
+    maxb = std::max(maxb, ee);
+//  fprintf(stderr, "0x%04x - (0x%04x + 0x%04x          [---]) => 0x%04x\n", i, gr, br, e);
+
+    // bottom 4/5 bit
+    assert(e < (1 << (NB - 5 - 4 - 0)));
+    int rp = (e >> (NB - 5 - 4 - 5)) & (~0); rp += testofs;
+    bool rt = false;
+
+    // reconstruction
+//  int rr = (rp * ((1 << 0))) >> ((1 * 5) - (NB - 4 - 4));
+    int rr = ((rp << 3) + (rp >> 2)) >> 3;
+
+    int uu = qerror::reconstruct<NB-5-4,5,8>(rp);
+    assert(rr == uu);
+    ee = e; re = qerror::code<NB-5-4,5,8>(ee);
+
+    // ensure truncation to next lower reconstruction value
+    if (rt = rr > e) rp -= 1, 
+//    rr = (rp * ((1 << 0))) >> ((1 * 5) - (NB - 5 - 4));
+      rr = ((rp << 3) + (rp >> 2)) >> 3;
+
+    // error
+    e = e - rr;
+    assert(ee == e);
+    assert(re == rp);
+    minr = std::min(minr, ee);
+    maxr = std::max(maxr, ee);
+    fprintf(stderr, "0x%04x - (0x%04x + 0x%04x + 0x%04x [%c%c%c]) => 0x%04x\n", i, gr, br, rr, gt ? 't' : ' ', bt ? 't' : ' ', rt ? 't' : ' ', e);
+  }
+
+  fprintf(stderr, "g [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", ming, maxg, 0x1FF);
+  fprintf(stderr, "b [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minb, maxb, 0x01F);
+  fprintf(stderr, "r [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minr, maxr, 0x000);
 }

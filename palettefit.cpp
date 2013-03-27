@@ -168,6 +168,12 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
   bool perceptual = ((m_flags & kColourMetricPerceptual) != 0);
   bool unit       = ((m_flags & kColourMetricUnit      ) != 0);
 
+  // the weighting of colour against alpha is 1:1, which
+  // is a middle-ground of quality. increasing the alpha-weight
+  // will start showing false colour assignments, decreasing
+  // alpha-weight will start showing flatness of moderately
+  // transparent areas
+
   // sum is 2.0f
   if (unit)
     m_metric[0] = Vec4(0.5000f, 0.5000f, 0.0000f, 1.0000f);
@@ -184,9 +190,9 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
 
   // swap channel-weights
   switch (ix) {
-    case 1: m_metric[0] = Exchange<0, 3>(m_metric[0]); break;
-    case 2: m_metric[0] = Exchange<1, 3>(m_metric[0]); break;
-    case 3: m_metric[0] = Exchange<2, 3>(m_metric[0]); break;
+    case 1: m_metric[0] = Exchange<0,3>(m_metric[0]); break;
+    case 2: m_metric[0] = Exchange<1,3>(m_metric[0]); break;
+    case 3: m_metric[0] = Exchange<2,3>(m_metric[0]); break;
   }
 
   // split metric into two, double sum is 1.0f

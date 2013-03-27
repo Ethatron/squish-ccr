@@ -48,6 +48,21 @@ public:
 
   virtual void Compress(void* block, vQuantizer &q, int mode);
 
+public:
+  enum {
+    kMinIterations = 1,
+    kMaxIterations = 15
+  };
+
+  static int SanitizeFlags(int flags) {
+    if (flags > (kColourClusterFit * kMaxIterations))
+      return (kColourClusterFit * kMaxIterations);
+    if (flags < (kColourClusterFit * kMinIterations))
+      return (kColourClusterFit * kMinIterations);
+
+    return flags;
+  }
+
 private:
 #define CLUSTERINDICES	3
   // separate components, 4/8 colors, 4/8 alphas
@@ -57,7 +72,7 @@ private:
   void CompressC4(void* block, vQuantizer &q, int mode);
 
   bool ConstructOrdering(Vec4 const& axis, int iteration, int set);
-  
+
   Scr4 ClusterSearch4Alpha(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
 
   Scr4 ClusterSearch4Constant(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
@@ -65,11 +80,6 @@ private:
 
   Scr4 ClusterSearch4(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
   Scr4 ClusterSearch8(u8 (&closest)[4][16], int count, int set, Vec4 const &metric, vQuantizer &q, int sb);
-
-  enum {
-    kMinIterations = 1,
-    kMaxIterations = 15
-  };
 
   int  m_iterationCount;
   Vec4 m_principle[4];

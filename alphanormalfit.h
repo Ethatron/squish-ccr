@@ -24,8 +24,8 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_ALPHA_H
-#define SQUISH_ALPHA_H
+#ifndef SQUISH_NORMAL_H
+#define SQUISH_NORMAL_H
 
 #include <squish.h>
 #include <limits.h>
@@ -34,38 +34,17 @@ namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-  void CompressAlphaBtc2(u8  const* rgba, int mask, void* block);
-  void CompressAlphaBtc3(u8  const* rgba, int mask, void* block, int flags);
-  
-  void CompressAlphaBtc2(u16 const* rgba, int mask, void* block);
-  void CompressAlphaBtc3(u16 const* rgba, int mask, void* block, int flags);
+  void CompressNormalsBtc5(u8  const* xyzd, int mask, void* blockx, void* blocky, int flags);
+  void CompressNormalsBtc5(u16 const* xyzd, int mask, void* blockx, void* blocky, int flags);
+  void CompressNormalsBtc5(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags);
 
-  void CompressAlphaBtc2(f23 const* rgba, int mask, void* block);
-  void CompressAlphaBtc3(f23 const* rgba, int mask, void* block, int flags);
-
-  void DecompressAlphaBtc2(u8 * rgba, void const* block);
-  void DecompressAlphaBtc3(u8 * rgba, void const* block);
-  
-  void DecompressAlphaBtc2(u16* rgba, void const* block);
-  void DecompressAlphaBtc3(u16* rgba, void const* block);
-
-  void DecompressAlphaBtc2(f23* rgba, void const* block);
-  void DecompressAlphaBtc3(f23* rgba, void const* block);
+  void DecompressNormalsBtc5(u8 * xyzd, void const* blockx, void const* blocky);
+  void DecompressNormalsBtc5(u16* xyzd, void const* blockx, void const* blocky);
+  void DecompressNormalsBtc5(f23* xyzd, void const* blockx, void const* blocky);
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-  void CompressAlphaBtc2(tile_barrier barrier, const int thread,
-			 pixel16 rgba, int mask, out code64 block,
-			 IndexBlockLUT yArr) amp_restricted;
-  void CompressAlphaBtc3(tile_barrier barrier, const int thread,
-			 pixel16 rgba, int mask, out code64 block,
-			 IndexBlockLUT yArr) amp_restricted;
-
-/*void DecompressAlphaBtc2(tile_barrier barrier, const int thread,
-			   out pixel16 rgba, code64 block) amp_restricted;
-  void DecompressAlphaBtc3(tile_barrier barrier, const int thread,
-			   out pixel16 rgba, code64 block) amp_restricted;*/
 #endif
 
 } // namespace squish

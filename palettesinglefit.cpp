@@ -106,7 +106,7 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
 	case  6: cl = sp_lookup_5u1_4_sb_; break;	//{ 2, 6, 0, 0,  5, 5, 1,  0,  2, 0 },
 	case  7: cl = sp_lookup_7_4; break;		//{ 1, 0, 2, 0,  7, 8, 0,  0,  2, 2 },
 	case  8: cl = sp_lookup_7u1_4_sb_; break;	//{ 2, 6, 0, 0,  7, 0, 1,  0,  2, 0 },
-	default: abort(); break;
+	default: assume(0); break;
       }
 
       assume(ab == 0 || ab == 6 || ab == 8);
@@ -129,13 +129,13 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
       switch (cb) {
 	case  5: cl = sp_lookup_4u1_8_ck_; break;	//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
 	case  7: cl = sp_lookup_6s1_8_sb_; break;	//{ 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
-	default: abort(); break;
+	default: assume(0); break;
       }
 
       assume(ab == 0 || ab == 6);
       switch (ab) {
 	case  6: al = sp_lookup_6_8; break;		//{ 1, 0, 2, 1,  5, 6, 0,  0,  2, 3 },
-	default: al = NULL; break;			//{ 3, 4, 0, 0,  4, 0, 1,  0,  3, 0 }, / { 2, 6, 0, 0,  6, 0, 0,  1,  3, 0 },
+	default: assume(0); break;
       }
 
       PaletteSingleLookup4 const* const lookups[] =
@@ -150,13 +150,13 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
       assume(cb == 8);
       switch (cb) {
 	case  8: cl = sp_lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
-	default: abort(); break;
+	default: assume(0); break;
       }
 
       assume(ab == 8);
       switch (ab) {
 	case  8: al = sp_lookup_7u1_16_sb_; break;	//{ 1, 0, 0, 0,  7, 7, 1,  0,  4, 0 },
-	default: abort(); break;
+	default: assume(0); break;
       }
 
       PaletteSingleLookup8 const* const lookups[] =

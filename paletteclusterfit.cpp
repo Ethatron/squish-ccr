@@ -53,9 +53,6 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
   // set the iteration count
   m_iterationCount = (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
 
-  if (m_iterationCount > kMaxIterations) m_iterationCount = kMaxIterations;
-  if (m_iterationCount < kMinIterations) m_iterationCount = kMinIterations;
-
   // loop over all sets
   for (int s = 0; s < (isets + asets); s++) {
     // cache some values
@@ -1242,7 +1239,7 @@ Scr4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 
   // constants if weights == 1
 
-  Vec4 const two = VEC4_CONST(2.0f);
+  Vec4 const two  = VEC4_CONST(2.0f);
   Vec4 const half = VEC4_CONST(0.5f);
   Vec4 const zero = VEC4_CONST(0.0f);
 
@@ -1320,7 +1317,8 @@ Scr4 PaletteClusterFit::ClusterSearch8Constant(u8 (&closest)[4][16], int count, 
 
     // seventh cluster [n,o) is six seventh along
     Vec4 part6 = (n == 0) ? m_points_weights[set][0] : VEC4_CONST(0.0f);
-         sum16 = (n == 0) ? twonineths * (part1.SplatW() + Vec4(1.0f)) : twonineths * (part1.SplatW());
+         sum16 = (n == 0) ? twonineths * (part1.SplatW() + Vec4(1.0f)) :
+         	            twonineths * (part1.SplatW());
     int omin = (n == 0) ? 1 : n;
     for (int o = omin;;) {
 	  Vec4 sub6  =    sub5 + part6;
@@ -1686,7 +1684,7 @@ void PaletteClusterFit::Compress(void* block, vQuantizer &q, int mode) {
     case 1: /*3*/  CompressS23(block, q, mode); break;
     case 4: /*23*/ CompressS23(block, q, mode); break;
 #endif
-      
+
 #if (CLUSTERINDICES >= 4)
     case 6: /*CompressC4(block, q, mode);*/ break;
 #endif

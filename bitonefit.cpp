@@ -24,40 +24,28 @@
 
    -------------------------------------------------------------------------- */
 
-#ifndef SQUISH_COLOURBLOCK_H
-#define SQUISH_COLOURBLOCK_H
-
-#include <squish.h>
-#include "maths.h"
-
-// pull in structure definitions
-#if	defined(SQUISH_USE_AMP)
-#include "degeneracy_ccr.inl"
-#endif
+#include "bitonefit.h"
+#include "bitoneset.h"
 
 namespace squish {
 
-// -----------------------------------------------------------------------------
+/* *****************************************************************************
+ */
 #if	!defined(SQUISH_USE_PRE)
-  void WriteColourBlock3(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block);
-  void WriteColourBlock4(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block);
-  
-  void DecompressColoursBtc1(u8 * rgba, void const* block, bool isBtc1);
-  void DecompressColoursBtc1(u16* rgba, void const* block, bool isBtc1);
-  void DecompressColoursBtc1(f23* rgba, void const* block, bool isBtc1);
+BitoneFit::BitoneFit( BitoneSet const* bitones, int flags )
+  : m_bitones(bitones), m_flags(flags)
+{
+}
+
+void BitoneFit::Compress( void* block )
+{
+  Compress4(block);
+}
 #endif
 
-// -----------------------------------------------------------------------------
+/* *****************************************************************************
+ */
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-  void WriteColourBlock3(tile_barrier barrier, const int thread,
-			 lineC2 cline, inout index16 indices, out code64 block) amp_restricted;
-  void WriteColourBlock4(tile_barrier barrier, const int thread,
-			 lineC2 cline, inout index16 indices, out code64 block) amp_restricted;
-
-/*void DecompressColourBtc(tile_barrier barrier, const int thread,
-			out pixel16 rgba, bool isBtc1) amp_restricted;*/
 #endif
 
 } // namespace squish
-
-#endif // ndef SQUISH_COLOURBLOCK_H

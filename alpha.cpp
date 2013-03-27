@@ -40,15 +40,16 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
-void CompressAlphaBtc2(u8 const* rgba, int mask, void* block)
+template<typename dtyp>
+void CompressAlphaBtc2(dtyp const* rgba, int mask, void* block, float scale)
 {
   u8* bytes = reinterpret_cast< u8* >(block);
 
-  // quantise and pack the alpha values pairwise
+  // quantize and pack the alpha values pairwise
   for (int i = 0; i < 8; ++i) {
-    // quantise down to 4 bits
-    float alpha1 = (float)rgba[8 * i + 3] * (15.0f / 255.0f);
-    float alpha2 = (float)rgba[8 * i + 7] * (15.0f / 255.0f);
+    // quantize down to 4 bits
+    float alpha1 = (float)rgba[8 * i + 3] * scale;
+    float alpha2 = (float)rgba[8 * i + 7] * scale;
 
     int quant1 = FloatToInt(alpha1, 15);
     int quant2 = FloatToInt(alpha2, 15);
@@ -67,25 +68,46 @@ void CompressAlphaBtc2(u8 const* rgba, int mask, void* block)
   }
 }
 
-void DecompressAlphaBtc2(u8* rgba, void const* block)
+void CompressAlphaBtc2(u8  const* rgba, int mask, void* block) {
+  CompressAlphaBtc2(rgba, mask, block, 15.0f / 255.0f); }
+
+void CompressAlphaBtc2(u16 const* rgba, int mask, void* block) {
+  CompressAlphaBtc2(rgba, mask, block, 15.0f / 65535.0f); }
+
+void CompressAlphaBtc2(f23 const* rgba, int mask, void* block) {
+  CompressAlphaBtc2(rgba, mask, block, 15.0f / 1.0f); }
+
+template<typename dtyp>
+void DecompressAlphaBtc2(dtyp* rgba, void const* block, dtyp scale)
 {
   u8 const* bytes = reinterpret_cast< u8 const* >(block);
 
   // unpack the alpha values pairwise
   for (int i = 0; i < 8; ++i) {
-    // quantise down to 4 bits
+    // quantize down to 4 bits
     u8 quant = bytes[i];
 
     // unpack the values
     u8 lo = quant & 0x0F;
-    u8 hi = quant & 0xF0;
+    u8 hi = quant >> 4;
 
     // convert back up to bytes
-    rgba[8 * i + 3] = (lo << 0) + (lo << 4);
-    rgba[8 * i + 7] = (hi << 0) + (hi >> 4);
+    rgba[8 * i + 3] = (lo * 0x11) * scale;
+    rgba[8 * i + 7] = (hi * 0x11) * scale;
   }
 }
 
+void DecompressAlphaBtc2(u8 * rgba, void const* block) {
+  DecompressAlphaBtc2(rgba, block, (u8 )(255 / 255)); }
+
+void DecompressAlphaBtc2(u16* rgba, void const* block) {
+  DecompressAlphaBtc2(rgba, block, (u16)(65535 / 255)); }
+
+void DecompressAlphaBtc2(f23* rgba, void const* block) {
+  DecompressAlphaBtc2(rgba, block, (f23)(1.0f / 255.0f)); }
+
+/* *****************************************************************************
+ */
 static void FixRange(int& min, int& max, int steps)
 {
   if (max - min < steps)
@@ -94,7 +116,53 @@ static void FixRange(int& min, int& max, int steps)
     min = std::max<int>(0x00, max - steps);
 }
 
-static int FitCodes(u8 const* rgba, int mask, u8 const* codes, u8* indices)
+template<typename dtyp>
+static Scr4 FitCodes(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
+{
+  // fit each alpha value to the codebook
+  Scr4 err = Scr4(0.0f);
+  for (int i = 0; i < 16; ++i) {
+    // check this pixel is valid
+    int bit = 1 << i;
+    if ((mask & bit) == 0) {
+      // use the first code
+      indices[i] = 0;
+      continue;
+    }
+
+    // find the least error and corresponding index
+    // prefer lower indices over higher ones
+    Vec4 value = Vec4(&rgba[4 * i + 3]);
+
+    // for all possible codebook-entries
+    Vec4 dsl = LoVec4(codes) - value; dsl *= dsl;
+    Vec4 dsh = HiVec4(codes) - value; dsh *= dsh;
+    
+    // get best index, binary search
+    int  index = 0;
+    Scr4 least = HorizontalMin(Min(dsl, dsh));
+    int  match = 
+      (CompareEqualTo(least, dsl) << 0) + 
+      (CompareEqualTo(least, dsh) << 4);
+
+    if (!(match & 0xF))
+      index += 4, match >>= 4;
+    if (!(match & 0x3))
+      index += 2, match >>= 2;
+    if (!(match & 0x1))
+      index += 1, match >>= 1;
+
+    // save this index and accumulate the error
+    indices[i] = (u8)index;
+    err += least;
+  }
+
+  // return the total error
+  return Scr4(err);
+}
+
+template<>
+static Scr4 FitCodes<u8>(u8 const* rgba, int mask, Col8 const &codes, u8* indices)
 {
   // fit each alpha value to the codebook
   int err = 0;
@@ -108,115 +176,198 @@ static int FitCodes(u8 const* rgba, int mask, u8 const* codes, u8* indices)
     }
 
     // find the least error and corresponding index
+    // prefer lower indices over higher ones
     int value = rgba[4 * i + 3];
-    int least = INT_MAX;
-    int index = 0;
-    for (int j = 0; j < 8; ++j) {
-      // get the squared error from this code
-      int dist = (int)value - (int)codes[j];
-      dist *= dist;
+    
+    // for all possible codebook-entries
+    Col8 val = Col8(value);
+    Col8 dst = val - codes;
+    
+    // accumulate the error
+    dst *= dst;
+    
+    // get best index, binary search
+    int  index = 0;
+    Col8 least = HorizontalMin(dst);
+    int  match = CompareEqualTo(least, dst);
 
-      // compare with the best so far
-      if (dist < least) {
-	least = dist;
-	index = j;
-      }
-    }
+    if (!(match & 0xFF))
+      index += 4, match >>= 8;
+    if (!(match & 0x0F))
+      index += 2, match >>= 4;
+    if (!(match & 0x03))
+      index += 1, match >>= 2;
 
     // save this index and accumulate the error
     indices[i] = (u8)index;
-    err += least;
+    err += least.Get0();
   }
 
   // return the total error
-  return err;
+  return Scr4(err);
 }
 
+template<typename dtyp>
+static void GetError(dtyp const* rgba, int mask,
+		     Col8 const &codes5, Col8 const &codes7,
+		     Scr4 &error5, Scr4 &error7,
+		     float (&aaaa)[16])
+{
+  // initial values
+  Scr4 err5 = Scr4(0.0f);
+  Scr4 err7 = Scr4(0.0f);
+  for (int v = 0; v < 16; v++) {
+    f23 value = rgba[4 * v + 3];
+
+    // find the closest code
+    Vec4 val = Vec4(value);
+      
+    // create floating point vector
+    aaaa[v] = float(value);
+
+    // for all possible codebook-entries
+    Vec4 d5l = LoVec4(codes5) - val; d5l *= d5l;
+    Vec4 d5h = HiVec4(codes5) - val; d5h *= d5h;
+    Vec4 d7l = LoVec4(codes7) - val; d7l *= d7l;
+    Vec4 d7h = HiVec4(codes7) - val; d7h *= d7h;
+      
+    // accumulate the error
+    err5 += HorizontalMin(Min(d5l, d5h));
+    err7 += HorizontalMin(Min(d7l, d7h));
+  }
+  
+  // return the total error
+  error5 = err5;
+  error7 = err7;
+}
+
+template<>
+static void GetError<u8>(u8 const* rgba, int mask,
+			 Col8 const &codes5, Col8 const &codes7,
+			 Scr4 &error5, Scr4 &error7,
+			 float (&aaaa)[16])
+{
+  // initial values
+  int err5 = 0;
+  int err7 = 0;
+  for (int v = 0; v < 16; v++) {
+    int value = rgba[4 * v + 3];
+
+    // find the closest code
+    Col8 val = Col8(value);
+      
+    // create floating point vector
+    aaaa[v] = float(value);
+
+    // for all possible codebook-entries
+    Col8 d5 = codes5 - val; d5 *= d5;
+    Col8 d7 = codes7 - val; d7 *= d7;
+      
+    // accumulate the error
+    err5 += HorizontalMin(d5).Get0();
+    err7 += HorizontalMin(d7).Get0();
+  }
+  
+  // return the total error
+  error5 = Scr4(err5);
+  error7 = Scr4(err7);
+}
+
+#define FIT_THRESHOLD 1e-5f
+
 template<const int steps>
-static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
-#if	(SQUISH_USE_SIMD > 0) && 0
-  float r = (float)((maxS - minS) >> 1);	// max 127
+static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
+#if	(SQUISH_USE_SIMD > 0)
+  int rng = (maxS - minS) >> 1;	// max 127
 
-  Scr4 errC  = Scr4(errS);
-  Vec4 s     = Vec4(minS);
-  Vec4 e     = Vec4(maxS);
-  Vec4 range = Vec4(r, -r, 0.0f, 0.0f);
+  Scr4 errC = errS;
+  Vec4 s    = Vec4(minS);
+  Vec4 e    = Vec4(maxS);
+  Vec4 r    = Vec4(rng) * Vec4(1.0f, -1.0f, 0.0f, 0.0f);
 
-  while (range > Vec4(0.0f)) {
+  while (r > Vec4(0.0f)) {
     // s + os, s + os, s + os - r, s + os + r
     // e - oe - r, e - oe + r, e - oe, e - oe
-    Vec4 rssmp = s + range;
-    Vec4 rmpee = e + range.Swap();
+    Vec4 cssmp = s + r       ; cssmp = Max(Min(cssmp, Vec4(255.0f)), Vec4(0.0f));
+    Vec4 cmpee = e + r.Swap(); cmpee = Max(Min(cmpee, Vec4(255.0f)), Vec4(0.0f));
+    
+    // for all possible codebook-entries
+    Vec4 cb0, cb1, cb2, cb3,
+	 cb4, cb5, cb6, cb7;
 
-    Vec4 cssmp = Max(Min(rssmp, Vec4(255.0f)), Vec4(0.0f));
-    Vec4 cmpee = Max(Min(rmpee, Vec4(255.0f)), Vec4(0.0f));
+    if (steps == 5) {
+      cb0 =  cssmp                                                   ; //0 = Truncate(cb0);
+      cb1 = (cssmp * Vec4(4.0f / 5.0f)) + (cmpee * Vec4(1.0f / 5.0f)); cb1 = Truncate(cb1);
+      cb2 = (cssmp * Vec4(3.0f / 5.0f)) + (cmpee * Vec4(2.0f / 5.0f)); cb2 = Truncate(cb2);
+      cb3 = (cssmp * Vec4(2.0f / 5.0f)) + (cmpee * Vec4(3.0f / 5.0f)); cb3 = Truncate(cb3);
+      cb4 = (cssmp * Vec4(1.0f / 5.0f)) + (cmpee * Vec4(4.0f / 5.0f)); cb4 = Truncate(cb4);
+      cb5 =                                cmpee                     ; //5 = Truncate(cb5);
+      cb6 = Vec4(0.0f);
+      cb7 = Vec4(255.0f);
+    }
+    else if (steps == 7) {
+      cb0 =  cssmp                                                   ; //0 = Truncate(cb0);
+      cb1 = (cssmp * Vec4(6.0f / 7.0f)) + (cmpee * Vec4(1.0f / 7.0f)); cb1 = Truncate(cb1);
+      cb2 = (cssmp * Vec4(5.0f / 7.0f)) + (cmpee * Vec4(2.0f / 7.0f)); cb2 = Truncate(cb2);
+      cb3 = (cssmp * Vec4(4.0f / 7.0f)) + (cmpee * Vec4(3.0f / 7.0f)); cb3 = Truncate(cb3);
+      cb4 = (cssmp * Vec4(3.0f / 7.0f)) + (cmpee * Vec4(4.0f / 7.0f)); cb4 = Truncate(cb4);
+      cb5 = (cssmp * Vec4(2.0f / 7.0f)) + (cmpee * Vec4(5.0f / 7.0f)); cb5 = Truncate(cb5);
+      cb6 = (cssmp * Vec4(1.0f / 7.0f)) + (cmpee * Vec4(6.0f / 7.0f)); cb6 = Truncate(cb6);
+      cb7 =                                cmpee                     ; //7 = Truncate(cb7);
+    }
 
     Vec4 errors = Vec4(0.0f);
     for (int v = 0; v < 16; v++) {
       // find the closest code
-      Vec4 val = Vec4(rgba[4 * v + 3]);
-      Vec4 dists = Vec4(255.0f * 255.0f);
+      Vec4 val = Vec4(&aaaa[v]);
+      Vec4 dists;
 
-      // for all possible codebook-entries
-      Vec4 _cb0, _cb1, _cb2, _cb3,
-	   _cb4, _cb5, _cb6, _cb7;
+      Vec4 d0 = cb0 - val; d0 = d0 * d0;
+      Vec4 d1 = cb1 - val; d1 = d1 * d1;
+      Vec4 d2 = cb2 - val; d2 = d2 * d2;
+      Vec4 d3 = cb3 - val; d3 = d3 * d3;
+      Vec4 d4 = cb4 - val; d4 = d4 * d4;
+      Vec4 d5 = cb5 - val; d5 = d5 * d5;
+      Vec4 d6 = cb6 - val; d6 = d6 * d6;
+      Vec4 d7 = cb7 - val; d7 = d7 * d7;
 
-      if (steps == 5) {
-	_cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
-	_cb1 = (cssmp * Vec4(4.0f / 5.0f)) + (cmpee * Vec4(1.0f / 5.0f)); _cb1 = Truncate(_cb1);
-	_cb2 = (cssmp * Vec4(3.0f / 5.0f)) + (cmpee * Vec4(2.0f / 5.0f)); _cb2 = Truncate(_cb2);
-	_cb3 = (cssmp * Vec4(2.0f / 5.0f)) + (cmpee * Vec4(3.0f / 5.0f)); _cb3 = Truncate(_cb3);
-	_cb4 = (cssmp * Vec4(1.0f / 5.0f)) + (cmpee * Vec4(4.0f / 5.0f)); _cb4 = Truncate(_cb4);
-	_cb5 =                                cmpee                     ; //b5 = Truncate(_cb5);
-	_cb6 = Vec4(0.0f);
-	_cb7 = Vec4(255.0f);
-      }
-      else if (steps == 7) {
-	_cb0 =  cssmp                                                   ; //b0 = Truncate(_cb0);
-	_cb1 = (cssmp * Vec4(6.0f / 7.0f)) + (cmpee * Vec4(1.0f / 7.0f)); _cb1 = Truncate(_cb1);
-	_cb2 = (cssmp * Vec4(5.0f / 7.0f)) + (cmpee * Vec4(2.0f / 7.0f)); _cb2 = Truncate(_cb2);
-	_cb3 = (cssmp * Vec4(4.0f / 7.0f)) + (cmpee * Vec4(3.0f / 7.0f)); _cb3 = Truncate(_cb3);
-	_cb4 = (cssmp * Vec4(3.0f / 7.0f)) + (cmpee * Vec4(4.0f / 7.0f)); _cb4 = Truncate(_cb4);
-	_cb5 = (cssmp * Vec4(2.0f / 7.0f)) + (cmpee * Vec4(5.0f / 7.0f)); _cb5 = Truncate(_cb5);
-	_cb6 = (cssmp * Vec4(1.0f / 7.0f)) + (cmpee * Vec4(6.0f / 7.0f)); _cb6 = Truncate(_cb6);
-	_cb7 =                                cmpee                     ; //b7 = Truncate(_cb7);
-      }
-      else
-	abort();
-
-      _cb0 = _cb0 - val; dists = Min(dists, _cb0 * _cb0);
-      _cb1 = _cb1 - val; dists = Min(dists, _cb1 * _cb1);
-      _cb2 = _cb2 - val; dists = Min(dists, _cb2 * _cb2);
-      _cb3 = _cb3 - val; dists = Min(dists, _cb3 * _cb3);
-      _cb4 = _cb4 - val; dists = Min(dists, _cb4 * _cb4);
-      _cb5 = _cb5 - val; dists = Min(dists, _cb5 * _cb5);
-      _cb6 = _cb6 - val; dists = Min(dists, _cb6 * _cb6);
-      _cb7 = _cb7 - val; dists = Min(dists, _cb7 * _cb7);
+      // encourage OoO
+      Vec4 da = Min(d0, d1);
+      Vec4 db = Min(d2, d3);
+      Vec4 dc = Min(d4, d5);
+      Vec4 dd = Min(d6, d7);
+      Vec4 de = Min(da, db);
+      Vec4 df = Min(dc, dd);
+      dists   = Min(de, df);
 
       // accumulate the error
       errors = errors + dists;
     }
 
-    Scr4 merr = HorizontalMin(errors);
-    if (!(merr < errC))
-      range = Truncate(range * Vec4(0.5f));
-    else {
-      int value = CompareEqualTo(errors, merr);
+    // check which range has smaller error
+    int value = CompareLessThan(errors, errC);
+      
+#if defined(TRACK_STATISTICS)
+			  gstat.alphacond[steps == 5 ? 0 : 1][0]++;
+    /**/ if (value ==  0) gstat.alphacond[steps == 5 ? 0 : 1][1]++;
+    else if (value & 0x1) gstat.alphacond[steps == 5 ? 0 : 1][2]++;
+    else if (value & 0x2) gstat.alphacond[steps == 5 ? 0 : 1][3]++;
+    else if (value & 0x4) gstat.alphacond[steps == 5 ? 0 : 1][4]++;
+    else /* (value & 8)*/ gstat.alphacond[steps == 5 ? 0 : 1][5]++;
+#endif
 
-      // e -= r;// range up
-      /**/ if (value & 0x8) e = rmpee.SplatW();
-      // s += r;// range dn
-      else if (value & 0x1) s = rssmp.SplatX();
-      // e += r;// range up
-      else if (value & 0x4) e = rmpee.SplatZ();
-      // s -= r;// range dn
-      else if (value & 0x2) s = rssmp.SplatY();
-
-      errC = merr;
-    }
+    /**/ if (value ==  0) { r = Truncate(r * Vec4(0.5f)); continue; }
+    // e -= r;// range up
+    else if (value & 0x8) errC = errors.SplatW(), e = cmpee.SplatW();
+    // s += r;// range dn
+    else if (value & 0x1) errC = errors.SplatX(), s = cssmp.SplatX();
+    // e += r;// range up
+    else if (value & 0x4) errC = errors.SplatZ(), e = cmpee.SplatZ();
+    // s -= r;// range dn
+    else /* (value & 2)*/ errC = errors.SplatY(), s = cssmp.SplatY();
 
     // lossless
-    if (!(errC > Vec4(0.0f)))
+    if (!(errC > Scr4(FIT_THRESHOLD)))
       break;
   }
 
@@ -237,9 +388,9 @@ static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
 #endif
 
   // final match
-  minS = FloatToInt<false>(Max(Min(s, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-  maxS = FloatToInt<false>(Max(Min(e, Vec4(255.0f)), Vec4(0.0f))).GetLong();
-  errS = FloatToInt<false>(errC).GetLong();
+  minS = FloatToInt<false>(s).GetLong();
+  maxS = FloatToInt<false>(e).GetLong();
+  errS = errC;
 
 #if defined(TRACK_STATISTICS)
   /* there is a clear skew towards unweighted clusterfit (all weights == 1)
@@ -266,6 +417,22 @@ static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
     int me = std::max(std::min(e - r, 0xFF), 0x00);  // oe + r
     int ce = std::max(std::min(e    , 0xFF), 0x00);  // oe
     int pe = std::max(std::min(e + r, 0xFF), 0x00);  // oe - r
+    
+    // construct code-books
+    Col8 cb1, cb2, cb3, cb4;
+    
+    if (steps == 5) {
+      Codebook6(codes5, Col8(cs), Col8(me));
+      Codebook6(codes5, Col8(cs), Col8(pe));
+      Codebook6(codes5, Col8(ms), Col8(ce));
+      Codebook6(codes5, Col8(ps), Col8(ce));
+    }
+    else if (steps == 7) {
+      Codebook8(codes5, Col8(cs), Col8(me));
+      Codebook8(codes5, Col8(cs), Col8(pe));
+      Codebook8(codes5, Col8(ms), Col8(ce));
+      Codebook8(codes5, Col8(ps), Col8(ce));
+    }
 
     int error1 = 0;
     int error2 = 0;
@@ -273,48 +440,19 @@ static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
     int error4 = 0;
     for (int v = 0; v < 16; v++) {
       // find the closest code
-      int dist1, dist2,
-	  dist3, dist4;
-
-      dist1 = dist2 =
-      dist3 = dist4 = 0xFFFF;
+      Col8 val = Col8(aaaa[v]);
 
       // for all possible codebook-entries
-      for (int f = 0; f < 8; f++) {
-	int cb1, cb2, cb3, cb4;
-
-	if (steps == 5) {
-	  cb1 = (((5 - f) * cs + f * me) / 5);
-	  cb2 = (((5 - f) * cs + f * pe) / 5);
-	  cb3 = (((5 - f) * ms + f * ce) / 5);
-	  cb4 = (((5 - f) * ps + f * ce) / 5);
-
-	  if (f >= 6) cb1 = cb2 = cb3 = cb4 = 0x00;
-	  if (f >= 7) cb1 = cb2 = cb3 = cb4 = 0xFF;
-	}
-	else if (steps == 7) {
-	  cb1 = (((7 - f) * cs + f * me) / 7);
-	  cb2 = (((7 - f) * cs + f * pe) / 7);
-	  cb3 = (((7 - f) * ms + f * ce) / 7);
-	  cb4 = (((7 - f) * ps + f * ce) / 7);
-	}
-
-	int d1 = cb1 - rgba[4 * v + 3]; d1 *= d1;
-	int d2 = cb2 - rgba[4 * v + 3]; d2 *= d2;
-	int d3 = cb3 - rgba[4 * v + 3]; d3 *= d3;
-	int d4 = cb4 - rgba[4 * v + 3]; d4 *= d4;
-
-	if (dist1 > d1) dist1 = d1;
-	if (dist2 > d2) dist2 = d2;
-	if (dist3 > d3) dist3 = d3;
-	if (dist4 > d4) dist4 = d4;
-      }
-
+      Col8 d1 = cb1 - val; d1 *= d1;
+      Col8 d2 = cb2 - val; d2 *= d2;
+      Col8 d3 = cb3 - val; d3 *= d3;
+      Col8 d4 = cb4 - val; d4 *= d4;
+      
       // accumulate the error
-      error1 += dist1;
-      error2 += dist2;
-      error3 += dist3;
-      error4 += dist4;
+      error1 += HorizontalMin(d1).Get0();
+      error2 += HorizontalMin(d2).Get0();
+      error3 += HorizontalMin(d3).Get0();
+      error4 += HorizontalMin(d4).Get0();
     }
 
     int                merr = error0;
@@ -323,11 +461,11 @@ static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
     if (merr > error2) merr = error2;
     if (merr > error3) merr = error3;
 
-    /**/ if (merr == error0) r >>= 1;	// half range
-    else if (merr == error1) e -= r;	// range up
-    else if (merr == error4) s += r;	// range dn
-    else if (merr == error2) e += r;	// range up
-    else if (merr == error3) s -= r;	// range dn
+    /**/ if (merr == error0) r >>= 1;		// half range
+    else if (merr == error1) e = me;//e -= r;	// range up
+    else if (merr == error4) s = ps;//s += r;	// range dn
+    else if (merr == error2) e = pe;//e += r;	// range up
+    else if (merr == error3) s = ms;//s -= r;	// range dn
 
     // lossless
     error0 = merr;
@@ -352,8 +490,8 @@ static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
 #endif
 
   // final match
-  minS = std::max(s, 0x00);
-  maxS = std::min(e, 0xFF);
+  minS = s;
+  maxS = e;
   errS = error0;
 
 #if defined(TRACK_STATISTICS)
@@ -363,6 +501,9 @@ static int FitError(u8 const* rgba, int &minS, int &maxS, int &errS) {
     gstat.alpha[4] += errS;
 #endif
 #endif
+
+  assert((minS >= 0) && (minS <= 255));
+  assert((maxS >= 0) && (maxS <= 255));
 
   return errS;
 }
@@ -383,12 +524,12 @@ static void WriteAlphaBlock(int alpha0, int alpha1, u8 const* indices, void* blo
     int value = 0;
     for (int j = 0; j < 8; ++j) {
       int index = *src++;
-      value += (index << 3 * j);
+      value += (index << (3 * j));
     }
 
     // store in 3 bytes
     for (int j = 0; j < 3; ++j) {
-      int byte = (value >> 8 * j) & 0xFF;
+      int byte = (value >> (8 * j)) & 0xFF;
       *dest++ = (u8)byte;
     }
 
@@ -400,57 +541,47 @@ static void WriteAlphaBlock(int alpha0, int alpha1, u8 const* indices, void* blo
 static void WriteAlphaBlock5(int alpha0, int alpha1, u8 const* indices, void* block)
 {
   // check the relative values of the endpoints
-  if (alpha0 > alpha1) {
-    // swap the indices
-    u8 swapped[16];
-    for (int i = 0; i < 16; ++i) {
-      u8 index = indices[i];
-      if (index == 0)
-	swapped[i] = 1;
-      else if (index == 1)
-	swapped[i] = 0;
-      else if (index <= 5)
-	swapped[i] = 7 - index;
-      else
-	swapped[i] = index;
-    }
+  assert(alpha0 <= alpha1);
+  
+  if (alpha0 == alpha1) {
+    assert((indices[ 0] % 6) < 2); assert((indices[ 1] % 6) < 2);
+    assert((indices[ 2] % 6) < 2); assert((indices[ 3] % 6) < 2);
+    assert((indices[ 4] % 6) < 2); assert((indices[ 5] % 6) < 2);
+    assert((indices[ 6] % 6) < 2); assert((indices[ 7] % 6) < 2);
+    assert((indices[ 8] % 6) < 2); assert((indices[ 9] % 6) < 2);
+    assert((indices[10] % 6) < 2); assert((indices[11] % 6) < 2);
+    assert((indices[12] % 6) < 2); assert((indices[13] % 6) < 2);
+    assert((indices[14] % 6) < 2); assert((indices[15] % 6) < 2);
+  }
 
-    // write the block
-    WriteAlphaBlock(alpha1, alpha0, swapped, block);
-  }
-  else {
-    // write the block
-    WriteAlphaBlock(alpha0, alpha1, indices, block);
-  }
+  // write the block
+  WriteAlphaBlock(alpha0, alpha1, indices, block);
 }
 
 static void WriteAlphaBlock7(int alpha0, int alpha1, u8 const* indices, void* block)
 {
   // check the relative values of the endpoints
-  if (alpha0 < alpha1) {
-    // swap the indices
-    u8 swapped[16];
-    for (int i = 0; i < 16; ++i) {
-      u8 index = indices[i];
-      if (index == 0)
-	swapped[i] = 1;
-      else if (index == 1)
-	swapped[i] = 0;
-      else
-	swapped[i] = 9 - index;
-    }
+  assert(alpha0 >= alpha1);
+  
+  if (alpha0 == alpha1) {
+    assert(indices[ 0] < 2); assert(indices[ 1] < 2);
+    assert(indices[ 2] < 2); assert(indices[ 3] < 2);
+    assert(indices[ 4] < 2); assert(indices[ 5] < 2);
+    assert(indices[ 6] < 2); assert(indices[ 7] < 2);
+    assert(indices[ 8] < 2); assert(indices[ 9] < 2);
+    assert(indices[10] < 2); assert(indices[11] < 2);
+    assert(indices[12] < 2); assert(indices[13] < 2);
+    assert(indices[14] < 2); assert(indices[15] < 2);
+  }
 
-    // write the block
-    WriteAlphaBlock(alpha1, alpha0, swapped, block);
-  }
-  else {
-    // write the block
-    WriteAlphaBlock(alpha0, alpha1, indices, block);
-  }
+  // write the block
+  WriteAlphaBlock(alpha0, alpha1, indices, block);
 }
 
 void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 {
+  Col8 codes5, codes7;
+
   // get the range for 5-alpha and 7-alpha interpolation
   int min5 = 255, max5 = 0;
   int min7 = 255, max7 = 0;
@@ -463,6 +594,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 
     // incorporate into the min/max
     int value = rgba[4 * i + 3];
+    
     if (value < min7)
       min7 = value;
     if (value > max7)
@@ -476,89 +608,212 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
   // handle the case that no valid range was found
   if (min5 > max5) min5 = max5;
   if (min7 > max7) min7 = max7;
+  
+  // fix the range to be the minimum in each case
+//FixRange(min5, max5, 5);
+//FixRange(min7, max7, 7);
+
+  // construct code-book
+  Codebook6(codes5, Col8(min5), Col8(max5));
+  Codebook8(codes7, Col8(max7), Col8(min7));
 
   // do the iterative tangent search
   if (flags & kAlphaIterativeFit) {
-    // initial values
-    int err5 = 0;
-    int err7 = 0;
-    
-#if defined(TRACK_STATISTICS)
-    for (int v = 0; v < 16; v++) {
-      // find the closest code
-      int dist5, dist7;
-      dist5 = dist7 = 0xFFFF;
+    Scr4 err5, err7; float aaaa[16];
 
-      // for all possible codebook-entries
-      for (int f = 0; f < 8; f++) {
-	int cb5 = (((5 - f) * min5 + f * max5) / 5);
-	int cb7 = (((7 - f) * min7 + f * max7) / 7);
-
-	if (f >= 6) cb5 = 0x00;
-	if (f >= 7) cb5 = 0xFF;
-
-	int d5 = cb5 - rgba[4 * v + 3]; d5 *= d5;
-	int d7 = cb7 - rgba[4 * v + 3]; d7 *= d7;
-
-	if (dist5 > d5) dist5 = d5;
-	if (dist7 > d7) dist7 = d7;
-      }
-
-      // accumulate the error
-      err5 += dist5;
-      err7 += dist7;
-    }
+    GetError(rgba, mask, codes5, codes7, err5, err7, aaaa);
 
     // binary search, tangent-fitting
-    int errM = std::min(err5, err7);
+    Scr4 errM = Min(err5, err7);
 
     // !lossless, !lossless
-    if (errM) errM = FitError<5>(rgba, min5, max5, err5);
-    if (errM) errM = FitError<7>(rgba, min7, max7, err7);
-#else
-    // binary search, tangent-fitting
-    int errM = FitError<5>(rgba, min5, max5, err5);
-    // !lossless
-    if (errM)
-      errM = FitError<7>(rgba, min7, max7, err7);
-#endif
+    if (errM > Scr4(FIT_THRESHOLD)) {
+      // if better, reconstruct code-book
+      errM = FitError<7>(aaaa, min7, max7, err7);
+      Codebook8(codes7, Col8(max7), Col8(min7));
+      
+    if (errM > Scr4(FIT_THRESHOLD)) {
+      // if better, reconstruct code-book
+      errM = FitError<5>(aaaa, min5, max5, err5);
+      Codebook6(codes5, Col8(min5), Col8(max5));
+    
+    }}
   }
-
-  // fix the range to be the minimum in each case
-  FixRange(min5, max5, 5);
-  FixRange(min7, max7, 7);
-
-  // set up the 5-alpha code book
-  u8 codes5[8];
-  codes5[0] = (u8)min5;
-  codes5[1] = (u8)max5;
-  for (int i = 1; i < 5; ++i)
-    codes5[1 + i] = (u8)(((5 - i) * min5 + i * max5) / 5);
-  codes5[6] = 0x00;
-  codes5[7] = 0xFF;
-
-  // set up the 7-alpha code book
-  u8 codes7[8];
-  codes7[0] = (u8)min7;
-  codes7[1] = (u8)max7;
-  for (int i = 1; i < 7; ++i)
-    codes7[1 + i] = (u8)(((7 - i) * min7 + i * max7) / 7);
 
   // fit the data to both code books
   u8 indices5[16];
   u8 indices7[16];
 
-  int err5 = FitCodes(rgba, mask, codes5, indices5);
-  int err7 = FitCodes(rgba, mask, codes7, indices7);
+  Scr4 err5 = FitCodes(rgba, mask, codes5, indices5);
+  Scr4 err7 = FitCodes(rgba, mask, codes7, indices7);
 
-  // save the block with least error
-  if (err5 <= err7)
+  // save the block with least error (prefer 7)
+  if (err7 > err5)
     WriteAlphaBlock5(min5, max5, indices5, block);
   else
-    WriteAlphaBlock7(min7, max7, indices7, block);
+    WriteAlphaBlock7(max7, min7, indices7, block);
 }
 
-void DecompressAlphaBtc3(u8* rgba, void const* block)
+void CompressAlphaBtc3(u16 const* rgba, int mask, void* block, int flags)
+{
+  Col8 codes5, codes7;
+
+  // get the range for 5-alpha and 7-alpha interpolation
+  int min5 = 255, max5 = 0;
+  int min7 = 255, max7 = 0;
+
+  for (int i = 0; i < 16; ++i) {
+    // check this pixel is valid
+    int bit = 1 << i;
+    if ((mask & bit) == 0)
+      continue;
+
+    // incorporate into the min/max
+    int value = rgba[4 * i + 3] >> 8;
+    
+    if (value < min7)
+      min7 = value;
+    if (value > max7)
+      max7 = value;
+    if ((value != 0x00) && (value < min5))
+      min5 = value;
+    if ((value != 0xFF) && (value > max5))
+      max5 = value;
+  }
+
+  // handle the case that no valid range was found
+  if (min5 > max5) min5 = max5;
+  if (min7 > max7) min7 = max7;
+  
+  // fix the range to be the minimum in each case
+//FixRange(min5, max5, 5);
+//FixRange(min7, max7, 7);
+
+  // construct code-book
+  Codebook6(codes5, Col8(min5), Col8(max5));
+  Codebook8(codes7, Col8(max7), Col8(min7));
+
+  // do the iterative tangent search
+  if (flags & kAlphaIterativeFit) {
+    Scr4 err5, err7; float aaaa[16];
+
+    GetError(rgba, mask, codes5, codes7, err5, err7, aaaa);
+
+    // binary search, tangent-fitting
+    Scr4 errM = Min(err5, err7);
+
+    // !lossless, !lossless
+    if (errM > Scr4(FIT_THRESHOLD)) {
+      // if better, reconstruct code-book
+      errM = FitError<7>(aaaa, min7, max7, err7);
+      Codebook8(codes7, Col8(max7), Col8(min7));
+
+    if (errM > Scr4(FIT_THRESHOLD)) {
+      // if better, reconstruct code-book
+      errM = FitError<5>(aaaa, min5, max5, err5);
+      Codebook6(codes5, Col8(min5), Col8(max5));
+    
+    }}
+  }
+
+  // fit the data to both code books
+  u8 indices5[16];
+  u8 indices7[16];
+
+  Scr4 err5 = FitCodes(rgba, mask, codes5, indices5);
+  Scr4 err7 = FitCodes(rgba, mask, codes7, indices7);
+
+  // save the block with least error (prefer 7)
+  if (err7 > err5)
+    WriteAlphaBlock5(min5, max5, indices5, block);
+  else
+    WriteAlphaBlock7(max7, min7, indices7, block);
+}
+
+void CompressAlphaBtc3(f23 const* rgba, int mask, void* block, int flags)
+{
+  Col8 codes5, codes7;
+
+  // get the range for 5-alpha and 7-alpha interpolation
+  int min5 = 255, max5 = 0;
+  int min7 = 255, max7 = 0;
+
+  for (int i = 0; i < 16; ++i) {
+    // check this pixel is valid
+    int bit = 1 << i;
+    if ((mask & bit) == 0)
+      continue;
+
+    // incorporate into the min/max
+    int value = (int)((rgba[4 * i + 3] * 255.0f) + 0.5f);
+    
+    if (value < min7)
+      min7 = value;
+    if (value > max7)
+      max7 = value;
+    if ((value != 0x00) && (value < min5))
+      min5 = value;
+    if ((value != 0xFF) && (value > max5))
+      max5 = value;
+  }
+
+  // handle the case that no valid range was found
+  if (min5 > max5) min5 = max5;
+  if (min7 > max7) min7 = max7;
+  
+  // fix the range to be the minimum in each case
+//FixRange(min5, max5, 5);
+//FixRange(min7, max7, 7);
+
+  // construct code-book
+  Codebook6(codes5, Col8(min5), Col8(max5));
+  Codebook8(codes7, Col8(max7), Col8(min7));
+
+  // do the iterative tangent search
+  if (flags & kAlphaIterativeFit) {
+    Scr4 err5, err7; float aaaa[16];
+
+    GetError(rgba, mask, codes5, codes7, err5, err7, aaaa);
+
+    // binary search, tangent-fitting
+    Scr4 errM = Min(err5, err7);
+
+    // !lossless, !lossless
+    if (errM > Scr4(FIT_THRESHOLD)) {
+      // if better, reconstruct code-book
+      errM = FitError<7>(aaaa, min7, max7, err7);
+      Codebook8(codes7, Col8(max7), Col8(min7));
+
+    if (errM > Scr4(FIT_THRESHOLD)) {
+      // if better, reconstruct code-book
+      errM = FitError<5>(aaaa, min5, max5, err5);
+      Codebook6(codes5, Col8(min5), Col8(max5));
+    
+    }}
+  }
+
+  // fit the data to both code books
+  u8 indices5[16];
+  u8 indices7[16];
+
+  Scr4 err5 = FitCodes(rgba, mask, codes5, indices5);
+  Scr4 err7 = FitCodes(rgba, mask, codes7, indices7);
+
+  // save the block with least error (prefer 7)
+  if (err7 > err5)
+    WriteAlphaBlock5(min5, max5, indices5, block);
+  else
+    WriteAlphaBlock7(max7, min7, indices7, block);
+}
+
+#undef	FIT_THRESHOLD
+
+/* *****************************************************************************
+ */
+static void ReadAlphaBlock(
+  u8 (&codes  )[ 8],
+  u8 (&indices)[16],
+  void const* block)
 {
   // get the two alpha values
   u8 const* bytes = reinterpret_cast< u8 const* >(block);
@@ -566,25 +821,17 @@ void DecompressAlphaBtc3(u8* rgba, void const* block)
   int alpha1 = bytes[1];
 
   // compare the values to build the codebook
-  u8 codes[8];
   codes[0] = (u8)alpha0;
   codes[1] = (u8)alpha1;
-  if (alpha0 <= alpha1) {
-    // use 5-alpha codebook
-    for (int i = 1; i < 5; ++i)
-      codes[1 + i] = (u8)(((5 - i) * alpha0 + i * alpha1) / 5);
 
-    codes[6] = 0x00;
-    codes[7] = 0xFF;
-  }
-  else {
+  if (alpha0 <= alpha1)
+    // use 5-alpha codebook
+    Codebook6(codes);
+  else
     // use 7-alpha codebook
-    for (int i = 1; i < 7; ++i)
-      codes[1 + i] = (u8)(((7 - i) * alpha0 + i * alpha1) / 7);
-  }
+    Codebook8(codes);
 
   // decode the indices
-  u8 indices[16];
   u8 const* src = bytes + 2;
   u8* dest = indices;
   for (int i = 0; i < 2; ++i) {
@@ -601,10 +848,39 @@ void DecompressAlphaBtc3(u8* rgba, void const* block)
       *dest++ = (u8)index;
     }
   }
+}
+
+void DecompressAlphaBtc3(u8* rgba, void const* block)
+{
+  u8 codes[8], indices[16];
+
+  ReadAlphaBlock(codes, indices, block);
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i)
-    rgba[4 * i + 3] = codes[indices[i]];
+    rgba[4 * i + 3] = codes[indices[i]] * (255 / 255);
+}
+
+void DecompressAlphaBtc3(u16* rgba, void const* block)
+{
+  u8 codes[8], indices[16];
+
+  ReadAlphaBlock(codes, indices, block);
+
+  // write out the indexed codebook values
+  for (int i = 0; i < 16; ++i)
+    rgba[4 * i + 3] = codes[indices[i]] * (65535 / 255);
+}
+
+void DecompressAlphaBtc3(f23* rgba, void const* block)
+{
+  u8 codes[8], indices[16];
+
+  ReadAlphaBlock(codes, indices, block);
+
+  // write out the indexed codebook values
+  for (int i = 0; i < 16; ++i)
+    rgba[4 * i + 3] = codes[indices[i]] * (1.0f / 255.0f);
 }
 #endif
 
@@ -914,9 +1190,9 @@ void CompressAlphaBtc2(tile_barrier barrier, const int thread, pixel16 rgba, int
   const int opos = thread << 2;
   const int hilo = thread >> 1;
 
-  // quantise and pack the alpha values quad-wise (AMP: prefer vectorization over parallelism)
+  // quantize and pack the alpha values quad-wise (AMP: prefer vectorization over parallelism)
   threaded_for(qs, 4) {
-    // quantise down to 4 bits
+    // quantize down to 4 bits
     float4 alpha = float4(
       (float)rgba[opos + 0][0],
       (float)rgba[opos + 1][0],

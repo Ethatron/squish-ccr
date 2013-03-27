@@ -183,7 +183,7 @@ void ColourRangeFit::Compress3(void* block)
   Scr3 error = Scr3(0.0f);
   for (int i = 0; i < count; ++i) {
     // find the closest code
-    Scr3 dist = Scr3(FLT_MAX);
+    Scr3 dist;
     Vec3 value = m_metric * values[i];
     int idx = 0;
 
@@ -195,13 +195,12 @@ void ColourRangeFit::Compress3(void* block)
       // encourage OoO
       Scr3 da = Min(d0, d1);
       Scr3 db =    (d2    );
-      dist = Min(da, dist);
-      dist = Min(db, dist);
+      dist    = Min(da, db);
 
       // will cause VS to make them all cmovs
-      if (d0 == dist) { idx = 0; }
-      if (d1 == dist) { idx = 1; }
       if (d2 == dist) { idx = 2; }
+      if (d1 == dist) { idx = 1; }
+      if (d0 == dist) { idx = 0; }
     }
 
     // save the index
@@ -243,7 +242,7 @@ void ColourRangeFit::Compress4(void* block)
   Scr3 error = Scr3(0.0f);
   for (int i = 0; i < count; ++i) {
     // find the closest code
-    Scr3 dist = Scr3(FLT_MAX);
+    Scr3 dist;
     Vec3 value = m_metric * values[i];
     int idx = 0;
 
@@ -256,14 +255,13 @@ void ColourRangeFit::Compress4(void* block)
       // encourage OoO
       Scr3 da = Min(d0, d1);
       Scr3 db = Min(d2, d3);
-      dist = Min(da, dist);
-      dist = Min(db, dist);
+      dist    = Min(da, db);
 
       // will cause VS to make them all cmovs
-      if (d0 == dist) { idx = 0; }
-      if (d1 == dist) { idx = 1; }
-      if (d2 == dist) { idx = 2; }
       if (d3 == dist) { idx = 3; }
+      if (d2 == dist) { idx = 2; }
+      if (d1 == dist) { idx = 1; }
+      if (d0 == dist) { idx = 0; }
     }
 
     // save the index

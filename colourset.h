@@ -35,11 +35,13 @@ namespace squish {
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
 /*! @brief Represents a set of block colours
-*/
+ */
 class ColourSet
 {
 public:
-  ColourSet( u8 const* rgba, int mask, int flags );
+  ColourSet(u8  const* rgba, int mask, int flags);
+  ColourSet(u16 const* rgba, int mask, int flags);
+  ColourSet(f23 const* rgba, int mask, int flags);
 
   bool IsTransparent() const { return m_transparent; }
   bool IsUnweighted() const { return m_unweighted; }
@@ -55,7 +57,7 @@ private:
   int   m_count;
   Vec3  m_points[16];
   float m_weights[16];
-  int   m_remap[16];
+  char  m_remap[16];
 
 #ifdef	FEATURE_EXACT_ERROR
   /* --------------------------------------------------------------------------- */
@@ -63,7 +65,8 @@ public:
   u8 const* GetFrequencies() const {
     return m_frequencies; }
   u8 GetMaxFrequency() const {
-    u8 mx = 1; for (int i = 0; i < m_count; ++i) mx = std::max(mx, m_frequencies[i]); return mx; }
+    u8 mx = 1; for (int i = 0; i < m_count; ++i)
+    mx = std::max(mx, m_frequencies[i]); return mx; }
 
 private:
   u8    m_frequencies[16];

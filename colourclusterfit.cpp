@@ -42,9 +42,6 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   // set the iteration count
   m_iterationCount = (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
 
-  if (m_iterationCount > kMaxIterations) m_iterationCount = kMaxIterations;
-  if (m_iterationCount < kMinIterations) m_iterationCount = kMinIterations;
-
   // initialize the best error
   m_besterror = Scr4(FLT_MAX);
 
@@ -63,7 +60,7 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   bool const unweighted = m_colours->IsUnweighted();
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  
+
   Sym3x3 covariance;
   Vec3 centroid;
 
@@ -282,7 +279,7 @@ void ColourClusterFit::ClusterFit4(void* block)
   u8 bestindices[16];
   int bestiteration = 0;
   int besti = 0, bestj = 0, bestk = 0;
-  
+
   // metric is squared as well
   Vec4 cmetric = CMetric(m_metric);
 
@@ -414,7 +411,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
   a16 u8 bestindices[16];
   int bestiteration = 0;
   int besti = 0, bestj = 0;
-  
+
   // metric is squared as well
   Vec4 cmetric = CMetric(m_metric);
 
@@ -425,7 +422,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
   for (int iterationIndex = 0;;) {
     // cache some values
     Vec4 const xsum_wsum = m_xsum_wsum;
-    
+
     // constants if weights == 1
     Vec4 alphabeta_dltas  = *((Vec4 *)part1delta[count - 1][0]);
     Vec4 *alphabeta_inits = (Vec4 *)part1inits[count - 1][0];
@@ -459,7 +456,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
 
 	Vec4 a = NegativeMultiplySubtract( betax_sum, alphabeta_factor.SplatZ(), alphax_sum * alphabeta_factor.SplatY());
 	Vec4 b = NegativeMultiplySubtract(alphax_sum, alphabeta_factor.SplatZ(),  betax_sum * alphabeta_factor.SplatX());
-	
+
 #if 0
 	// last cluster [j,count) is at the end
 	Vec4 part2 = xsum_wsum - part1 - part0;
@@ -477,7 +474,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
 	Vec4 const _factor = Reciprocal(NegativeMultiplySubtract(_alphabeta_sum, _alphabeta_sum, _alpha2_sum * _beta2_sum));
 	Vec4 const _a = NegativeMultiplySubtract( _betax_sum, _alphabeta_sum, _alphax_sum *  _beta2_sum) * _factor;
 	Vec4 const _b = NegativeMultiplySubtract(_alphax_sum, _alphabeta_sum,  _betax_sum * _alpha2_sum) * _factor;
-	
+
 #define	limit 1e-5
 	  assert(fabs(_alpha2_sum.W() - alpha2_sum.X()) < limit);
 	  assert(fabs(_beta2_sum.W() - beta2_sum.X()) < limit);
@@ -508,7 +505,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
 	    beta2_sum.W(), lastb.W() - beta2_sum.W(),
 	    alphabeta_sum.W(), lastc.W() - alphabeta_sum.W(),
 	    factor.W());
-	  
+
 	  lasta = alpha2_sum;
 	  lastb = beta2_sum;
 	  lastc = alphabeta_sum;
@@ -537,7 +534,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
 	  bestj = j;
 	  bestiteration = iterationIndex;
 	}
-	
+
       alphabeta_val += alphabeta_dltas;
 
       // advance
@@ -600,7 +597,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
   Vec4 const twonineths                                     = VEC4_CONST(2.0f / 9.0f);
 
   assume((count > 0) && (count <= 16));
-  
+
   // check all possible clusters and iterate on the total order
   Vec4 beststart = VEC4_CONST(0.0f);
   Vec4 bestend = VEC4_CONST(0.0f);
@@ -608,7 +605,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
   u8 bestindices[16];
   int bestiteration = 0;
   int besti = 0, bestj = 0, bestk = 0;
-  
+
   // metric is squared as well
   Vec4 cmetric = CMetric(m_metric);
 
@@ -619,7 +616,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
   for (int iterationIndex = 0;;) {
     // cache some values
     Vec4 const xsum_wsum = m_xsum_wsum;
-    
+
     // constants if weights == 1
     Vec4 alphabeta_dltas  = *((Vec4 *)part2delta[0]);
     Vec4 *alphabeta_inits = (Vec4 *)part2inits[0];
@@ -650,7 +647,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
 	  // compute least squares terms directly
 	  Vec4 const alphax_sum =   MultiplyAdd(part2, onethird_onethird2, MultiplyAdd(part1, twothirds_twothirds2, part0));
 	  Vec4 const  betax_sum = /*MultiplyAdd(part1, onethird_onethird2, MultiplyAdd(part2, twothirds_twothirds2, part3))*/ xsum_wsum - alphax_sum;
-	  
+
 	  Vec4 const    alpha2_sum = alphabeta_val.SplatX();
 	  Vec4 const     beta2_sum = alphabeta_val.SplatY();
 	  Vec4 const alphabeta_sum = alphabeta_val.SplatZ();
@@ -682,14 +679,14 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
 	  assert(fabs(_alpha2_sum.W() - alpha2_sum.X()) < limit);
 	  assert(fabs(_beta2_sum.W() - beta2_sum.X()) < limit);
 	  assert(fabs(_alphabeta_sum.W() - alphabeta_sum.X()) < limit);
-	  
+
 	  if (alphabeta_factors[-1] != FLT_MAX) {
 	    assert(fabs(_factor.W() - alphabeta_factors[-1]) < limit);
 
 	    assert(fabs(_alpha2_sum.W()    * _factor.W() - alphabeta_factor.X()) < limit);
 	    assert(fabs(_beta2_sum.W()     * _factor.W() - alphabeta_factor.Y()) < limit);
 	    assert(fabs(_alphabeta_sum.W() * _factor.W() - alphabeta_factor.Z()) < limit);
-	    
+
 	    assert(fabs(a.X() - _a.X()) < limit);
 	    assert(fabs(a.Y() - _a.Y()) < limit);
 	    assert(fabs(a.Z() - _a.Z()) < limit);
@@ -740,7 +737,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
 	    bestj = j;
 	    bestk = k;
 	  }
-	  
+
       alphabeta_val += alphabeta_dltas;
 
       // advance

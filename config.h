@@ -90,6 +90,13 @@
  * end up as one endpoint (dot-product being 0)
  */
 #define	FEATURE_RANGEFIT_PROJECT
+#define	FEATURE_NORMALFIT_PROJECT
+
+/* guarantee that the results of all z-complementing normal-fit algorithms
+ * stay inside the unit-sphere
+ * end-points, if not selected as index, may still go outside the unit-sphere
+ */
+#define	FEATURE_NORMALFIT_UNITGUARANTEE
 
 /* inline the index-fit error-check, makes it use the minimal amount
  * of instructions possible at the cost of more code (~2x)
@@ -133,7 +140,9 @@
 #define	SHAREDBITS_TRIAL_PERMUTE		4
 
 #define	FEATURE_SHAREDBITS_TRIALS		SHAREDBITS_TRIAL_LOWPRC
-
+ 
+/* enable the set-builder to detect straight lines of values
+ */
 #define	FEATURE_TEST_LINES
 
 /* .............................................................................
@@ -185,17 +194,17 @@ namespace squish {
 
 // Set to 1 when building squish to use Altivec instructions.
 #ifndef SQUISH_USE_ALTIVEC
-#define SQUISH_USE_ALTIVEC 0
+#define SQUISH_USE_ALTIVEC  0
 #endif
 
 // Set to 1 or 2 or 3 or 4 when building squish to use SSE or SSE2, SSE3 or SSE4 instructions.
 #ifndef SQUISH_USE_SSE
-#define SQUISH_USE_SSE 0
+#define SQUISH_USE_SSE	    3
 #endif
 
 // Set to 3 or 4 when building squish to use SSSE3 or SSE4A instructions.
 #ifndef SQUISH_USE_XSSE
-#define SQUISH_USE_XSSE 4
+#define SQUISH_USE_XSSE	    4
 #endif
 
 // Internally et SQUISH_USE_SIMD when either Altivec or SSE is available.
