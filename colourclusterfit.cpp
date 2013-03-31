@@ -820,13 +820,13 @@ void ColourClusterFit::Compress4(void* block)
    * C == 4, numset ==
    *  [0]	0x00f796e0 {13856, 5184}
    */
-  if (m_optimizable)
+  if (m_optimizable && (m_colours->GetCount() == 16))
     gstat.has_noweightsets[1][0][0]++;
   else
     gstat.has_noweightsets[1][0][1]++;
 #endif
 
-  if (m_optimizable)
+  if (m_optimizable && (m_colours->GetCount() == 16))
     ClusterFit4Constant(block);
   else
     ClusterFit4        (block);
