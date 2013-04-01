@@ -136,7 +136,7 @@ doinline int PaletteSet::SetMode(int flags) {
     m_mask[1] = 0xFFFF,	// alpha-set
     m_mask[2] = 0;
   if (m_numsets > 1)
-    m_numsets = 1, flags &= ~kExcludeAlphaFromPalette;
+    m_numsets = 1;
 
   return flags;
 }
@@ -248,14 +248,17 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
   bool const seperateAlpha = ((flags & kExcludeAlphaFromPalette) == 0) &&  m_seperatealpha;
   bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0) && !m_mergedalpha;
+  bool const killByAlpha   = ((flags & kWeightColourByAlpha    ) != 0);
 
   // build mapped data
   u8 const mska = !seperateAlpha ? 0xFF : 0x00;
   u8 const clra = !clearAlpha    ? 0x00 : 0xFF;
   u8 const wgta =  weightByAlpha ? 0x00 : 0xFF;
+  u8 const klla =  killByAlpha   ? 0x00 : 0xFF;
 
   u8 rgbx[4 * 16], wgtx = wgta;
   u8 ___a[1 * 16], ___w = 0xFF;
+  int amask = mask;
 
   /* Apply the component rotation, while preserving semantics:
    * - swap: aa, ra, ga, ba
@@ -296,6 +299,14 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
     // check for transparency (after blanking out)
     m_transparent = m_transparent || (temp[3] < 255);
+
+#ifdef FEATURE_IGNORE_ALPHA0
+    // kill colour
+    amask &= ~((rgba[4 * i + 3] | klla) ? 0 : 1 << i);
+#endif
+
+    // temporary, TODO: remove it
+    m_weights[3][i] = Vec4(rgba[4 * i + 3] + 1) * Vec4(1.0f / 256.0f);
   }
   
   // clean initial state
@@ -310,8 +321,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   // required for being able to reorder the contents of "rgbx"
   assert(m_numsets == 1);
   for (int s = 0; s < m_numsets; s++) {
-    // combined exclusion and selection mask
-    int pmask = mask & m_mask[s];
+    // combined alpha, exclusion and selection mask
+    int pmask = amask & m_mask[s];
     
 #ifdef	FEATURE_TEST_LINES
     Col4 m_cnst_s_(~0);
@@ -323,25 +334,16 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
       // check this pixel is enabled
       int bit = 1 << i;
       if ((pmask & bit) == 0) {
-	if ((mask & bit) == 0)
+	if ((amask & bit) == 0)
 	  m_remap[s][i] = -1;
 
 	continue;
       }
-
+      
       // ensure there is always non-zero weight even for zero alpha
-      u8    w = rgba[4 * i + 3] | wgtx;
-      float W = (float)(w + 1) / 256.0f;
-
-#ifdef FEATURE_IGNORE_ALPHA0
-      /* check for blanked out pixels when weighting
-       */
-      if (!w) {
-	m_remap[s][i] = -1;
-	continue;
-      }
-#endif
-
+      u8   w = rgba[4 * i + 3] | wgtx;
+      Vec4 W = Vec4(w + 1) * Vec4(1.0f / 256.0f);
+    
       // loop over previous matches for a match
       u8 *rgbvalue = &rgbx[4 * i + 0];
       for (index = 0; index < m_count[s]; ++index) {
@@ -354,7 +356,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 	  // map to this point and increase the weight
 	  m_remap[s][i] = (char)index;
-	  m_weights[s][index] += Vec4(W);
+	  m_weights[s][index] += W;
 	  m_unweighted[s] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][index] += 1;
@@ -381,7 +383,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  // add the point
 	  m_remap[s][i] = (char)index;
 	  m_points[s][index] = Vec4(r, g, b, a);
-	  m_weights[s][index] = Vec4(W);
+	  m_weights[s][index] = W;
 	  m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][index] = 1;
@@ -412,9 +414,62 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
     for (int i = 0; i < m_count[s]; ++i)
       m_weights[s][i] = Sqrt(m_weights[s][i]);
 #endif
+    
+#ifdef FEATURE_IGNORE_ALPHA0
+    if ((amask != 0xFFFF)) {
+      // non-separate alpha doesn't have rotations
+      if (!m_rotid) {
+	// a) there are no colours in the set, just add one
+	// a) there are no colour-alphas in the set, just add one
+	// b) there don't exist a alpha == 0 in the set, just add one
+	if ((m_count[s] == 0) || (!m_seperatealpha && m_transparent)) {
+	  Vec4 sum = Vec4(0.0f);
+	  int num = 0;
+	  int p = m_count[s];
+
+	  for (int i = 0; i < 16; ++i) {
+	    int bit = 1 << i;
+
+	    /* assign blanked out pixels when weighting
+	     */
+	    if ((amask & bit) == 0) {
+	      m_remap[s][i] = (u8)p;
+
+	      u8 *rgbvalue = &rgbx[4 * i + 0];
+	    
+	      // normalize coordinates to [0,1]
+	      const float *r = &caLUTs[0][rgbvalue[0]];
+	      const float *g = &caLUTs[1][rgbvalue[1]];
+	      const float *b = &caLUTs[2][rgbvalue[2]];
+	      const float *a = &caLUTs[3][rgbvalue[3]];
+
+	      sum += Vec4(r, g, b, a);
+	      num += 1;
+	    }
+	  }
+	  
+	  sum /= num;
+	  if (!m_seperatealpha && m_transparent)
+	    sum = KillW(sum);
+
+	  // add the point
+	  m_count[s]++;
+	  m_points[s][p] = sum;
+	  m_weights[s][p] = Vec4(num);
+	  m_unweighted[s] = m_unweighted[s] && (num == 1);
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][p] = (u8)num;
+#endif
+	}
+      }
+      else {
+	int hmpf = 0; hmpf = 0;
+      }
+    }
+#endif
 
     // TODO: if not m_transparent this all becomes a constant!
-    if (seperateAlpha) {
+    if (m_seperatealpha) {
       // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
       int a = s + m_numsets;
 
@@ -423,27 +478,16 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	// check this pixel is enabled
 	int bit = 1 << i;
 	if ((pmask & bit) == 0) {
-	  if ((mask & bit) == 0)
+	  if ((amask & bit) == 0)
 	    m_remap[a][i] = -1;
 
 	  continue;
 	}
 
         // ensure there is always non-zero weight even for zero alpha
-        u8    w = rgba[4 * i + 3] | ___w;
-        float W = (float)(w + 1) / 256.0f;
-
-#if 0
-#ifdef FEATURE_IGNORE_ALPHA0
-        /* check for blanked out pixels when weighting
-         */
-        if (!w) {
-	  m_remap[a][i] = -1;
-	  continue;
-        }
-#endif
-#endif
-
+        u8   w = rgba[4 * i + 3] | ___w;
+        Vec4 W = Vec4(w + 1) * Vec4(1.0f / 256.0f);
+	
 	// loop over previous matches for a match
 	u8 *avalue = &___a[1 * i + 0];
 	for (index = 0; index < m_count[a]; ++index) {
@@ -456,7 +500,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 	    // map to this point and increase the weight
 	    m_remap[a][i] = (char)index;
-	    m_weights[a][index] += Vec4(W);
+	    m_weights[a][index] += W;
 	    m_unweighted[a] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] += 1;
@@ -480,7 +524,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    // add the point
 	    m_remap[a][i] = (char)index;
 	    m_points[a][index] = Vec4(c);
-	    m_weights[a][index] = Vec4(W);
+	    m_weights[a][index] = W;
 	    m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][index] = 1;
@@ -502,6 +546,55 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
       for (int i = 0; i < m_count[a]; ++i)
 	m_weights[a][i] = Sqrt(m_weights[a][i]);
 #endif
+
+#ifdef FEATURE_IGNORE_ALPHA0
+      if ((amask != 0xFFFF)) {
+	// separate alpha does have rotations
+	{
+	  // a) there are no colours in the set, just add one
+	  if ((m_count[a] == 0) || (!m_rotid && m_transparent)) {
+	    Vec4 sum = Vec4(0.0f);
+	    int num = 0;
+	    int p = m_count[a];
+
+	    for (int i = 0; i < 16; ++i) {
+	      int bit = 1 << i;
+
+	      /* assign blanked out pixels when weighting
+	       */
+	      if ((amask & bit) == 0) {
+		m_remap[a][i] = (u8)p;
+	      
+		u8 *avalue = &___a[1 * i + 0];
+	    
+		// normalize coordinates to [0,1]
+		const float *c = &caLUTs[3][avalue[0]];
+
+		sum += Vec4(c);
+		num += 1;
+	      }
+	    }
+	    
+	    sum /= num;
+	    if (!m_rotid && m_transparent)
+	      sum = Vec4(0.0f);
+
+	    // add the point
+	    m_count[a]++;
+	    m_points[a][p] = sum;
+	    m_weights[a][p] = Vec4(num);
+	    m_unweighted[a] = m_unweighted[a] && (num == 1);
+#ifdef	FEATURE_EXACT_ERROR
+	    m_frequencies[a][p] = (u8)num;
+#endif
+	  }
+	  else {
+	    int hmpf = 0; hmpf = 0; 
+	  }
+	}
+      }
+#endif
+
     }
   }
 
@@ -524,12 +617,10 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
   assert(m_seperatealpha == true);
 
   // check the compression mode for btc
-  bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
-  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha) != 0);
 
   // build mapped data
-  Vec4 const clra = !clearAlpha    ? Vec4(0.0f) : Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-  Vec4 const wgta =  weightByAlpha ? Vec4(0.0f) : Vec4(1.0f);
+  Vec4 const wgta = weightByAlpha ? Vec4(0.0f) : Vec4(1.0f);
   
   Vec4 wgtx = wgta;
   Vec4 ___w = Vec4(1.0f);
@@ -553,6 +644,13 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       // copy "unset"
       int cindex = palette.m_remap[0][i];
       int aindex = palette.m_remap[1][i];
+      
+      /*
+      assert(
+	((cindex == -1) && (aindex == -1)) ||
+	((cindex != -1) && (aindex != -1))
+      );
+       */
 
       if ((cindex == -1) && (aindex == -1)) {
       	m_remap[s][i] = -1;
@@ -566,9 +664,6 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       Vec4 ___a = palette.m_points[1][aindex >= 0 ? aindex : 0];
       Vec4 rgba = TransferW(rgbx, ___a);
       
-      // kill off alpha if necessary
-      rgba = Max(rgba, clra);
-
       switch (m_rotid) {
 	case 1:  rgba = Exchange<0, 3>(rgba); wgtx = Vec4(1.0f); ___w = wgta; break;
 	case 2:  rgba = Exchange<1, 3>(rgba); wgtx = Vec4(1.0f); ___w = wgta; break;
@@ -576,13 +671,11 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 //	default: rgba = Exchange<3, 3>(rgba); wgtx = wgta; ___w = Vec4(1.0f); break;
       }
       
-      // ensure there is always non-zero weight even for zero alpha
-      Vec4 
-	A = ((___a * Vec4(255.0f)) + Vec4(1.0f)) * Vec4(1.0f / (255.0f + 1.0f)),
-        W = Max(A, wgtx).SplatW();
-	
       rgbx = KillW(rgba);
       
+      // ensure there is always non-zero weight even for zero alpha
+      Vec4 W = Max(m_weights[3][i], wgtx);
+	
       // loop over previous matches for a match
       for (index = 0; index < m_count[s]; ++index) {
 	if (CompareAllEqualTo(rgbx, m_points[s][index])) {
@@ -624,9 +717,9 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       }
 
       {
-        W = Max(A, ___w).SplatW();
-	
 	___a = rgba.SplatW();
+
+	Vec4 A = Max(m_weights[3][i], ___w);
 	
 	// loop over previous matches for a match
 	for (index = 0; index < m_count[a]; ++index) {
@@ -679,7 +772,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
   }
 
   // clear if we're suppose to throw alway alpha
-  m_transparent = palette.m_transparent && !clearAlpha;
+  m_transparent = palette.m_transparent;
 }
 
 void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
@@ -687,12 +780,10 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
   assert(m_seperatealpha == false);
 
   // check the compression mode for btc
-  bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
-  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0) && !m_mergedalpha;
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha) != 0) && !m_mergedalpha;
 
   // build mapped data
-  Vec4 const clra = !clearAlpha    ? Vec4(0.0f) : Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-  Vec4 const wgta =  weightByAlpha ? Vec4(0.0f) : Vec4(1.0f);
+  Vec4 const wgta = weightByAlpha ? Vec4(0.0f) : Vec4(1.0f);
 
   // clean initial state
   m_count     [0] = m_count     [1] =
@@ -728,14 +819,9 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 
       // TODO: kill off alpha will kill the weighting
       Vec4 rgba = palette.m_points[0][uindex];
-
+      
       // ensure there is always non-zero weight even for zero alpha
-      Vec4 
-	W = ((rgba * Vec4(255.0f)) + Vec4(1.0f)) * Vec4(1.0f / (255.0f + 1.0f));
-        W = Max(W, wgta).SplatW();
-	
-      // kill off alpha if necessary
-      rgba = Max(rgba, clra);
+      Vec4 W = Max(m_weights[3][i], wgta);
 
       int index;
       if ((index = gotcha[uindex]) >= 0) {
@@ -788,7 +874,31 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
   }
 
   // clear if we're suppose to throw alway alpha
-  m_transparent = palette.m_transparent && !clearAlpha;
+  m_transparent = palette.m_transparent;
+  
+#ifdef FEATURE_IGNORE_ALPHA0
+  // if there are no entries in a set, just
+  // assign the first of another set
+  for (int s = 0; s < m_numsets; s++) {
+    if (!m_count[s]) {
+      for (int t = 0; t < m_numsets; t++) {
+	if (m_count[t] && (t != s)) {
+	  Vec4 pnt = m_points[t][0];
+	  if (m_transparent)
+	    pnt = KillW(pnt);
+
+	  m_count[s] = 1;
+	  m_points[s][0] = pnt;
+	  m_weights[s][0] = Vec4(1.0f);
+	  m_unweighted[s] = false;
+#ifdef	FEATURE_EXACT_ERROR
+	  m_frequencies[s][0] = (u8)1;
+#endif
+	}
+      }
+    }
+  }
+#endif
 }
 
 void PaletteSet::RemapIndices(u8 const* source, u8* target, int set) const
