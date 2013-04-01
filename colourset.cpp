@@ -49,7 +49,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   int wgta = weightByAlpha         ? 0x0000 : 0xFFFF;
 
   a16 u8 rgbx[4 * 16];
-  int abit;
+  int amask;
 
   Col4 m0 = Col4(&rgba[0 * 16]);
   Col4 m1 = Col4(&rgba[1 * 16]);
@@ -67,20 +67,20 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   StoreAligned(m2, &rgbx[2 * 16]);
   StoreAligned(m3, &rgbx[3 * 16]);
   
-  // threshold alpha
-  abit  =   CompareLessThan(al, Col4(0)) | (clra);
+  // threshold alpha (signed char)
+  amask  =   CompareLessThan(al, Col4(0)) | (clra);
 #ifdef FEATURE_IGNORE_ALPHA0
   // threshold color
-  abit &= (~CompareEqualTo(al, Col4(0))) | (wgta);
+  amask &= (~CompareEqualTo(al, Col4(0))) | (wgta);
 #endif
   // combined mask
-  abit &= mask;
+  amask &= mask;
 
   // create the minimal set, O(16*count/2)
   for (int i = 0, index; i < 16; ++i) {
     // check this pixel is enabled
     int bit = 1 << i;
-    if ((abit & bit) == 0) {
+    if ((amask & bit) == 0) {
       m_remap[i] = -1;
 
       /* check for transparent pixels when using dxt1
@@ -147,7 +147,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   }
 
 #ifdef FEATURE_IGNORE_ALPHA0
-  if ((clra == 0xFFFF) && (abit != 0xFFFF)) {
+  if ((clra == 0xFFFF) && (amask != 0xFFFF)) {
     if (!m_count) {
       Vec3 sum = Vec3(0.0f);
 
@@ -156,7 +156,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  m_remap[i] = 0;
 
 	  u8 *rgbvalue = &rgbx[4 * i + 0];
@@ -185,7 +185,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  u8 *rgbvalue = &rgbx[4 * i + 0];
 
 	  // normalize coordinates to [0,1]
@@ -245,7 +245,7 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
   Scr4 wgta = weightByAlpha         ? Scr4(0.0f) : Scr4(1.0f);
   
   Vec3 rgbx[16];
-  int abit = 0;
+  int amask = 0;
 
   for (int i = 0; i < 16; i += 4) {
     Vec4 m0; LoadUnaligned(m0, &rgba[4 * i + 4 * 0]);
@@ -268,17 +268,17 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
     ibit &=  IsNotEqualTo(Max(al, wgta), Vec4(0.0f));
 #endif
 
-    abit += ibit.GetM4() << i;
+    amask += ibit.GetM4() << i;
   }
   
   // combined mask
-  abit &= mask;
+  amask &= mask;
 
   // create the minimal set, O(16*count/2)
   for (int i = 0, index; i < 16; ++i) {
     // check this pixel is enabled
     int bit = 1 << i;
-    if ((abit & bit) == 0) {
+    if ((amask & bit) == 0) {
       m_remap[i] = -1;
 
       /* check for transparent pixels when using dxt1
@@ -347,7 +347,7 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
   }
 
 #ifdef FEATURE_IGNORE_ALPHA0
-  if ((clra == Scr4(1.0f)) && (abit != 0xFFFF)) {
+  if ((clra == Scr4(1.0f)) && (amask != 0xFFFF)) {
     if (!m_count) {
       Vec3 sum = Vec3(0.0f);
 
@@ -356,7 +356,7 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  m_remap[i] = 0;
 
 	  Vec3 *rgbvalue = &rgbx[i];
@@ -387,7 +387,7 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  Vec3 *rgbvalue = &rgbx[i];
 	  
 #if 0
