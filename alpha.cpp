@@ -388,8 +388,8 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
 #endif
 
   // final match
-  minS = FloatToInt<false>(s).GetLong();
-  maxS = FloatToInt<false>(e).GetLong();
+  minS = FloatToInt<false>(Min(s, e)).GetLong();
+  maxS = FloatToInt<false>(Max(s, e)).GetLong();
   errS = errC;
 
 #if defined(TRACK_STATISTICS)
@@ -490,8 +490,8 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
 #endif
 
   // final match
-  minS = s;
-  maxS = e;
+  minS = std::min(s, e;)
+  maxS = std::max(s, e;)
   errS = error0;
 
 #if defined(TRACK_STATISTICS)
@@ -504,6 +504,7 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
 
   assert((minS >= 0) && (minS <= 255));
   assert((maxS >= 0) && (maxS <= 255));
+  assert((minS <= maxS));
 
   return errS;
 }
