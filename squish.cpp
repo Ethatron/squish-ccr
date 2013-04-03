@@ -413,7 +413,7 @@ void CompressPaletteBtc7(dtyp const* rgba, int mask, void* block, int flags)
       if (degree < (kColourClusterFit * 15))
 	sb = eb = bestbit;
       if (degree < (kColourClusterFit * 14))
-	sb = eb = bestbit, sx = ex = bestswp;
+	sx = ex = bestswp;
 
       // search for the best swap
       for (int x = sx; x <= ex; x++) {
