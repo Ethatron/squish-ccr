@@ -102,10 +102,23 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   Vec4 wmask;
 
   switch (m_channel[set]) {
-    case 0: wmask = Vec4(true, false, false, false); break;
-    case 1: wmask = Vec4(false, true, false, false); break;
-    case 2: wmask = Vec4(false, false, true, false); break;
-    case 3: wmask = Vec4(false, false, false, true); break;
+    // select the only non-constant channel
+    case  0: wmask = Vec4(true, false, false, false); break;
+    case  1: wmask = Vec4(false, true, false, false); break;
+    case  2: wmask = Vec4(false, false, true, false); break;
+    case  3: wmask = Vec4(false, false, false, true); break;
+    // select all grey non-constant channels
+    case  4: wmask = Vec4(false, true , true , true); break;
+    case  5: wmask = Vec4(true , false, true , true); break;
+    case  6: wmask = Vec4(true , true , false, true); break;
+    case  7: wmask = Vec4(true , true , true, false); break;
+    // all channels were the same
+    case  8: wmask = Vec4(true , true , true , true); break;
+    // select all grey non-constant channels
+    case  9: wmask = Vec4(false, false, true , true); break;
+    case 10: wmask = Vec4(true , false, false, true); break;
+    case 11: wmask = Vec4(true , true, false, false); break;
+    case 12: wmask = Vec4(false, true , true, false); break;
   }
 
   if (~sb) wdelta *= Vec4(2.0f);
@@ -115,21 +128,24 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   // compensates a bit the rounding error of the end-points
   cstart = Max(cstart - wdelta, Vec4(0.0f));
   cend   = Min(cend   + wdelta, Vec4(1.0f));
-
+  
   // create a codebook
   Vec4 codes[1 << 4];
 
   Scr4 besterror = Scr4(FLT_MAX);
-  Vec4 beststart = cstart;
-  Vec4 bestend = cend;
+  Vec4 beststart = q.SnapToLatticeClamped(cstart, sb, 1 << SBSTART);
+  Vec4 bestend   = q.SnapToLatticeClamped(cend  , sb, 1 << SBEND  );
 
   // Brute force approach, try all the possible endpoints with g0 > g1.
   wend = cstart + wdelta;
   while (!CompareAnyGreaterThan(wend, cend)) {
     wstart = cstart;
     while (!CompareAnyGreaterThan(wstart, wend)) {
+      Vec4 vstart = q.SnapToLatticeClamped(wstart, sb, 1 << SBSTART);
+      Vec4 vend   = q.SnapToLatticeClamped(wend  , sb, 1 << SBEND  );
+
       // resolve "metric * (value - code)" to "metric * value - metric * code"
-      int ccs = CodebookP(codes, ib, metric * wstart, metric * wend);
+      int ccs = CodebookP(codes, ib, metric * vstart, metric * vend);
 
       Scr4 error = Scr4(0.0f);
       for (int i = 0; i < count; ++i) {
@@ -155,8 +171,8 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
 
       if (besterror > error) {
 	besterror = error;
-	beststart = wstart;
-	bestend   = wend;
+	beststart = vstart;
+	bestend   = vend;
       }
 
       wstart += wdelta;
@@ -171,7 +187,7 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   
   // resolve "metric * (value - code)" to "metric * value - metric * code"
   int ccs = CodebookP(codes, ib, metric * beststart, metric * bestend);
-
+  
   for (int i = 0; i < count; ++i) {
     // find the closest code
     Scr4 dist = Scr4(FLT_MAX);
@@ -200,7 +216,7 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
     // save the index
     closest[i] = (u8)idx;
   }
-
+  
   return besterror;
 }
 #endif
