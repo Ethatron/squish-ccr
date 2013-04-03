@@ -121,6 +121,15 @@ public:
       if (!(m_cnst[idx] & 0xF0FF)) return 2;
       if (!(m_cnst[idx] & 0xFF0F)) return 1;
       if (!(m_cnst[idx] & 0xFFF0)) return 0;
+    } {                            if (!(m_grey[idx] & 0x0FFF)) return 8;
+      if (!(m_cnst[idx] & 0xF000)) if (!(m_grey[idx] & 0x00FF)) return 7;
+      if (!(m_cnst[idx] & 0x0F00)) if (!(m_grey[idx] & 0xF00F)) return 6;
+      if (!(m_cnst[idx] & 0x00F0)) if (!(m_grey[idx] & 0xFF00)) return 5;
+      if (!(m_cnst[idx] & 0x000F)) if (!(m_grey[idx] & 0x0FF0)) return 4;
+      if (!(m_cnst[idx] & 0xF00F)) if (!(m_grey[idx] & 0x00F0)) return 12;
+      if (!(m_cnst[idx] & 0xFF00)) if (!(m_grey[idx] & 0x000F)) return 11;
+      if (!(m_cnst[idx] & 0x0FF0)) if (!(m_grey[idx] & 0xF000)) return 10;
+      if (!(m_cnst[idx] & 0x00FF)) if (!(m_grey[idx] & 0x0F00)) return 9;
     }
     
     return -1;

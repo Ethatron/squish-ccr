@@ -2996,6 +2996,11 @@ public:
 		return (value & 0xF) == 0xF;
 	}
 
+	friend Col4 CompareAllEqualTo_M4( Vec4::Arg left, Vec4::Arg right )
+	{
+		return Col4( _mm_cmpeq_epi32( _mm_castps_si128 ( left.m_v ), _mm_castps_si128 ( right.m_v ) ) );
+	}
+	
 	friend Col4 CompareAllEqualTo_M8( Vec4::Arg left, Vec4::Arg right )
 	{
 		return Col4( _mm_cmpeq_epi8( _mm_castps_si128 ( left.m_v ), _mm_castps_si128 ( right.m_v ) ) );

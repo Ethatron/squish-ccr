@@ -394,8 +394,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 #ifdef	FEATURE_TEST_LINES
 	  // if -1, all bytes are identical, checksum to check which bytes flip
-	  m_cnst_s_ &= CompareAllEqualTo_M8(m_points[s][index], m_points[s][0]);
-	  m_grey_s_ &= CompareAllEqualTo_M8(m_points[s][index], RotateLeft<1>(m_points[s][index]));
+	  m_cnst_s_ &= CompareAllEqualTo_M4(m_points[s][index], m_points[s][0]);
+	  m_grey_s_ &= CompareAllEqualTo_M4(m_points[s][index], RotateLeft<1>(m_points[s][index]));
 
 //	  m_cnst[s] |= (*((int *)rgbx    ) ^ (*((int *)rgbvalue)) >> 0);
 //	  m_grey[s] |= (*((int *)rgbvalue) ^ (*((int *)rgbvalue)) >> 8);
@@ -403,17 +403,6 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	}
       }
     }
-    
-#ifdef	FEATURE_TEST_LINES
-    m_cnst[s] = ~m_cnst_s_.GetM8();
-    m_grey[s] = ~m_grey_s_.GetM8();
-#endif
-
-#ifdef	FEATURE_WEIGHTS_ROOTED
-    // square root the weights
-    for (int i = 0; i < m_count[s]; ++i)
-      m_weights[s][i] = Sqrt(m_weights[s][i]);
-#endif
     
 #ifdef FEATURE_IGNORE_ALPHA0
     if ((amask != 0xFFFF)) {
@@ -455,10 +444,16 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  // add the point
 	  m_count[s]++;
 	  m_points[s][p] = sum;
-	  m_weights[s][p] = Vec4(num);
+	  m_weights[s][p] = Vec4(num * (wgtx + 1)) * Vec4(1.0f / 256.0f);
 	  m_unweighted[s] = m_unweighted[s] && (num == 1);
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][p] = (u8)num;
+#endif
+
+#ifdef	FEATURE_TEST_LINES
+	  // if -1, all bytes are identical, checksum to check which bytes flip
+	  m_cnst_s_ &= CompareAllEqualTo_M4(sum, m_points[s][0]);
+	  m_grey_s_ &= CompareAllEqualTo_M4(sum, RotateLeft<1>(sum));
 #endif
 	}
       }
@@ -467,7 +462,18 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
       }
     }
 #endif
+    
+#ifdef	FEATURE_TEST_LINES
+    m_cnst[s] = ~m_cnst_s_.GetM8();
+    m_grey[s] = ~m_grey_s_.GetM8();
+#endif
 
+#ifdef	FEATURE_WEIGHTS_ROOTED
+    // square root the weights
+    for (int i = 0; i < m_count[s]; ++i)
+      m_weights[s][i] = Sqrt(m_weights[s][i]);
+#endif
+    
     // TODO: if not m_transparent this all becomes a constant!
     if (m_seperatealpha) {
       // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
@@ -536,17 +542,6 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	}
       }
       
-#ifdef	FEATURE_TEST_LINES
-      m_cnst[a] = 0;
-      m_grey[a] = 0;
-#endif
-
-#ifdef FEATURE_WEIGHTS_ROOTED
-      // square root the weights
-      for (int i = 0; i < m_count[a]; ++i)
-	m_weights[a][i] = Sqrt(m_weights[a][i]);
-#endif
-
 #ifdef FEATURE_IGNORE_ALPHA0
       if ((amask != 0xFFFF)) {
 	// separate alpha does have rotations
@@ -582,7 +577,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    // add the point
 	    m_count[a]++;
 	    m_points[a][p] = sum;
-	    m_weights[a][p] = Vec4(num);
+	    m_weights[a][p] = Vec4(num * (___w + 1)) * Vec4(1.0f / 256.0f);
 	    m_unweighted[a] = m_unweighted[a] && (num == 1);
 #ifdef	FEATURE_EXACT_ERROR
 	    m_frequencies[a][p] = (u8)num;
@@ -594,7 +589,17 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	}
       }
 #endif
+      
+#ifdef	FEATURE_TEST_LINES
+      m_cnst[a] = 0;
+      m_grey[a] = 0;
+#endif
 
+#ifdef FEATURE_WEIGHTS_ROOTED
+      // square root the weights
+      for (int i = 0; i < m_count[a]; ++i)
+	m_weights[a][i] = Sqrt(m_weights[a][i]);
+#endif
     }
   }
 
@@ -670,7 +675,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	case 3:  rgba = Exchange<2, 3>(rgba); wgtx = Vec4(1.0f); ___w = wgta; break;
 //	default: rgba = Exchange<3, 3>(rgba); wgtx = wgta; ___w = Vec4(1.0f); break;
       }
-      
+
       rgbx = KillW(rgba);
       
       // ensure there is always non-zero weight even for zero alpha
@@ -710,12 +715,13 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 
 #ifdef	FEATURE_TEST_LINES
 	  // if -1, all bytes are identical, checksum to check which bytes flip
-	  m_cnst_s_ &= CompareAllEqualTo_M8(rgbx, m_points[s][0]);
-	  m_grey_s_ &= CompareAllEqualTo_M8(rgbx, RotateLeft<1>(rgbx));
+	  m_cnst_s_ &= CompareAllEqualTo_M4(rgbx, m_points[s][0]);
+	  m_grey_s_ &= CompareAllEqualTo_M4(rgbx, RotateLeft<1>(rgbx));
 #endif
 	}
       }
-
+      
+      // TODO: if alpha==0 don't add this colour
       {
 	___a = rgba.SplatW();
 
@@ -853,8 +859,8 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 
 #ifdef	FEATURE_TEST_LINES
 	// if -1, all bytes are identical, checksum to check which bytes flip
-	m_cnst_s_ &= CompareAllEqualTo_M8(rgba, m_points[s][0]);
-	m_grey_s_ &= CompareAllEqualTo_M8(rgba, RotateLeft<1>(rgba));
+	m_cnst_s_ &= CompareAllEqualTo_M4(rgba, m_points[s][0]);
+	m_grey_s_ &= CompareAllEqualTo_M4(rgba, RotateLeft<1>(rgba));
 #endif
       }
     }
@@ -893,6 +899,12 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 	  m_unweighted[s] = false;
 #ifdef	FEATURE_EXACT_ERROR
 	  m_frequencies[s][0] = (u8)1;
+#endif
+
+#ifdef	FEATURE_TEST_LINES
+	  // if -1, all bytes are identical, checksum to check which bytes flip
+	  m_cnst[s] = 0;
+	  m_grey[s] = 0;
 #endif
 	}
       }
