@@ -40,7 +40,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
 
   // check the compression mode for dxt1
-  bool const isBtc1        = ((flags & kBtc1                   ) != 0);
+  bool const isBtc1        = ((flags & kBtcp                   ) == kBtc1);
   bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
   bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
 
@@ -236,7 +236,7 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
 //const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
 
   // check the compression mode for dxt1
-  bool const isBtc1        = ((flags & kBtc1                   ) != 0);
+  bool const isBtc1        = ((flags & kBtcp                   ) == kBtc1);
   bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
   bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
 

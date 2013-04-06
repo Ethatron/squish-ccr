@@ -46,8 +46,8 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   m_besterror = Scr4(FLT_MAX);
 
   // initialize the metric
-  bool perceptual = ((m_flags & kColourMetricPerceptual) != 0);
-  bool unit       = ((m_flags & kColourMetricUnit      ) != 0);
+  const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
+  const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
 
   if (unit)
     m_metric = Vec4(0.5000f, 0.5000f, 0.0000f, 0.0f);
@@ -74,7 +74,7 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   GetPrincipleComponent(covariance, m_principle);
 
   // we have tables for this
-  m_optimizable = unweighted && ((count == 16) || (flags & kBtc1));
+  m_optimizable = unweighted && ((count == 16) || ((flags & kBtcp) == kBtc1));
 }
 
 bool ColourClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)

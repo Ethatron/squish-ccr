@@ -44,26 +44,35 @@ namespace squish {
 enum
 {
 	//! Use DXT1/BC1 compression.
-	kBtc1 = ( 1 << 0 ),
+	kBtc1 = (  1 << 0 ),
 	//! Use DXT3/BC2 compression.
-	kBtc2 = ( 1 << 1 ),
+	kBtc2 = (  2 << 0 ),
 	//! Use DXT5/BC3 compression.
-	kBtc3 = ( 1 << 2 ),
+	kBtc3 = (  3 << 0 ),
 	//! Use ATI1/BC4 compression.
-	kBtc4 = ( 1 << 3 ),
+	kBtc4 = (  4 << 0 ),
 	//! Use ATI2/BC5 compression.
-	kBtc5 = ( 1 << 4 ),
+	kBtc5 = (  5 << 0 ),
 	//! Use BC6H compression.
-	kBtc6 = ( 1 << 5 ),
+	kBtc6 = (  6 << 0 ),
 	//! Use BC7 compression.
-	kBtc7 = ( 1 << 6 ),
+	kBtc7 = (  7 << 0 ),
+	//! Use CTX1 compression.
+	kCtx1 = (  8 << 0 ),
+	//! Use a compression
+	kBtcp = ( 15 << 0 ),
+	
+	//! Compress signed values/points
+	kSigned = ( 1 << 7 ),
 
-	//! Use a uniform metric for colour error.
-	kColourMetricUniform = ( 1 << 7 ),
 	//! Use a perceptual metric for colour error (the default).
 	kColourMetricPerceptual = ( 1 << 8 ),
+	//! Use a uniform metric for colour error.
+	kColourMetricUniform = ( 2 << 8 ),
 	//! Use a unit metric for colour error.
-	kColourMetricUnit = ( 1 << 9 ),
+	kColourMetricUnit = ( 3 << 8 ),
+	//! Use a metric
+	kColourMetrics = ( 3 << 8 ),
 
 	//! Weight the colour by alpha during cluster fit (disabled by default).
 	kWeightColourByAlpha = ( 1 << 10 ),
@@ -82,7 +91,7 @@ enum
 	kNormalIterativeFit = ( 1 << 15 ),
 
 	//! Use a slow but high quality colour compressor (the default).
-	kColourClusterFit = ( 1 << 16 ),
+	kColourClusterFit           = (  1 << 16 ),
 	//! Use a very slow but very high quality colour compressor.
 	kColourIterativeClusterFit  = (  8 << 16 ),
 	//! Specify the number of iterations explicitly. You can go until 15.

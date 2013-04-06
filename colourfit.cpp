@@ -39,7 +39,7 @@ ColourFit::ColourFit( ColourSet const* colours, int flags )
 
 void ColourFit::Compress( void* block )
 {
-  bool isBtc1 = ((m_flags & kBtc1) != 0);
+  bool isBtc1 = ((m_flags & kBtcp) == kBtc1);
   if (isBtc1) {
     Compress3(block);
     if (!m_colours->IsTransparent())

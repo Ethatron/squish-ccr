@@ -295,7 +295,7 @@ static void Compress( std::string const& sourceFileName, std::string const& targ
 	}
 
 	// create the target data
-	int bytesPerBlock = ( ( flags & kBtc1 ) != 0 ) ? 8 : 16;
+	int bytesPerBlock = ( ( flags & kBtcp ) == kBtc1 ) ? 8 : 16;
 	int targetDataSize = bytesPerBlock*width*height/16;
 	Mem targetData( targetDataSize );
 
@@ -380,7 +380,7 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 	fread( &height, sizeof( int ), 1, sourceFile.Get() );
 
 	// work out the data size
-	int bytesPerBlock = ( ( flags & kBtc1 ) != 0 ) ? 8 : 16;
+	int bytesPerBlock = ( ( flags & kBtcp ) == kBtc1 ) ? 8 : 16;
 	int sourceDataSize = bytesPerBlock*width*height/16;
 	Mem sourceData( sourceDataSize );
 

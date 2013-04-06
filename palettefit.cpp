@@ -165,8 +165,8 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
   int const ix = m_palette->GetRotation();
 
   // initialize the metric
-  bool perceptual = ((m_flags & kColourMetricPerceptual) != 0);
-  bool unit       = ((m_flags & kColourMetricUnit      ) != 0);
+  const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
+  const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
 
   // the weighting of colour against alpha is 1:1, which
   // is a middle-ground of quality. increasing the alpha-weight

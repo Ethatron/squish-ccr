@@ -41,8 +41,8 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
 
   // initialize the metric
-  bool perceptual = ((m_flags & kColourMetricPerceptual) != 0);
-  bool unit       = ((m_flags & kColourMetricUnit      ) != 0);
+  const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
+  const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
 
   if (unit)
     m_metric = Vec3(0.5000f, 0.5000f, 0.0000f);

@@ -363,11 +363,11 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
   bool alpha = sourceImage.IsAlpha();
 
   /* kill alpha-channel */
-  if (!alpha && ((flags & kBtc1) || (flags & kBtc2) || (flags & kBtc3) || (flags & kBtc7)))
+  if (!alpha && (((flags & kBtcp) <= kBtc3) || ((flags & kBtcp) <= kBtc7)))
     flags = (flags | kExcludeAlphaFromPalette) & (~kWeightColourByAlpha) & (~kAlphaIterativeFit);
-  if ((mapping == -1) && (flags & (kBtc4)))
+  if ((mapping == -1) && ((flags & kBtcp) == kBtc4))
     mapping = 0;
-  if ((mapping == -1) && (flags & (kBtc5)))
+  if ((mapping == -1) && ((flags & kBtcp) == kBtc5))
     mapping = 3;
 
   // check the image dimensions
@@ -415,17 +415,17 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
 	  else
 	    sourceRgba[4 * i + 3] = 255;
 
-	  if (flags & (kBtc5)) {
+	  if ((flags & kBtcp) == kBtc5) {
 	    // duplicate alpha into g (required!)
 	    // duplicate r into b (for symmetry)
-	    if (flags & kColourMetricUnit)
+	    if ((flags & kColourMetrics) == kColourMetricUnit)
 	      ;
 	    else {
 	      sourceRgba[4 * i + (4 - mapping)] = sourceRgba[4 * i + mapping];
 	      sourceRgba[4 * i +  2           ] = sourceRgba[4 * i + 0      ];
 	    }
 	  }
-	  else if (flags & (kBtc4)) {
+	  else if ((flags & kBtcp) == kBtc4) {
 	    sourceRgba[4 * i + 0] = sourceRgba[4 * i + mapping];
 	    sourceRgba[4 * i + 1] = sourceRgba[4 * i + mapping];
 	    sourceRgba[4 * i + 2] = sourceRgba[4 * i + mapping];
@@ -454,7 +454,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
       }
 #endif
 
-      if ((flags & kBtc7) && paint) {
+      if (((flags & kBtcp) == kBtc7) && paint) {
 	// draw the mode
 	if (paint == 2 ) {
 	  unsigned long btcvalue = *((int *)targetBlock);
@@ -478,7 +478,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
     }
 
     // draw the mode
-    if ((flags & kBtc7) && paint) {
+    if (((flags & kBtcp) == kBtc7) && paint) {
       fprintf(stderr, "\n");
     }
   }
@@ -559,9 +559,9 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
   fread(&width , sizeof(int), 1, sourceFile.Get());
   fread(&height, sizeof(int), 1, sourceFile.Get());
 
-  if ((mapping == -1) && (flags & (kBtc4)))
+  if ((mapping == -1) && ((flags & kBtcp) == kBtc4))
     mapping = 0;
-  if ((mapping == -1) && (flags & (kBtc5)))
+  if ((mapping == -1) && ((flags & kBtcp) == kBtc5))
     mapping = 3;
 
   // work out the data size
@@ -595,10 +595,10 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 //	assert(targetRgba[4 * i + 2] != 0x80);
 
 	for (int px = 0; px < 4; ++px, ++i) {
-	  if (flags & (kBtc5)) {
+	  if ((flags & kBtcp) == kBtc5) {
 	    // duplicate alpha from g (required!)
 	    // duplicate g/b from r (for greyscale)
-	    if (flags & kColourMetricUnit)
+	    if ((flags & kColourMetrics) == kColourMetricUnit)
 	      targetRgba[4 * i + 3] = 255;
 	    else {
 	      if (mapping == 3) {
@@ -615,7 +615,7 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 	      }
 	    }
 	  }
-	  else if (flags & (kBtc4)) {
+	  else if ((flags & kBtcp) == kBtc4) {
 	    if (mapping == 3) {
 	      targetRgba[4 * i + 3] = targetRgba[4 * i + 0];
 	      targetRgba[4 * i + 2] = 0;
@@ -635,7 +635,7 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
 	}
       }
 
-      if ((flags & kBtc7) && paint) {
+      if (((flags & kBtcp) == kBtc7) && paint) {
 	// draw the mode
 	if (paint == 2) {
 	  unsigned long btcvalue = *((int *)sourceBlock);
@@ -659,7 +659,7 @@ static void Decompress( std::string const& sourceFileName, std::string const& ta
     }
 
     // draw the mode
-    if ((flags & kBtc7) && paint) {
+    if (((flags & kBtcp) == kBtc7) && paint) {
       fprintf(stderr, "\n");
     }
   }
@@ -760,11 +760,11 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
   PngRows targetRows(width, height, 4);
 
   /* kill alpha-channel */
-  if (!alpha && ((flags & kBtc1) || (flags & kBtc2) || (flags & kBtc3) || (flags & kBtc7)))
+  if (!alpha && (((flags & kBtcp) <= kBtc3) || ((flags & kBtcp) <= kBtc7)))
     flags = (flags | kExcludeAlphaFromPalette) & (~kWeightColourByAlpha) & (~kAlphaIterativeFit);
-  if ((mapping == -1) && (flags & (kBtc4)))
+  if ((mapping == -1) && ((flags & kBtcp) == kBtc4))
     mapping = 0;
-  if ((mapping == -1) && (flags & (kBtc5)))
+  if ((mapping == -1) && ((flags & kBtcp) == kBtc5))
     mapping = 3;
 
   // check the image dimensions
@@ -841,17 +841,17 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 	    else
 	      sourceRgba[4 * i + 3] = 255;
 
-	    if (flags & (kBtc5)) {
+	    if ((flags & kBtcp) == kBtc5) {
 	      // duplicate alpha into g (required!)
 	      // duplicate r into b (for symmetry)
-	      if (flags & kColourMetricUnit)
+	      if ((flags & kColourMetrics) == kColourMetricUnit)
 		;
 	      else {
 		sourceRgba[4 * i + (4 - mapping)] = sourceRgba[4 * i + mapping];
 		sourceRgba[4 * i +  2           ] = sourceRgba[4 * i + 0      ];
 	      }
 	    }
-	    else if (flags & (kBtc4)) {
+	    else if ((flags & kBtcp) == kBtc4) {
 	      sourceRgba[4 * i + 0] = sourceRgba[4 * i + mapping];
 	      sourceRgba[4 * i + 1] = sourceRgba[4 * i + mapping];
 	      sourceRgba[4 * i + 2] = sourceRgba[4 * i + mapping];
@@ -997,6 +997,7 @@ int main(int argc, char* argv[]) {
 	    case 'R': mapping = 0; break;
 
 	    case 'u': metric = kColourMetricUniform; break;
+	    case 'l': metric = kColourMetricPerceptual; break;
 	    case 'n': metric = kColourMetricUnit; break;
 
 	    case 'a': alpha = kAlphaIterativeFit; break;
@@ -1031,24 +1032,28 @@ int main(int argc, char* argv[]) {
 	<< "\tsquishldrpng [-bcde123457] <source> <target>" << std::endl
 	<< "OPTIONS" << std::endl
 	<< "\t-c\tCompress source png to target raw btc (default)" << std::endl
+	<< "\t-d\tDecompress source raw btc to target png" << std::endl
+	<< "\t-b\tBenchmark the chosen config" << std::endl
+	<< "\t-e\tDiff source and target png" << std::endl
 	<< "\t-123\tSpecifies whether to use DXT1/BC1, DXT3/BC2 or DXT5/BC3 compression" << std::endl
 	<< "\t-45\tSpecifies whether to use ATI/BC4, ATI2/BC5 compression" << std::endl
-	<< "\t-7\tSpecifies whether to use BC7 (default) compression" << std::endl
-	<< "\t-u\tUse a uniform colour metric during colour compression" << std::endl
-	<< "\t-a\tUse the slow alpha/gray iterative compressor" << std::endl
+	<< "\t-7\tSpecifies whether to use BC7 compression" << std::endl
+	<< "\t-a\tUse the slow iterative alpha/gray/normal compressor" << std::endl
 	<< "\t-r\tUse the fast but inferior range-based colour compressor" << std::endl
 	<< "\t-i\tUse the very slow but slightly better iterative colour compressor" << std::endl
 	<< "\t-x\tUse the extreme slow but slightly better iterative colour compressor" << std::endl
 	<< "\t-w\tWeight colour values by alpha in the cluster colour compressor" << std::endl
-	<< "\t-n\tUse normal map algorithms" << std::endl
-	<< "\t-d\tDecompress source raw btc to target png" << std::endl
-	<< "\t-e\tDiff source and target png" << std::endl
-	<< "\t-p\tPaint the patterns used to stderr" << std::endl
-	<< "\t-m\tPaint the modes used to stderr" << std::endl
-	<< "\t-b\tBenchmark the chosen config" << std::endl
+	<< "\t-W\tWeight colour values by alpha, but store everything opaque" << std::endl
+	<< "\t-n\tUse normal map metrics and algorithms" << std::endl
+	<< "\t-l\tUse CIE XYZ luminance metrics during colour compression" << std::endl
+	<< "\t-u\tUse a uniform colour metric during colour compression" << std::endl
+	<< "\t-p\tPaint the patterns used in BC7 to stderr" << std::endl
+	<< "\t-m\tPaint the modes used in BC7 to stderr" << std::endl
 	<< "\t-A\tStore RA into BC5 (default), store A into BC4" << std::endl
 	<< "\t-G\tStore RG into BC5" << std::endl
 	<< "\t-R\tStore R into BC4 (default)" << std::endl
+//	<< "\t-g\tConvert png from gamma to linear and back to gamma png" << std::endl
+//	<< "\t-s\tConvert unsigned png to signed and back to unsigned png" << std::endl
 	;
 
       return 0;
