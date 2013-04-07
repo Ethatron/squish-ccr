@@ -48,208 +48,7 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   Vec3 const* values = m_colours->GetPoints();
   float const* weights = m_colours->GetWeights();
 
-#if 0
-  u8 const* freq = m_colours->GetFrequencies();
-  
-  const Vec3 scale  = Vec3( 1.0f / 0.5f);
-  const Vec3 offset = Vec3(-1.0f * 0.5f);
-
-  // build the average normal vector
-  Vec3 average = Vec3(0.0f);
-  Vec3 norml[16];
-  for (int i = 0; i < count; ++i) {
-    norml[i] = Normalize(scale * (offset + values[i]));
-    average += norml[i] * freq[i];
-  }
-
-  average = Normalize(average);
-  average = average + Vec3(0.0f, 0.0f, 1.0f);
-  average = Normalize(average);
-
-  Vec3 rotX, rotY, rotZ;
-  Vec3 invX, invY, invZ;
-  Vec3 test, tEst;
-
-  rotZ = average;
-  rotY = average; rotY.GetZ() = 0.0f; rotY = Normalize(rotY);
-
-  rotX.GetX() = rotZ.Y() * rotY.Z() - rotZ.Z() * rotY.Y();
-  rotX.GetY() = rotZ.Z() * rotY.X() - rotZ.X() * rotY.Z();
-  rotX.GetZ() = rotZ.X() * rotY.Y() - rotZ.Y() * rotY.X();
-  
-  rotY.GetX() = rotZ.Y() * rotX.Z() - rotZ.Z() * rotX.Y();
-  rotY.GetY() = rotZ.Z() * rotX.X() - rotZ.X() * rotX.Z();
-  rotY.GetZ() = rotZ.X() * rotX.Y() - rotZ.Y() * rotX.X();
-  
-  invX.GetX() = rotX.X(); invY.GetX() = rotX.Y(); invZ.GetX() = rotX.Z();
-  invX.GetY() = rotY.X(); invY.GetY() = rotY.Y(); invZ.GetY() = rotY.Z();
-  invX.GetZ() = rotZ.X(); invY.GetZ() = rotZ.Y(); invZ.GetZ() = rotZ.Z();
-  
-  test.GetX() = Dot(average, rotX).X();
-  test.GetY() = Dot(average, rotY).Y();
-  test.GetZ() = Dot(average, rotZ).Z();
-  
-  tEst.GetX() = Dot(test, invX).X();
-  tEst.GetY() = Dot(test, invY).Y();
-  tEst.GetZ() = Dot(test, invZ).Z();
-  
-  // transform vectors into tangent space
-  Vec3 tspace[16];
-  for (int i = 0; i < count; ++i) {
-    tspace[i] = Vec3(0.0f);
-    tspace[i].GetX() = Dot(norml[i], rotX).X() * 0.5f + 0.5f;
-    tspace[i].GetY() = Dot(norml[i], rotY).Y() * 0.5f + 0.5f;
-    tspace[i].GetZ() = Dot(norml[i], rotZ).Z() * 0.5f + 0.5f;
-  }
-  
-  Sym3x3 covariance;
-  Vec3 centroid;
-  Vec3 principle;
-
-  // get the covariance matrix
-  if (m_colours->IsUnweighted())
-    ComputeWeightedCovariance3(covariance, centroid, count, tspace, Vec3(1.0f));
-  else
-    ComputeWeightedCovariance3(covariance, centroid, count, tspace, Vec3(1.0f), weights);
-
-  // compute the principle component
-  GetPrincipleComponent(covariance, principle);
-
-  // get the min and max normal as the codebook endpoints
-  Vec3 start(0.0f);
-  Vec3 end(0.0f);
-  
-//centroid = Vec3(2.0f) * (Vec3(-0.5f) + centroid);
-//centroid = centroid * Vec3(1.0f, 1.0f, centroid.Z() * centroid.Z());
-//centroid = (centroid * Vec3(0.5f)) + Vec3(0.5f);
-
-//centroid = Vec3(0.5f, 0.5f, 0.00f);
-//centroid = Vec3(0.5f, 0.5f, ((centroid.Z() - 0.5f) * 0.5f) + 0.5f);
-//centroid = Vec3(0.5f, 0.5f, ((centroid.Z() * 2.0f) - 1.0f) + 0.5f);
-
-  if (count > 0) {
 #ifdef	FEATURE_NORMALFIT_PROJECT
-    Scr3 div = Reciprocal(Dot(principle, principle));
-    Vec3 rec = Reciprocal(    principle            );
-    Scr3 len, min, max;
-    Vec3 chk;
-
-    // compute the projection
-    min = max = Dot(tspace[0] - centroid, principle);
-
-    for (int i = 1; i < count; ++i) {
-      len = Dot(tspace[i] - centroid, principle);
-      min = Min(min, len);
-      max = Max(max, len);
-    }
-
-    start = centroid + principle * min * div;
-    end   = centroid + principle * max * div;
-    
-//  start = (Complement(Vec3(2.0f) * (Vec3(-0.5f) + start)) * Vec3(0.5f)) + Vec3(0.5f);
-//  end   = (Complement(Vec3(2.0f) * (Vec3(-0.5f) + end  )) * Vec3(0.5f)) + Vec3(0.5f);
-
-    // intersect negative undershoot with axis-plane(s), clamp to 0.0
-    chk = start;
-    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
-
-      start -= principle * hin;
-      chk = start;
-    }
-
-    // intersect negative undershoot with axis-plane(s), clamp to 0.0
-    chk = end;
-    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
-
-      end -= principle * hin;
-      chk = end;
-    }
-
-    // intersect positive overshoot with axis-plane(s), clamp to 1.0
-    chk = start - Vec3(1.0f);
-    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
-
-      start -= principle * hax;
-      chk = start - Vec3(1.0f);
-    }
-
-    // intersect positive overshoot with axis-plane(s), clamp to 1.0
-    chk = end - Vec3(1.0f);
-    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
-
-      end -= principle * hax;
-      chk = end - Vec3(1.0f);
-    }
-
-/*  assert(HorizontalMin(start).X() > -0.0001);
-    assert(HorizontalMin(end  ).X() > -0.0001);
-    assert(HorizontalMax(start).X() <  1.0001);
-    assert(HorizontalMax(end  ).X() <  1.0001);	 */
-#else
-    Scr3 min, max;
-
-    // compute the normal
-    start = end = tspace[0];
-    min = max = Dot(tspace[0], principle);
-
-    for (int i = 1; i < count; ++i) {
-      Scr3 val = Dot(tspace[i], principle);
-
-      if (val < min) {
-	start = tspace[i];
-	min = val;
-      }
-      else if (val > max) {
-	end = tspace[i];
-	max = val;
-      }
-    }
-#endif
-  }
-
-  for (int i = 0; i < count; ++i) {
-  for (int j = 0; j < count; ++j) {
-  }
-  }
-
-  Vec3 istart;
-  Vec3 iend;
-  
-  start = (start * 2.0f) - Vec3(1.0f);
-  end   = (end   * 2.0f) - Vec3(1.0f);
-
-  istart.GetX() = Dot(start, invX).X();
-  istart.GetY() = Dot(start, invY).Y();
-  istart.GetZ() = Dot(start, invZ).Z();
-  
-  iend.GetX() = Dot(end, invX).X();
-  iend.GetY() = Dot(end, invY).Y();
-  iend.GetZ() = Dot(end, invZ).Z();
-
-//istart = Complement(istart);
-//iend   = Complement(iend  );
-//
-//istart = Normalize(istart);
-//iend   = Normalize(iend  );
-
-  istart = (istart * 0.5f) + Vec3(0.5f);
-  iend   = (iend   * 0.5f) + Vec3(0.5f);
-
-//istart = Max(Vec3(0.0f), Min(Vec3(1.0f), istart));
-//iend   = Max(Vec3(0.0f), Min(Vec3(1.0f), iend  ));
-
-  // snap floating-point-values to the integer-lattice and save
-  m_start = q.SnapToLattice(istart);
-  m_end   = q.SnapToLattice(iend);
-#else
   Sym3x3 covariance;
   Vec3 centroid;
   Vec3 principle;
@@ -268,7 +67,66 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   Vec3 end(0.0f);
 
   if (count > 0) {
-#ifdef	FEATURE_NORMALFIT_PROJECT
+#ifdef	FEATURE_NORMALFIT_PROJECT_NEAREST
+    const Vec3 scale  = Vec3( 1.0f / 0.5f);
+    const Vec3 offset = Vec3(-1.0f * 0.5f);
+
+    Vec3 centroidn = (scale * (offset + centroid));
+    Vec3 rec = Reciprocal(principle);
+    Scr3 min, max;
+    Vec3 chk;
+
+    // http://geomalgorithms.com/a07-_distance.html
+    // compute the line parameters of the two closest points
+    min = Scr3( FLT_MAX);
+    max = Scr3(-FLT_MAX);
+
+    for (int i = 0; i < count; ++i) {
+      Vec3 valuenorm = Normalize(scale * (offset + values[i]));
+
+      Vec3 u = principle;//L1.P1 - L1.P0;
+      Vec3 v = valuenorm;//L2.P1 - L2.P0;
+      Vec3 w = centroidn;//L1.P0 - L2.P0;
+      Scr3 a = Dot(u, u);         // always >= 0
+      Scr3 b = Dot(u, v);
+      Scr3 c = Dot(v, v);         // always >= 0
+      Scr3 d = Dot(u, w);
+      Scr3 e = Dot(v, w);
+      Scr3 D = a * c - b * b;     // always >= 0
+      Scr3 sc, tc;
+
+      // compute the line parameters of the two closest points
+      if (D < Scr3(0.00001f)) {    // the lines are almost parallel
+	sc = Scr3(0.0f);	   // use the largest denominator
+	tc = (b > c 
+	  ? d * Reciprocal(b) 
+	  : e * Reciprocal(c)
+	);    
+      }
+      else {
+	D = Reciprocal(D);
+
+	sc = (b * e - c * d) * D;
+	tc = (a * e - b * d) * D;
+      }
+
+      // one dimension of the principle axis is 1
+      // the maximum magnitude the principle axis
+      // can move in the [-1,+1] cube is 1.41*2
+      // without leaving the cube's boundaries
+      sc = Min(sc, Scr3( 2.82842712474619f));
+      sc = Max(sc, Scr3(-2.82842712474619f));
+
+      min = Min(min, sc);
+      max = Max(max, sc);
+    }
+    
+    start = centroidn + principle * min;
+    end   = centroidn + principle * max;
+    
+    start = (start * 0.5f) + Vec3(0.5f);
+    end   = (end   * 0.5f) + Vec3(0.5f);
+#else
     Scr3 div = Reciprocal(Dot(principle, principle));
     Vec3 rec = Reciprocal(    principle            );
     Scr3 len, min, max;
@@ -285,6 +143,7 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
 
     start = centroid + principle * min * div;
     end   = centroid + principle * max * div;
+#endif
 
     // intersect negative undershoot with axis-plane(s), clamp to 0.0
     chk = start;
@@ -353,10 +212,176 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   }
 
   // snap floating-point-values to the integer-lattice and save
-  m_start = q.SnapToLattice(start);
-  m_end   = q.SnapToLattice(end  );
-#endif
+  m_start_candidate = q.SnapToLattice(start);
+  m_end_candidate   = q.SnapToLattice(end  );
 }
+
+#define KMEANS_QUANTIZED
+
+void ColourNormalFit::kMeans3()
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+  const Vec3 scalei = Vec3( 1.0f * 0.5f);
+  
+  // cache some values
+  int const count = m_colours->GetCount();
+  Vec3 const* values = m_colours->GetPoints();
+  u8 const* freq = m_colours->GetFrequencies();
+  
+  cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
+  Vec3 c_start = m_start, c_end = m_end;
+  Vec3 l_start = m_start, l_end = m_end;
+  Scr3 berror = Scr3(16.0f);
+  
+  int trie = 1 + (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
+  do {
+    Vec3 means[3];
+
+    means[0] = Vec3(0.0f);
+    means[1] = Vec3(0.0f);
+    means[2] = Vec3(0.0f);
+    
+    // create a codebook
+    // resolve "metric * (value - code)" to "metric * value - metric * code"
+    Vec3 codes[3]; Codebook3(codes, c_start, c_end);
+
+    codes[0] = Normalize(scale * (offset + codes[0]));
+    codes[1] = Normalize(scale * (offset + codes[1]));
+    codes[2] = Normalize(scale * (offset + codes[2]));
+
+    Scr3 merror = Scr3(16.0f);
+    for (int i = 0; i < count; ++i) {
+      // find the closest code
+      Scr3 dist;
+      Vec3 value = Normalize(scale * (offset + values[i]));
+      int idx = 0;
+
+      {
+	Scr3 d0 = Dot(value, codes[0]);
+	Scr3 d1 = Dot(value, codes[1]);
+	Scr3 d2 = Dot(value, codes[2]);
+
+	// encourage OoO
+	Scr3 da = Max(d0, d1);
+	Scr3 db =    (d2    );
+	dist    = Max(da, db);
+
+	// will cause VS to make them all cmovs
+	if (d2 == dist) { idx = 2; }
+	if (d1 == dist) { idx = 1; }
+	if (d0 == dist) { idx = 0; }
+      }
+      
+      // accumulate the error
+      means[idx] += value * freq[i];
+      merror -= dist * freq[i];
+    }
+    
+    if (berror > merror) {
+      berror = merror;
+
+      m_start = c_start;
+      m_end   = c_end;
+    }
+
+    means[0] = (Normalize(means[0]) * scalei) - offset;
+    means[1] = (Normalize(means[1]) * scalei) - offset;
+    means[2] = (Normalize(means[2]) * scalei) - offset;
+    
+    l_start = c_start;
+    l_end   = c_end;
+    c_start = q.SnapToLattice(means[0]);
+    c_end   = q.SnapToLattice(means[1]);
+
+  } while(--trie && !(CompareAllEqualTo(c_start, l_start) && CompareAllEqualTo(c_end, l_end)));
+}
+
+void ColourNormalFit::kMeans4()
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+  const Vec3 scalei = Vec3( 1.0f * 0.5f);
+  
+  // cache some values
+  int const count = m_colours->GetCount();
+  Vec3 const* values = m_colours->GetPoints();
+  u8 const* freq = m_colours->GetFrequencies();
+  
+  cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
+  Vec3 c_start = m_start, c_end = m_end;
+  Vec3 l_start = m_start, l_end = m_end;
+  Scr3 berror = Scr3(16.0f);
+  
+  int trie = 1 + (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
+  do {
+    Vec3 means[4];
+
+    means[0] = Vec3(0.0f);
+    means[1] = Vec3(0.0f);
+    means[2] = Vec3(0.0f);
+    means[3] = Vec3(0.0f);
+    
+    // create a codebook
+    // resolve "metric * (value - code)" to "metric * value - metric * code"
+    Vec3 codes[4]; Codebook4(codes, c_start, c_end);
+    
+    codes[0] = Normalize(scale * (offset + codes[0]));
+    codes[1] = Normalize(scale * (offset + codes[1]));
+    codes[2] = Normalize(scale * (offset + codes[2]));
+    codes[3] = Normalize(scale * (offset + codes[3]));
+
+    Scr3 merror = Scr3(16.0f);
+    for (int i = 0; i < count; ++i) {
+      // find the closest code
+      Scr3 dist;
+      Vec3 value = Normalize(scale * (offset + values[i]));
+      int idx = 0;
+
+      {
+	Scr3 d0 = Dot(value, codes[0]);
+	Scr3 d1 = Dot(value, codes[1]);
+	Scr3 d2 = Dot(value, codes[2]);
+	Scr3 d3 = Dot(value, codes[3]);
+
+	// encourage OoO
+	Scr3 da = Max(d0, d1);
+	Scr3 db = Max(d2, d3);
+	dist    = Max(da, db);
+
+	// will cause VS to make them all cmovs
+	if (d3 == dist) { idx = 3; }
+	if (d2 == dist) { idx = 2; }
+	if (d1 == dist) { idx = 1; }
+	if (d0 == dist) { idx = 0; }
+      }
+      
+      // accumulate the error
+      means[idx] += value * freq[i];
+      merror -= dist * freq[i];
+    }
+  
+    if (berror > merror) {
+      berror = merror;
+      
+      m_start = c_start;
+      m_end   = c_end;
+    }
+
+    means[0] = (Normalize(means[0]) * scalei) - offset;
+    means[1] = (Normalize(means[1]) * scalei) - offset;
+    means[2] = (Normalize(means[2]) * scalei) - offset;
+    means[3] = (Normalize(means[3]) * scalei) - offset;
+    
+    l_start = c_start;
+    l_end   = c_end;
+    c_start = q.SnapToLattice(means[0]);
+    c_end   = q.SnapToLattice(means[1]);
+
+  } while(--trie && !(CompareAllEqualTo(c_start, l_start) && CompareAllEqualTo(c_end, l_end)));
+}
+
+#undef	KMEANS_QUANTIZED
 
 void ColourNormalFit::Compress3(void* block)
 {
@@ -367,7 +392,13 @@ void ColourNormalFit::Compress3(void* block)
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
   u8 const* freq = m_colours->GetFrequencies();
-
+  
+  // use a fitting algorithm
+  m_start = m_start_candidate;
+  m_end   = m_end_candidate;
+  if (m_flags & kColourIterativeClusterFits)
+    kMeans3();
+  
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"
   Vec3 codes[3]; Codebook3(codes, m_start, m_end);
@@ -433,7 +464,13 @@ void ColourNormalFit::Compress4(void* block)
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
   u8 const* freq = m_colours->GetFrequencies();
-
+  
+  // use a fitting algorithm
+  m_start = m_start_candidate;
+  m_end   = m_end_candidate;
+  if (m_flags & kColourIterativeClusterFits)
+    kMeans4();
+  
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"
   Vec3 codes[4]; Codebook4(codes, m_start, m_end);

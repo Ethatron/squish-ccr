@@ -41,9 +41,14 @@ public:
   ColourNormalFit(ColourSet const* colours, int flags);
 
 private:
+  void kMeans3();
+  void kMeans4();
+
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
-
+  
+  Vec3 m_start_candidate;
+  Vec3 m_end_candidate;
   Vec3 m_start;
   Vec3 m_end;
   Scr3 m_besterror;
