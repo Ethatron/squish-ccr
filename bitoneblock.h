@@ -41,9 +41,13 @@ namespace squish {
 #if	!defined(SQUISH_USE_PRE)
   void WriteBitoneBlock4(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block);
 
-  void DecompressBitoneCtx1(u8 * rgba, void const* block, bool isBtc1);
-  void DecompressBitoneCtx1(u16* rgba, void const* block, bool isBtc1);
-  void DecompressBitoneCtx1(f23* rgba, void const* block, bool isBtc1);
+  void DecompressBitoneCtx1(u8 * rgba, void const* block);
+  void DecompressBitoneCtx1(u16* rgba, void const* block);
+  void DecompressBitoneCtx1(f23* rgba, void const* block);
+
+  void DecompressNormalsCtx1(u8 * xyzd, void const* block);
+  void DecompressNormalsCtx1(u16* xyzd, void const* block);
+  void DecompressNormalsCtx1(f23* xyzd, void const* block);
 #endif
 
 // -----------------------------------------------------------------------------

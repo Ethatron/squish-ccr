@@ -37,25 +37,28 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
   , m_unweighted(true)
 {
   const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
-
-  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
   
+  bool const preserveThird = ((flags & kColourMetricUnit   ) != 0);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha) != 0);
+
   // build mapped data
+  Col4 kill = preserveThird ? Col4(0x00FFFFFF) : Col4(0x0000FFFF);
   int wgta = weightByAlpha ? 0x0000 : 0xFFFF;
 
   a16 u8 rgbx[4 * 16];
-  int abit;
+  int amask;
 
   Col4 m0 = Col4(&rgba[0 * 16]);
   Col4 m1 = Col4(&rgba[1 * 16]);
   Col4 m2 = Col4(&rgba[2 * 16]);
   Col4 m3 = Col4(&rgba[3 * 16]);
   Col4 al = CollapseA(m0, m1, m2, m3);
-
-  m0 &= Col4(0x00FFFFFF);
-  m1 &= Col4(0x00FFFFFF);
-  m2 &= Col4(0x00FFFFFF);
-  m3 &= Col4(0x00FFFFFF);
+  
+  // clear alpha and maybe b
+  m0 &= kill;
+  m1 &= kill;
+  m2 &= kill;
+  m3 &= kill;
   
   StoreAligned(m0, &rgbx[0 * 16]);
   StoreAligned(m1, &rgbx[1 * 16]);
@@ -63,17 +66,17 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
   StoreAligned(m3, &rgbx[3 * 16]);
   
   // combined mask
-  abit  = mask;
+  amask  = mask;
 #ifdef FEATURE_IGNORE_ALPHA0
   // threshold color
-  abit &= (~CompareEqualTo(al, Col4(0))) | (wgta);
+  amask &= (~CompareEqualTo(al, Col4(0))) | (wgta);
 #endif
 
   // create the minimal set, O(16*count/2)
   for (int i = 0, index; i < 16; ++i) {
     // check this pixel is enabled
     int bit = 1 << i;
-    if ((abit & bit) == 0) {
+    if ((amask & bit) == 0) {
       m_remap[i] = -1;
       continue;
     }
@@ -133,7 +136,7 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
   }
 
 #ifdef FEATURE_IGNORE_ALPHA0
-  if (abit != 0xFFFF) {
+  if (amask != 0xFFFF) {
     if (!m_count) {
       Vec3 sum = Vec3(0.0f);
 
@@ -142,7 +145,7 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  m_remap[i] = 0;
 
 	  u8 *rgbvalue = &rgbx[4 * i + 0];
@@ -171,7 +174,7 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  u8 *rgbvalue = &rgbx[4 * i + 0];
 
 	  // normalize coordinates to [0,1]
@@ -215,14 +218,16 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
   , m_unweighted(true)
 {
 //const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
-
-  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0);
+  
+  bool const preserveThird = ((flags & kColourMetricUnit   ) != 0);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha) != 0);
 
   // build mapped data
+  Vec4 kill = preserveThird ? Vec4(true, true, true, false) : Vec4(true, true, false, false);
   Scr4 wgta = weightByAlpha ? Scr4(0.0f) : Scr4(1.0f);
 
   Vec3 rgbx[16];
-  int abit = 0;
+  int amask = 0;
   
   for (int i = 0; i < 16; i += 4) {
     Vec4 m0; LoadUnaligned(m0, &rgba[4 * i + 4 * 0]);
@@ -232,11 +237,11 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
     Vec4 al = CollapseW(m0, m1, m2, m3);
     Vec4 ibit;
 
-    // clear alpha
-    rgbx[i + 0] = KillW(m0).GetVec3();
-    rgbx[i + 1] = KillW(m1).GetVec3();
-    rgbx[i + 2] = KillW(m2).GetVec3();
-    rgbx[i + 3] = KillW(m3).GetVec3();
+    // clear alpha and maybe b
+    rgbx[i + 0] = (m0 & kill).GetVec3();
+    rgbx[i + 1] = (m1 & kill).GetVec3();
+    rgbx[i + 2] = (m2 & kill).GetVec3();
+    rgbx[i + 3] = (m3 & kill).GetVec3();
 
 #ifdef FEATURE_IGNORE_ALPHA0
     // threshold color
@@ -245,17 +250,17 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
     ibit = 0xF;
 #endif
 
-    abit += ibit.GetM4() << i;
+    amask += ibit.GetM4() << i;
   }
   
   // combined mask
-  abit &= mask;
+  amask &= mask;
 
   // create the minimal set, O(16*count/2)
   for (int i = 0, index; i < 16; ++i) {
     // check this pixel is enabled
     int bit = 1 << i;
-    if ((abit & bit) == 0) {
+    if ((amask & bit) == 0) {
       m_remap[i] = -1;
       continue;
     }
@@ -317,7 +322,7 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
   }
 
 #ifdef FEATURE_IGNORE_ALPHA0
-  if (abit != 0xFFFF) {
+  if (amask != 0xFFFF) {
     if (!m_count) {
       Vec3 sum = Vec3(0.0f);
 
@@ -326,7 +331,7 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  m_remap[i] = 0;
 
 	  Vec3 *rgbvalue = &rgbx[i];
@@ -357,7 +362,7 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
 
 	/* assign blanked out pixels when weighting
 	 */
-	if ((abit & bit) == 0) {
+	if ((amask & bit) == 0) {
 	  Vec3 *rgbvalue = &rgbx[i];
 
 #if 0

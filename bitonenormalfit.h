@@ -41,8 +41,13 @@ public:
   BitoneNormalFit(BitoneSet const* bitones, int flags);
 
 private:
-  virtual void Compress4(void* block);
+  void kMeans4();
+  void Permute4();
 
+  virtual void Compress4(void* block);
+  
+  Vec3 m_start_candidate;
+  Vec3 m_end_candidate;
   Vec3 m_start;
   Vec3 m_end;
   Scr3 m_besterror;

@@ -30,6 +30,7 @@
 
 #include "alpha.h"
 
+#include "bitoneset.h"
 #include "colourset.h"
 #include "paletteset.h"
 //nclude "hdrset.h"
@@ -136,17 +137,31 @@ template<typename dtyp>
 void CompressNormalBtc1(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // create the minimal point set
-  ColourSet colours(xyzd, mask, flags);
+  ColourSet normals(xyzd, mask, flags);
 
-  // check the compression type and compress colour
-  if (colours.GetCount() == 1) {
+  // check the compression type and compress normals
+  if (normals.GetCount() == 1) {
     // always do a single colour fit
-    ColourSingleMatch fit(&colours, flags);
+    ColourSingleMatch fit(&normals, flags);
     fit.Compress(block);
   }
   else {
     // do a range fit
-    ColourNormalFit fit(&colours, flags);
+    ColourNormalFit fit(&normals, flags);
+    fit.Compress(block);
+  }
+}
+
+template<typename dtyp>
+void CompressNormalCtx1(dtyp const* xyzd, int mask, void* block, int flags)
+{
+  // create the minimal point set
+  BitoneSet bitones(xyzd, mask, flags);
+
+  // check the compression type and compress normals
+  {
+    // do a normal fit
+    BitoneNormalFit fit(&bitones, flags);
     fit.Compress(block);
   }
 }
@@ -543,6 +558,16 @@ void CompressMaskedNormalBtc1(dtyp const* xyzd, int mask, void* block, int flags
 }
 
 template<typename dtyp>
+void CompressMaskedNormalCtx1(dtyp const* xyzd, int mask, void* block, int flags)
+{
+  // get the block locations
+  void* normalBlock = block;
+
+  // compress color separately if necessary
+  CompressNormalCtx1(xyzd, mask, normalBlock, flags);
+}
+
+template<typename dtyp>
 void CompressMaskedNormalBtc2(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // get the block locations
@@ -625,7 +650,9 @@ void CompressMaskedPaletteBtc7(dtyp const* rgba, int mask, void* block, int flag
 void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
 {
   // DXT-type compression
-  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+    CompressMaskedNormalCtx1(rgba, mask, block, flags);
+  else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
     CompressMaskedNormalBtc1(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
     CompressMaskedNormalBtc2(rgba, mask, block, flags);
@@ -657,7 +684,9 @@ void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
 void CompressMasked(u16 const* rgba, int mask, void* block, int flags)
 {
   // DXT-type compression
-  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+    CompressMaskedNormalCtx1(rgba, mask, block, flags);
+  else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
     CompressMaskedNormalBtc1(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
     CompressMaskedNormalBtc2(rgba, mask, block, flags);
@@ -689,7 +718,9 @@ void CompressMasked(u16 const* rgba, int mask, void* block, int flags)
 void CompressMasked(f23 const* rgba, int mask, void* block, int flags)
 {
   // DXT-type compression
-  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+    CompressMaskedNormalCtx1(rgba, mask, block, flags);
+  else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
     CompressMaskedNormalBtc1(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
     CompressMaskedNormalBtc2(rgba, mask, block, flags);
@@ -753,6 +784,16 @@ void DecompressColourBtc1(dtyp* rgba, void const* block, int flags)
 
   // decompress colour
   DecompressColoursBtc1(rgba, colourBlock, true);
+}
+
+template<typename dtyp>
+void DecompressNormalCtx1(dtyp* xyzd, void const* block, int flags)
+{
+  // get the block locations
+  void const* normalBlock = block;
+
+  // decompress normals
+  DecompressNormalsCtx1(xyzd, normalBlock);
 }
 
 template<typename dtyp>
@@ -842,14 +883,16 @@ void DecompressPaletteBtc7(dtyp* rgba, void const* block, int flags)
 void Decompress(u8* rgba, void const* block, int flags)
 {
   // DXT-type compression
-///**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+    DecompressNormalCtx1(rgba, block, flags);
+//else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
 //  DecompressNormalBtc1(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
 //  DecompressNormalBtc2(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
 //  DecompressNormalBtc3(rgba, block, flags);
   // 3Dc-type compression
-  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
+  else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
     DecompressNormalBtc5(rgba, block, flags);
 
   // DXT-type compression
@@ -874,14 +917,16 @@ void Decompress(u8* rgba, void const* block, int flags)
 void Decompress(u16* rgba, void const* block, int flags)
 {
   // DXT-type compression
-///**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+    DecompressNormalCtx1(rgba, block, flags);
+//else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
 //  DecompressNormalBtc1(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
 //  DecompressNormalBtc2(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
 //  DecompressNormalBtc3(rgba, block, flags);
   // 3Dc-type compression
-  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
+  else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
     DecompressNormalBtc5(rgba, block, flags);
 
   // DXT-type compression
@@ -906,14 +951,16 @@ void Decompress(u16* rgba, void const* block, int flags)
 void Decompress(f23* rgba, void const* block, int flags)
 {
   // DXT-type compression
-///**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+    DecompressNormalCtx1(rgba, block, flags);
+//else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
 //  DecompressNormalBtc1(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
 //  DecompressNormalBtc2(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
 //  DecompressNormalBtc3(rgba, block, flags);
   // 3Dc-type compression
-  /**/ if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
+  else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
     DecompressNormalBtc5(rgba, block, flags);
 
   // DXT-type compression
@@ -949,6 +996,8 @@ int GetStorageRequirements(int width, int height, int flags)
     blocksize = ((flags & kBtcp) == kBtc4) ? 8 : 16;
   else if ((flags & kBtcp) <= kBtc7)
     blocksize =                                  16;
+  else if ((flags & kBtcp) == kCtx1)
+    blocksize =                              8     ;
 
   return blockcount * blocksize;
 }
@@ -972,13 +1021,18 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
     s.blocksize = ((flags & kBtcp) == kBtc4) ? 8 : 16;
   else if ((flags & kBtcp) <= kBtc7)
     s.blocksize =                                  16;
+  else if ((flags & kBtcp) == kCtx1)
+    s.blocksize =                              8     ;
 
   s.compressedsize = s.blockcount * s.blocksize;
   s.decompressedsize = sizeof(u8) * 4 * (width * height);
 
   if (datatype == sqio::dtp::DT_U8) {
     // DXT-type compression
-    /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+    /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+      s.encoder = (sqio::enc)CompressMaskedNormalCtx1<u8>,
+      s.decoder = (sqio::dec)DecompressNormalCtx1<u8>;
+    else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
       s.encoder = (sqio::enc)CompressMaskedNormalBtc1<u8>,
       s.decoder = (sqio::dec)DecompressColourBtc1<u8>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
@@ -1018,7 +1072,10 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
   }
   else if (datatype == sqio::dtp::DT_U16) {
     // DXT-type compression
-    /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+    /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+      s.encoder = (sqio::enc)CompressMaskedNormalCtx1<u16>,
+      s.decoder = (sqio::dec)DecompressNormalCtx1<u16>;
+    else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
       s.encoder = (sqio::enc)CompressMaskedNormalBtc1<u16>,
       s.decoder = (sqio::dec)DecompressColourBtc1<u16>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
@@ -1059,7 +1116,10 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
   }
   else if (datatype == sqio::dtp::DT_F23) {
     // DXT-type compression
-    /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
+    /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
+      s.encoder = (sqio::enc)CompressMaskedNormalCtx1<f23>,
+      s.decoder = (sqio::dec)DecompressNormalCtx1<f23>;
+    else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
       s.encoder = (sqio::enc)CompressMaskedNormalBtc1<f23>,
       s.decoder = (sqio::dec)DecompressColourBtc1<f23>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
@@ -1119,6 +1179,8 @@ void CompressImage(u8 const* rgba, int width, int height, void* blocks, int flag
     bytesPerBlock = ((flags & kBtcp) == kBtc4) ? 8 : 16;
   else if ((flags & kBtcp) <= kBtc7)
     bytesPerBlock =                                  16;
+  else if ((flags & kBtcp) == kCtx1)
+    bytesPerBlock =                              8     ;
 
   // loop over blocks
   for (int y = 0; y < height; y += 4) {
@@ -1175,6 +1237,8 @@ void DecompressImage(u8* rgba, int width, int height, void const* blocks, int fl
     bytesPerBlock = ((flags & kBtcp) == kBtc4) ? 8 : 16;
   else if ((flags & kBtcp) <= kBtc7)
     bytesPerBlock =                                  16;
+  else if ((flags & kBtcp) == kCtx1)
+    bytesPerBlock =                              8     ;
 
   // loop over blocks
   for (int y = 0; y < height; y += 4) {

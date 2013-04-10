@@ -1706,6 +1706,8 @@ public:
 	  m_v = _mm_unpacklo_ps(_mm_load_ss(x), _mm_load_ss(y));
 	  m_v = _mm_movelh_ps(m_v, _mm_load_ss(z));
 	}
+	
+	Vec3( bool x, bool y, bool z ) : m_v( _mm_castsi128_ps( _mm_setr_epi32( x ? ~0 : 0, y ? ~0 : 0, z ? ~0 : 0, 0 ) ) ) {}
 
 	Vec3( float x, float y, float z ) : m_v( _mm_setr_ps( x, y, z, 0.0f ) ) {}
 	Vec3( float x, float y ) : m_v( _mm_setr_ps( x, y, 0.0f, 0.0f ) ) {}

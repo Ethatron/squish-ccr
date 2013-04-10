@@ -102,7 +102,7 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
       // measure absolute angle-deviation (cosine)
       Vec4 dst = (valx * cxx) + (valy * cyy) + (valz * czz);
 
-      // select the smallest deviation (NaN as second arg is ignored!)
+      // select the smallest deviation (NaN as first arg is ignored!)
       dist = HorizontalMax(Max(dst, dist));
       int match = CompareEqualTo(dst, dist);
 
@@ -160,7 +160,7 @@ static Vec4 GetError(Vec4 const* xyz, int mask,
       // measure absolute angle-deviation (cosine)
       Vec4 dst = (valx * cxx) + (valy * cyy) + (valz * czz);
 
-      // select the smallest deviation (NaN as second arg is ignored!)
+      // select the smallest deviation (NaN as first arg is ignored!)
       dists = Max(dst, dists);
 
     } while (--f >= 0);
@@ -349,7 +349,7 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
 	Vec4 d3xy = (valx * x3xy) + (valy * y3xy) + (valz * z3xy);
 	Vec4 d4xy = (valx * x4xy) + (valy * y4xy) + (valz * z4xy);
 
-	// select the smallest deviation (NaN as second arg is ignored!)
+	// select the smallest deviation (NaN as first arg is ignored!)
 	dist0x  = Max(d0x , dist0x );
 	dist0y  = Max(d0y , dist0y );
 	dist1xy = Max(d1xy, dist1xy);

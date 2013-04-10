@@ -149,8 +149,8 @@ BitoneRangeFit::BitoneRangeFit(BitoneSet const* bitones, int flags)
   }
 
   // snap floating-point-values to the integer-lattice and save
-  m_start = Truncate(start * 255.0f) * (1.0f / 255.0f);
-  m_end   = Truncate(end   * 255.0f) * (1.0f / 255.0f);
+  m_start = Truncate(start * 255.0f + Vec3(0.5f)) * (1.0f / 255.0f);
+  m_end   = Truncate(end   * 255.0f + Vec3(0.5f)) * (1.0f / 255.0f);
 }
 
 void BitoneRangeFit::Compress4(void* block)

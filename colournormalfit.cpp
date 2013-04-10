@@ -67,10 +67,12 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   Vec3 end(0.0f);
 
   if (count > 0) {
-#ifdef	FEATURE_NORMALFIT_PROJECT_NEAREST
     const Vec3 scale  = Vec3( 1.0f / 0.5f);
     const Vec3 offset = Vec3(-1.0f * 0.5f);
+    const Vec3 scalei = Vec3( 1.0f * 0.5f);
 
+#undef	FEATURE_NORMALFIT_PROJECT_NEAREST
+#ifdef	FEATURE_NORMALFIT_PROJECT_NEAREST
     Vec3 centroidn = (scale * (offset + centroid));
     Vec3 rec = Reciprocal(principle);
     Scr3 min, max;
@@ -124,8 +126,8 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
     start = centroidn + principle * min;
     end   = centroidn + principle * max;
     
-    start = (start * 0.5f) + Vec3(0.5f);
-    end   = (end   * 0.5f) + Vec3(0.5f);
+    start = (start * scalei) - offset;
+    end   = (end   * scalei) - offset;
 #else
     Scr3 div = Reciprocal(Dot(principle, principle));
     Vec3 rec = Reciprocal(    principle            );
@@ -145,6 +147,7 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
     end   = centroid + principle * max * div;
 #endif
 
+#if 1
     // intersect negative undershoot with axis-plane(s), clamp to 0.0
     chk = start;
     while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
@@ -184,6 +187,16 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
       end -= principle * hax;
       chk = end - Vec3(1.0f);
     }
+#else
+    start = (scale * (offset + start));
+    end   = (scale * (offset + end  ));
+
+    start = Normalize(start);
+    end   = Normalize(end  );
+
+    start = (start * scalei) - offset;
+    end   = (end   * scalei) - offset;
+#endif
 
 /*  assert(HorizontalMin(start).X() > -0.0001);
     assert(HorizontalMin(end  ).X() > -0.0001);
@@ -215,8 +228,6 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   m_start_candidate = q.SnapToLattice(start);
   m_end_candidate   = q.SnapToLattice(end  );
 }
-
-#define KMEANS_QUANTIZED
 
 void ColourNormalFit::kMeans3()
 {
@@ -275,7 +286,7 @@ void ColourNormalFit::kMeans3()
       
       // accumulate the error
       means[idx] += value * freq[i];
-      merror -= dist * freq[i];
+      merror     -= dist  * freq[i];
     }
     
     if (berror > merror) {
@@ -287,7 +298,6 @@ void ColourNormalFit::kMeans3()
 
     means[0] = (Normalize(means[0]) * scalei) - offset;
     means[1] = (Normalize(means[1]) * scalei) - offset;
-    means[2] = (Normalize(means[2]) * scalei) - offset;
     
     l_start = c_start;
     l_end   = c_end;
@@ -358,7 +368,7 @@ void ColourNormalFit::kMeans4()
       
       // accumulate the error
       means[idx] += value * freq[i];
-      merror -= dist * freq[i];
+      merror     -= dist  * freq[i];
     }
   
     if (berror > merror) {
@@ -370,8 +380,6 @@ void ColourNormalFit::kMeans4()
 
     means[0] = (Normalize(means[0]) * scalei) - offset;
     means[1] = (Normalize(means[1]) * scalei) - offset;
-    means[2] = (Normalize(means[2]) * scalei) - offset;
-    means[3] = (Normalize(means[3]) * scalei) - offset;
     
     l_start = c_start;
     l_end   = c_end;
@@ -381,7 +389,157 @@ void ColourNormalFit::kMeans4()
   } while(--trie && !(CompareAllEqualTo(c_start, l_start) && CompareAllEqualTo(c_end, l_end)));
 }
 
-#undef	KMEANS_QUANTIZED
+void ColourNormalFit::Permute3()
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+  const Vec3 scalei = Vec3( 1.0f * 0.5f);
+  
+  // cache some values
+  int const count = m_colours->GetCount();
+  Vec3 const* values = m_colours->GetPoints();
+  u8 const* freq = m_colours->GetFrequencies();
+  
+  cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
+  Scr3 berror = Scr3(16.0f);
+  
+  Vec3 c_start = m_start;
+  Vec3 c_end   = m_end;
+  Scr3 l_start = LengthSquared(Normalize(scale * (offset + m_start)));
+  Scr3 l_end   = LengthSquared(Normalize(scale * (offset + m_end)));
+  Vec3 q_start = Reciprocal(q.grid + Vec3(1.0f));
+  Vec3 q_end   = q_start;
+
+  // adjust offset towards sphere-boundary
+  if (!(l_start < Scr3(1.0f)))
+    q_start = Vec3(0.0f) - q_start;
+  if (!(l_end   < Scr3(1.0f)))
+    q_end   = Vec3(0.0f) - q_end;
+  
+  int trie = 0x3F;
+  do {
+    // permute end-points +-1 towards sphere-boundary
+    Vec3 p_start = q_start & Vec3(!(trie & 0x01), !(trie & 0x02), !(trie & 0x04));
+    Vec3 p_end   = q_end   & Vec3(!(trie & 0x08), !(trie & 0x10), !(trie & 0x20));
+    
+    p_start = q.SnapToLattice(c_start + p_start);
+    p_end   = q.SnapToLattice(c_end   + p_end);
+
+    // create a codebook
+    // resolve "metric * (value - code)" to "metric * value - metric * code"
+    Vec3 codes[3]; Codebook3(codes, p_start, p_end);
+
+    codes[0] = Normalize(scale * (offset + codes[0]));
+    codes[1] = Normalize(scale * (offset + codes[1]));
+    codes[2] = Normalize(scale * (offset + codes[2]));
+
+    Scr3 merror = Scr3(16.0f);
+    for (int i = 0; i < count; ++i) {
+      // find the closest code
+      Scr3 dist;
+      Vec3 value = Normalize(scale * (offset + values[i]));
+
+      {
+	Scr3 d0 = Dot(value, codes[0]);
+	Scr3 d1 = Dot(value, codes[1]);
+	Scr3 d2 = Dot(value, codes[2]);
+
+	// encourage OoO
+	Scr3 da = Max(d0, d1);
+	Scr3 db =    (d2    );
+	dist    = Max(da, db);
+      }
+      
+      // accumulate the error
+      merror -= dist * freq[i];
+    }
+    
+    if (berror > merror) {
+      berror = merror;
+
+      m_start = p_start;
+      m_end   = p_end;
+    }
+
+  } while(--trie);
+}
+
+void ColourNormalFit::Permute4()
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+  const Vec3 scalei = Vec3( 1.0f * 0.5f);
+  
+  // cache some values
+  int const count = m_colours->GetCount();
+  Vec3 const* values = m_colours->GetPoints();
+  u8 const* freq = m_colours->GetFrequencies();
+  
+  cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
+  Scr3 berror = Scr3(16.0f);
+  
+  Vec3 c_start = m_start;
+  Vec3 c_end   = m_end;
+  Scr3 l_start = LengthSquared(Normalize(scale * (offset + m_start)));
+  Scr3 l_end   = LengthSquared(Normalize(scale * (offset + m_end)));
+  Vec3 q_start = Reciprocal(q.grid + Vec3(1.0f));
+  Vec3 q_end   = q_start;
+
+  // adjust offset towards sphere-boundary
+  if (!(l_start < Scr3(1.0f)))
+    q_start = Vec3(0.0f) - q_start;
+  if (!(l_end   < Scr3(1.0f)))
+    q_end   = Vec3(0.0f) - q_end;
+  
+  int trie = 0x3F;
+  do {
+    // permute end-points +-1 towards sphere-boundary
+    Vec3 p_start = q_start & Vec3(!(trie & 0x01), !(trie & 0x02), !(trie & 0x04));
+    Vec3 p_end   = q_end   & Vec3(!(trie & 0x08), !(trie & 0x10), !(trie & 0x20));
+    
+    p_start = q.SnapToLattice(c_start + p_start);
+    p_end   = q.SnapToLattice(c_end   + p_end);
+
+    // create a codebook
+    // resolve "metric * (value - code)" to "metric * value - metric * code"
+    Vec3 codes[4]; Codebook4(codes, p_start, p_end);
+
+    codes[0] = Normalize(scale * (offset + codes[0]));
+    codes[1] = Normalize(scale * (offset + codes[1]));
+    codes[2] = Normalize(scale * (offset + codes[2]));
+    codes[3] = Normalize(scale * (offset + codes[3]));
+
+    Scr3 merror = Scr3(16.0f);
+    for (int i = 0; i < count; ++i) {
+      // find the closest code
+      Scr3 dist;
+      Vec3 value = Normalize(scale * (offset + values[i]));
+
+      {
+	Scr3 d0 = Dot(value, codes[0]);
+	Scr3 d1 = Dot(value, codes[1]);
+	Scr3 d2 = Dot(value, codes[2]);
+	Scr3 d3 = Dot(value, codes[3]);
+
+	// encourage OoO
+	Scr3 da = Max(d0, d1);
+	Scr3 db = Max(d2, d3);
+	dist    = Max(da, db);
+      }
+      
+      // accumulate the error
+      merror -= dist * freq[i];
+    }
+    
+    if (berror > merror) {
+      berror = merror;
+
+      m_start = p_start;
+      m_end   = p_end;
+    }
+
+  } while(--trie);
+}
 
 void ColourNormalFit::Compress3(void* block)
 {
@@ -396,8 +554,10 @@ void ColourNormalFit::Compress3(void* block)
   // use a fitting algorithm
   m_start = m_start_candidate;
   m_end   = m_end_candidate;
-  if (m_flags & kColourIterativeClusterFits)
+  if ((m_flags & kColourIterativeClusterFits))
     kMeans3();
+//if ((m_flags & kColourIterativeClusterFits) >= (kColourIterativeClusterFit))
+//  Permute3();
   
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"
@@ -470,6 +630,8 @@ void ColourNormalFit::Compress4(void* block)
   m_end   = m_end_candidate;
   if (m_flags & kColourIterativeClusterFits)
     kMeans4();
+//if ((m_flags & kColourIterativeClusterFits) >= (kColourIterativeClusterFit))
+//  Permute4();
   
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"

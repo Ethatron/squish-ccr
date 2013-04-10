@@ -29,6 +29,12 @@
 #include "inlineables.cpp"
 
 namespace squish {
+  
+#ifdef	FEATURE_NORMALFIT_UNITGUARANTEE
+#define DISARM	true
+#else
+#define DISARM	false
+#endif
 
 /* *****************************************************************************
  */
@@ -58,6 +64,26 @@ static void WriteBitoneBlock(int a, int b, u8 const* indices, void* block)
   }
 }
 
+static void WriteBitoneBlock(int a, int b, Col4 const& indices, void* block)
+{
+  // get the block as ints
+  int* ints = (int*)block;
+
+  Col4 reindexed =
+    (indices      ) +
+    (indices >>  6) +
+    (indices >> 12) +
+    (indices >> 18);
+  
+  // write the endpoints
+  ints[0] = (b << 16) + (a);
+
+  // write the indices
+  // [3-0] [7-4] [11-8] [15-12] big endian dword
+  // [15-12] [11-8] [7-4] [3-0] little endian dword
+  PackBytes(reindexed & Col4(0x000000FF), ints[1]);
+}
+
 void WriteBitoneBlock4(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block)
 {
   // get the packed values
@@ -65,25 +91,19 @@ void WriteBitoneBlock4(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* 
   int b = FloatTo88(end);
 
   // remap the indices
-  u8 remapped[16];
+  Col4 remapped = Col4(indices);
 
   if (a < b) {
     // swap a and b
     std::swap(a, b);
-    for (int i = 0; i < 16; ++i)
-      remapped[i] = (indices[i] ^ 0x1) & 0x3;
+    // swap index 0 and 1, 2 and 3
+    remapped ^= Col4(0x01010101);
   }
   else if (a == b) {
     // use index 0
-    for (int i = 0; i < 16; ++i)
-      remapped[i] = 0;
+    remapped  = Col4(0x00000000);
   }
-  else {
-    // use the indices directly
-    for (int i = 0; i < 16; ++i)
-      remapped[i] = indices[i];
-  }
-
+  
   // write the block
   WriteBitoneBlock(a, b, remapped, block);
 }
@@ -168,11 +188,80 @@ void DecompressBitoneCtx1(f23* rgba, void const* block)
     rgba[4 * i + 3] = codes[offset + 3] * (1.0f / 255.0f);
   }
 }
+
+void DecompressNormalsCtx1(u8* xyzd, void const* block)
+{
+  const Vec3 scale  = Vec3( 1.0f / 127.5f);
+  const Vec3 offset = Vec3(-1.0f * 127.5f);
+  const Vec3 scalei = Vec3( 1.0f * 127.5f);
+  
+  u8 codes[16];
+  u8 indices[16];
+
+  ReadBitoneBlock(codes, indices, block);
+
+  // write out the indexed codebook values
+  for (int i = 0; i < 16; ++i) {
+    Col3 _xyz0  = Col3(codes[indices[i]], codes[indices[i]]);
+    Vec3 cxyz0  = scale * (offset + _xyz0);
+         cxyz0  = Complement<DISARM>(cxyz0);
+	 cxyz0  = (scalei * cxyz0) - offset;
+	 _xyz0  = FloatToInt<true>(cxyz0);
+
+    PackBytes(_xyz0, *((int *)(&xyzd[4 * i])));
+  }
+}
+
+void DecompressNormalsCtx1(u16* xyzd, void const* block)
+{
+  const Vec3 scale   = Vec3( 1.0f / 127.5f);
+  const Vec3 offset  = Vec3(-1.0f * 127.5f);
+  const Vec3 scalei  = Vec3( 1.0f * 32767.5f);
+  const Vec3 offseti = Vec3(-1.0f * 32767.5f);
+  
+  u8 codes[16];
+  u8 indices[16];
+
+  ReadBitoneBlock(codes, indices, block);
+
+  // write out the indexed codebook values
+  for (int i = 0; i < 16; ++i) {
+    Col3 _xyz0  = Col3(codes[indices[i]], codes[indices[i]]);
+    Vec3 cxyz0  = scale * (offset + _xyz0);
+         cxyz0  = Complement<DISARM>(cxyz0);
+	 cxyz0  = (scalei * cxyz0) - offseti;
+	 _xyz0  = FloatToInt<true>(cxyz0);
+
+    PackWords(_xyz0, *((__int64 *)(&xyzd[4 * i])));
+  }
+}
+
+void DecompressNormalsCtx1(f23* xyzd, void const* block)
+{
+  const Vec3 scale  = Vec3( 1.0f / 127.5f);
+  const Vec3 offset = Vec3(-1.0f * 127.5f);
+  
+  u8 codes[16];
+  u8 indices[16];
+
+  ReadBitoneBlock(codes, indices, block);
+
+  // write out the indexed codebook values
+  for (int i = 0; i < 16; ++i) {
+    Col3 _xyz0  = Col3(codes[indices[i]], codes[indices[i]]);
+    Vec3 cxyz0  = scale * (offset + _xyz0);
+         cxyz0  = Complement<DISARM>(cxyz0);
+
+    StoreUnaligned(cxyz0, &xyzd[4 * i]);
+  }
+}
 #endif
 
 /* *****************************************************************************
  */
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #endif
+
+#undef DISARM
 
 } // namespace squish

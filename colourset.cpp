@@ -57,6 +57,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   Col4 m3 = Col4(&rgba[3 * 16]);
   Col4 al = CollapseA(m0, m1, m2, m3);
 
+  // clear alpha
   m0 &= Col4(0x00FFFFFF);
   m1 &= Col4(0x00FFFFFF);
   m2 &= Col4(0x00FFFFFF);

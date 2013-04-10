@@ -43,6 +43,9 @@ public:
 private:
   void kMeans3();
   void kMeans4();
+  
+  void Permute3();
+  void Permute4();
 
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
