@@ -202,11 +202,12 @@ void DecompressNormalsCtx1(u8* xyzd, void const* block)
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i) {
-    Col3 _xyz0  = Col3(codes[indices[i]], codes[indices[i]]);
+    Col3 _xyz0  = Col3(codes[indices[i] * 4 + 0], codes[indices[i] * 4 + 1]);
     Vec3 cxyz0  = scale * (offset + _xyz0);
          cxyz0  = Complement<DISARM>(cxyz0);
 	 cxyz0  = (scalei * cxyz0) - offset;
 	 _xyz0  = FloatToInt<true>(cxyz0);
+	 _xyz0 |= Col4(0,0,0,0xFF).GetCol3();
 
     PackBytes(_xyz0, *((int *)(&xyzd[4 * i])));
   }
@@ -226,11 +227,12 @@ void DecompressNormalsCtx1(u16* xyzd, void const* block)
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i) {
-    Col3 _xyz0  = Col3(codes[indices[i]], codes[indices[i]]);
+    Col3 _xyz0  = Col3(codes[indices[i] * 4 + 0], codes[indices[i] * 4 + 1]);
     Vec3 cxyz0  = scale * (offset + _xyz0);
          cxyz0  = Complement<DISARM>(cxyz0);
 	 cxyz0  = (scalei * cxyz0) - offseti;
 	 _xyz0  = FloatToInt<true>(cxyz0);
+	 _xyz0 |= Col4(0,0,0,0xFF).GetCol3();
 
     PackWords(_xyz0, *((__int64 *)(&xyzd[4 * i])));
   }
@@ -248,11 +250,12 @@ void DecompressNormalsCtx1(f23* xyzd, void const* block)
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i) {
-    Col3 _xyz0  = Col3(codes[indices[i]], codes[indices[i]]);
+    Col3 _xyz0  = Col3(codes[indices[i] * 4 + 0], codes[indices[i] * 4 + 1]);
     Vec3 cxyz0  = scale * (offset + _xyz0);
          cxyz0  = Complement<DISARM>(cxyz0);
+    Vec4 dxyz0  = TransferW(cxyz0, Vec4(1.0f));
 
-    StoreUnaligned(cxyz0, &xyzd[4 * i]);
+    StoreUnaligned(dxyz0, &xyzd[4 * i]);
   }
 }
 #endif
