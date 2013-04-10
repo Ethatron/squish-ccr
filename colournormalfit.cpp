@@ -63,8 +63,8 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   GetPrincipleComponent(covariance, principle);
 
   // get the min and max normal as the codebook endpoints
-  Vec3 start(0.0f);
-  Vec3 end(0.0f);
+  Vec3 start(127.5f, 127.5f, 255.0f);
+  Vec3 end(127.5f, 127.5f, 255.0f);
 
   if (count > 0) {
     const Vec3 scale  = Vec3( 1.0f / 0.5f);
