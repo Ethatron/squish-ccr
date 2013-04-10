@@ -81,6 +81,7 @@ int SanitizeFlags(int flags)
   int metric = flags & (kColourMetrics);
   int extra  = flags & (kWeightColourByAlpha);
   int mode   = flags & (kVariableCodingModes);
+  int map    = flags & (kSrgbIn | kSrgbOut);
 
   // set defaults
   if (!method || (method > kCtx1))
@@ -97,6 +98,8 @@ int SanitizeFlags(int flags)
 
   if (!metric)
     metric = kColourMetricPerceptual;
+  if (metric == kColourMetricUnit)
+    map = 0;
 
   if ((method == kBtc6) && (mode > kVariableCodingMode14))
     mode = 0;
@@ -104,7 +107,7 @@ int SanitizeFlags(int flags)
     mode = 0;
 
   // done
-  return method + fit + metric + extra + mode;
+  return method + fit + metric + extra + mode + map;
 }
 
 /* *****************************************************************************
