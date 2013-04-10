@@ -67,8 +67,8 @@ BitoneNormalFit::BitoneNormalFit(BitoneSet const* bitones, int flags)
   GetPrincipleComponent(covariance, principle);
 
   // get the min and max normal as the codebook endpoints
-  Vec3 start(0.0f);
-  Vec3 end(0.0f);
+  Vec3 start(127.0f);
+  Vec3 end(127.0f);
 
   if (count > 0) {
     const Vec3 scale  = Vec3( 1.0f / 0.5f);
@@ -151,7 +151,7 @@ BitoneNormalFit::BitoneNormalFit(BitoneSet const* bitones, int flags)
     end   = centroid + principle * max * div;
 #endif
 
-#if 1
+#if 0
     // intersect negative undershoot with axis-plane(s), clamp to 0.0
     chk = start;
     while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
@@ -197,6 +197,10 @@ BitoneNormalFit::BitoneNormalFit(BitoneSet const* bitones, int flags)
 
     start = Normalize(start);
     end   = Normalize(end  );
+    
+    // truncate towards the center [0,0]
+    start = (FloatToInt<false>(start * 255.0f) &= Col3(~1)) * Vec3(1.0f / 255.0f);
+    end   = (FloatToInt<false>(end   * 255.0f) &= Col3(~1)) * Vec3(1.0f / 255.0f);
 
     start = (start * scalei) - offset;
     end   = (end   * scalei) - offset;
@@ -229,8 +233,8 @@ BitoneNormalFit::BitoneNormalFit(BitoneSet const* bitones, int flags)
   }
 
   // snap floating-point-values to the integer-lattice and save
-  m_start_candidate = Truncate(start * 255.0f) * (1.0f / 255.0f);
-  m_end_candidate   = Truncate(end   * 255.0f) * (1.0f / 255.0f);
+  m_start_candidate = start;
+  m_end_candidate   = end;
 }
 
 void BitoneNormalFit::kMeans4()
@@ -308,14 +312,21 @@ void BitoneNormalFit::kMeans4()
       m_start = c_start;
       m_end   = c_end;
     }
+    
+    means[0] = Normalize(means[0]);
+    means[1] = Normalize(means[1]);
+    
+    // truncate towards the center [0,0]
+    means[0] = (FloatToInt<false>(means[0] * 255.0f) &= Col3(~1)) * Vec3(1.0f / 255.0f);
+    means[1] = (FloatToInt<false>(means[1] * 255.0f) &= Col3(~1)) * Vec3(1.0f / 255.0f);
 
-    means[0] = (Normalize(means[0]) * scalei) - offset;
-    means[1] = (Normalize(means[1]) * scalei) - offset;
+    means[0] = (means[0] * scalei) - offset;
+    means[1] = (means[1] * scalei) - offset;
     
     l_start = c_start;
     l_end   = c_end;
-    c_start = Truncate(means[0] * 255.0f) * (1.0f / 255.0f);
-    c_end   = Truncate(means[1] * 255.0f) * (1.0f / 255.0f);
+    c_start = means[0];
+    c_end   = means[1];
 
   } while(--trie && !(CompareAllEqualTo(c_start, l_start) && CompareAllEqualTo(c_end, l_end)));
 }
@@ -333,11 +344,11 @@ void BitoneNormalFit::Permute4()
   
   Scr3 berror = Scr3(16.0f);
   
-  Vec3 c_start = m_start;
-  Vec3 c_end   = m_end;
-  Scr3 l_start = LengthSquared(Normalize(scale * (offset + m_start)));
-  Scr3 l_end   = LengthSquared(Normalize(scale * (offset + m_end)));
-  Vec3 q_start = Reciprocal(Vec3(255.0f) + Vec3(1.0f));
+  Vec3 c_start = scale * (offset + m_start);
+  Vec3 c_end   = scale * (offset + m_end);
+  Scr3 l_start = LengthSquared(Normalize(c_start));
+  Scr3 l_end   = LengthSquared(Normalize(c_end));
+  Vec3 q_start = Reciprocal(Vec3(127.0f) + Vec3(0.5f));
   Vec3 q_end   = q_start;
 
   // adjust offset towards sphere-boundary (or center if DISARM)
@@ -352,8 +363,15 @@ void BitoneNormalFit::Permute4()
     Vec3 p_start = q_start & Vec3(!(trie & 0x01), !(trie & 0x02), !(trie & 0x04));
     Vec3 p_end   = q_end   & Vec3(!(trie & 0x08), !(trie & 0x10), !(trie & 0x20));
     
-    p_start = Truncate((c_start + p_start) * 255.0f) * (1.0f / 255.0f);
-    p_end   = Truncate((c_end   + p_end  ) * 255.0f) * (1.0f / 255.0f);
+    p_start = (c_start + p_start);
+    p_end   = (c_end   + p_end  );
+
+    // truncate towards the center [0,0]
+    p_start = (FloatToInt<false>(p_start * 255.0f) &= Col3(~1)) * Vec3(1.0f / 255.0f);
+    p_end   = (FloatToInt<false>(p_end   * 255.0f) &= Col3(~1)) * Vec3(1.0f / 255.0f);
+      
+    p_start = (p_start * scalei) - offset;
+    p_end   = (p_end   * scalei) - offset;
 
     // create a codebook
     // resolve "metric * (value - code)" to "metric * value - metric * code"
@@ -394,7 +412,7 @@ void BitoneNormalFit::Permute4()
     
     if (berror > merror) {
       berror = merror;
-
+      
       m_start = p_start;
       m_end   = p_end;
     }
