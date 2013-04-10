@@ -990,6 +990,7 @@ int main(int argc, char* argv[]) {
 	    case '4': method = kBtc4; break;
 	    case '5': method = kBtc5; break;
 	    case '7': method = kBtc7; break;
+	    case '0': method = kCtx1; break;
 
 	    case 'A': mapping = 3; break;
 	    case 'B': mapping = 2; break;
@@ -1038,6 +1039,7 @@ int main(int argc, char* argv[]) {
 	<< "\t-123\tSpecifies whether to use DXT1/BC1, DXT3/BC2 or DXT5/BC3 compression" << std::endl
 	<< "\t-45\tSpecifies whether to use ATI/BC4, ATI2/BC5 compression" << std::endl
 	<< "\t-7\tSpecifies whether to use BC7 compression" << std::endl
+	<< "\t-0\tSpecifies whether to use CTX1 compression" << std::endl
 	<< "\t-a\tUse the slow iterative alpha/gray/normal compressor" << std::endl
 	<< "\t-r\tUse the fast but inferior range-based colour compressor" << std::endl
 	<< "\t-i\tUse the very slow but slightly better iterative colour compressor" << std::endl
