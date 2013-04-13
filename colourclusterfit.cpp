@@ -74,7 +74,7 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   GetPrincipleComponent(covariance, m_principle);
 
   // we have tables for this
-  m_optimizable = unweighted && ((count == 16) || ((flags & kBtcp) == kBtc1));
+  m_optimizable = unweighted & ((count == 16) | ((flags & kBtcp) == kBtc1));
 }
 
 bool ColourClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
@@ -110,13 +110,13 @@ bool ColourClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
 
   // copy the ordering and weight all the points
   Vec3 const* unweighted = m_colours->GetPoints();
-  float const* weights = m_colours->GetWeights();
+  Scr3 const* weights = m_colours->GetWeights();
   m_xsum_wsum = VEC4_CONST(0.0f);
   for(int i = 0; i < count; ++i) {
     int j = order[i];
 
     Vec4 p = Vec4(unweighted[j], 1.0f);
-    Vec4 w(weights[j]);
+    Scr4 w(weights[j]);
     Vec4 x = p * w;
 
     m_points_weights[i] = x;
@@ -820,13 +820,13 @@ void ColourClusterFit::Compress4(void* block)
    * C == 4, numset ==
    *  [0]	0x00f796e0 {13856, 5184}
    */
-  if (m_optimizable && (m_colours->GetCount() == 16))
+  if (m_optimizable & (m_colours->GetCount() == 16))
     gstat.has_noweightsets[1][0][0]++;
   else
     gstat.has_noweightsets[1][0][1]++;
 #endif
 
-  if (m_optimizable && (m_colours->GetCount() == 16))
+  if (m_optimizable & (m_colours->GetCount() == 16))
     ClusterFit4Constant(block);
   else
     ClusterFit4        (block);

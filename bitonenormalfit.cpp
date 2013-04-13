@@ -50,7 +50,7 @@ BitoneNormalFit::BitoneNormalFit(BitoneSet const* bitones, int flags)
   // cache some values
   int const count = m_bitones->GetCount();
   Vec3 const* values = m_bitones->GetPoints();
-  float const* weights = m_bitones->GetWeights();
+  Scr3 const* weights = m_bitones->GetWeights();
 
 #ifdef	FEATURE_NORMALFIT_PROJECT
   Sym3x3 covariance;
@@ -246,7 +246,7 @@ void BitoneNormalFit::kMeans4()
   // cache some values
   int const count = m_bitones->GetCount();
   Vec3 const* values = m_bitones->GetPoints();
-  u8 const* freq = m_bitones->GetFrequencies();
+  Scr3 const* freq = m_bitones->GetWeights();
   
   Vec3 c_start = m_start, c_end = m_end;
   Vec3 l_start = m_start, l_end = m_end;
@@ -340,7 +340,7 @@ void BitoneNormalFit::Permute4()
   // cache some values
   int const count = m_bitones->GetCount();
   Vec3 const* values = m_bitones->GetPoints();
-  u8 const* freq = m_bitones->GetFrequencies();
+  Scr3 const* freq = m_bitones->GetWeights();
   
   Scr3 berror = Scr3(16.0f);
   
@@ -428,7 +428,7 @@ void BitoneNormalFit::Compress4(void* block)
   // cache some values
   int const count = m_bitones->GetCount();
   Vec3 const* values = m_bitones->GetPoints();
-  u8 const* freq = m_bitones->GetFrequencies();
+  Scr3 const* freq = m_bitones->GetWeights();
   
   // use a fitting algorithm
   m_start = m_start_candidate;

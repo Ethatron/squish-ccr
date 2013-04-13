@@ -88,7 +88,7 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
   // cache some values
   int const count = m_palette->GetCount(set);
   Vec4 const* values = m_palette->GetPoints(set);
-  u8 const* freq = m_palette->GetFrequencies(set);
+  Scr4 const* freq = m_palette->GetWeights(set);
 
   // snap floating-point-values to the integer-lattice
   Vec4 cstart = q.SnapToLatticeClamped(m_start_candidate[set], sb, 1 << SBSTART);

@@ -54,7 +54,7 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
     bool const unweighted = m_palette->IsUnweighted(s);
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    Vec4 const* weights = m_palette->GetWeights(s);
+    Scr4 const* weights = m_palette->GetWeights(s);
     
     // the codebook endpoints
     Vec4 start(0.0f);
@@ -263,7 +263,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
     // cache some values
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    u8 const* freq = m_palette->GetFrequencies(s);
+    Scr4 const* freq = m_palette->GetWeights(s);
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
     Vec4 metric = m_metric[s < isets ? 0 : 1];

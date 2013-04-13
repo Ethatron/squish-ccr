@@ -57,7 +57,7 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  float const* weights = m_colours->GetWeights();
+  Scr3 const* weights = m_colours->GetWeights();
 
   Sym3x3 covariance;
   Vec3 centroid;
@@ -171,7 +171,7 @@ void ColourRangeFit::Compress3(void* block)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
 
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"
@@ -230,7 +230,7 @@ void ColourRangeFit::Compress4(void* block)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
 
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"

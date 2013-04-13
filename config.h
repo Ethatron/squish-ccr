@@ -43,12 +43,6 @@
 #define	ColourSingleMatch	ColourSingleSnap
 #define	PaletteSingleMatch	PaletteSingleSnap
 
-/* use frequencies of colour/palette-entries to calculate errors
- * this is more exact but a bit slower and uses more memory
- * this doesn't impact BC2/BC3 but BC1 (one vs. the other) and BC7
- */
-#define	FEATURE_EXACT_ERROR
-
 /* use the power-method to estimate the principle component axis
  * should be more precise if not faster
  */

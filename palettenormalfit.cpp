@@ -51,7 +51,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
     // cache some values
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    Vec4 const* weights = m_palette->GetWeights(s);
+    Scr4 const* weights = m_palette->GetWeights(s);
 
     // we don't do this for sparse sets
     if (count != 1) {
@@ -170,7 +170,7 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
     // cache some values
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    u8 const* freq = m_palette->GetFrequencies(s);
+    Scr4 const* freq = m_palette->GetWeights(s);
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
     Vec4 metric = m_metric[s < isets ? 0 : 1];

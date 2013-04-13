@@ -237,6 +237,7 @@
     <ClInclude Include="..\..\colourrangefit.h" />
     <ClInclude Include="..\..\colourset.h" />
     <ClInclude Include="..\..\config.h" />
+    <ClInclude Include="..\..\helpers.h" />
     <ClInclude Include="..\..\maths.h" />
     <ClInclude Include="..\..\alphanormalfit.h" />
     <ClInclude Include="..\..\paletteblock.h" />

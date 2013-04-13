@@ -63,7 +63,7 @@ BitoneClusterFit::BitoneClusterFit(BitoneSet const* bitones, int flags)
   GetPrincipleComponent(covariance, m_principle);
 
   // we have tables for this
-  m_optimizable = unweighted && (count == 16);
+  m_optimizable = unweighted & (count == 16);
 }
 
 bool BitoneClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
@@ -99,7 +99,7 @@ bool BitoneClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
 
   // copy the ordering and weight all the points
   Vec3 const* unweighted = m_bitones->GetPoints();
-  float const* weights = m_bitones->GetWeights();
+  Scr3 const* weights = m_bitones->GetWeights();
   m_xsum_wsum = VEC4_CONST(0.0f);
   for(int i = 0; i < count; ++i) {
     int j = order[i];
@@ -460,13 +460,13 @@ void BitoneClusterFit::Compress4(void* block)
    * C == 4, numset ==
    *  [0]	0x00f796e0 {13856, 5184}
    */
-  if (m_optimizable && (m_bitones->GetCount() == 16))
+  if (m_optimizable & (m_bitones->GetCount() == 16))
     gstat.has_noweightsets[1][0][0]++;
   else
     gstat.has_noweightsets[1][0][1]++;
 #endif
   
-  if (m_optimizable && (m_bitones->GetCount() == 16))
+  if (m_optimizable & (m_bitones->GetCount() == 16))
     ClusterFit4Constant(block);
   else
     ClusterFit4        (block);

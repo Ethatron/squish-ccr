@@ -205,9 +205,9 @@ void ComputeWeightedCovariance4(Sym4x4 &covariance, Vec4 &centroid, int n, Vec4 
   covariance_3.StoreX(&covariance[3]);
 }
 
-void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric, float const* weights) {
+void ComputeWeightedCovariance3(Sym3x3 &covariance, Vec3 &centroid, int n, Vec3 const* points, Vec3 const &metric, Scr3 const* weights) {
   // compute the centroid
-  float total = 0.0f;
+  Scr3 total = Scr3(0.0f);
   Vec3 center = Vec3(0.0f);
 
   for (int i = 0; i < n; ++i) {

@@ -44,7 +44,7 @@ BitoneRangeFit::BitoneRangeFit(BitoneSet const* bitones, int flags)
   // cache some values
   int const count = m_bitones->GetCount();
   Vec3 const* values = m_bitones->GetPoints();
-  float const* weights = m_bitones->GetWeights();
+  Scr3 const* weights = m_bitones->GetWeights();
 
   Sym3x3 covariance;
   Vec3 centroid;
@@ -158,7 +158,7 @@ void BitoneRangeFit::Compress4(void* block)
   // cache some values
   int const count = m_bitones->GetCount();
   Vec3 const* values = m_bitones->GetPoints();
-  u8 const* freq = m_bitones->GetFrequencies();
+  Scr3 const* freq = m_bitones->GetWeights();
 
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"

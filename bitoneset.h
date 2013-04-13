@@ -47,7 +47,7 @@ public:
 
   int GetCount() const { return m_count; }
   Vec3 const* GetPoints() const { return m_points; }
-  float const* GetWeights() const { return m_weights; }
+  Scr3 const* GetWeights() const { return m_weights; }
 
   void RemapIndices(u8 const* source, u8* target) const;
 
@@ -55,21 +55,8 @@ private:
   bool  m_unweighted;
   int   m_count;
   Vec3  m_points[16];
-  float m_weights[16];
+  Scr3  m_weights[16];
   char  m_remap[16];
-
-#ifdef	FEATURE_EXACT_ERROR
-  /* --------------------------------------------------------------------------- */
-public:
-  u8 const* GetFrequencies() const {
-    return m_frequencies; }
-  u8 GetMaxFrequency() const {
-    u8 mx = 1; for (int i = 0; i < m_count; ++i)
-    mx = std::max(mx, m_frequencies[i]); return mx; }
-
-private:
-  u8    m_frequencies[16];
-#endif
 };
 #endif
 

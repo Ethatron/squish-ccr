@@ -59,7 +59,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
     bool const unweighted = m_palette->IsUnweighted(s);
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    Vec4 const* weights = m_palette->GetWeights(s);
+    Scr4 const* weights = m_palette->GetWeights(s);
 
     // we don't do this for sparse sets
     if (count != 1) {
@@ -93,7 +93,7 @@ PaletteClusterFit::PaletteClusterFit(PaletteSet const* palette, int flags, int s
       }
 
       // we have tables for this
-      m_optimizable[s] = unweighted && (count == 16);
+      m_optimizable[s] = unweighted & (count == 16);
     }
   }
 
@@ -134,7 +134,7 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
 
   // copy the ordering and weight all the points
   Vec4 const* unweighted = m_palette->GetPoints(set);
-  Vec4 const* weights = m_palette->GetWeights(set);
+  Scr4 const* weights = m_palette->GetWeights(set);
   bool const trns = m_palette->IsMergedAlpha();
 
   if (trns) {
@@ -146,7 +146,7 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
       int j = order[i];
 
       Vec4 p = unweighted[j];
-      Vec4 w(weights[j]);
+      Scr4 w(weights[j]);
       Vec4 x = p * w;
 
       m_points_weights[set][(i << 1) + 0] = x;
@@ -165,7 +165,7 @@ bool PaletteClusterFit::ConstructOrdering(Vec4 const& axis, int iteration, int s
       int j = order[i];
 
       Vec4 p = TransferW(unweighted[j], Vec4(1.0f));
-      Vec4 w(weights[j]);
+      Scr4 w(weights[j]);
       Vec4 x = p * w;
 
       m_points_weights[set][i] = x;
@@ -1529,7 +1529,7 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
       closest[s][0] = GetIndex();
 
       // accumulate the error
-      error += dist * m_palette->GetFrequencies(s)[0];
+      error += dist * m_palette->GetWeights(s)[0];
     }
 #if 0 // cluster fit is very likely much better than the quick index-fit
     // we do dual entry fit for sparse sets

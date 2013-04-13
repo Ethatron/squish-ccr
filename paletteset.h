@@ -84,7 +84,7 @@ public:
 
   bool IsUnweighted(int idx) const { return m_unweighted[idx]; }
   Vec4 const* GetPoints(int idx) const { return m_points[idx]; }
-  Vec4 const* GetWeights(int idx) const { return m_weights[idx]; }
+  Scr4 const* GetWeights(int idx) const { return m_weights[idx]; }
   int GetCount(int idx) const { return m_count[idx]; }
   int GetCount() const {
     return             m_count[0]      +
@@ -109,7 +109,7 @@ private:
   int   m_mask[4];
   int   m_count[4];
   Vec4  m_points[4][16];
-  Vec4  m_weights[4][16];
+  Scr4  m_weights[4][16];
   char  m_remap[4][16];
   
 #ifdef	FEATURE_TEST_LINES
@@ -138,19 +138,6 @@ public:
 private:
   int   m_cnst[4];
   int   m_grey[4];
-#endif
-
-#ifdef	FEATURE_EXACT_ERROR
-  /* --------------------------------------------------------------------------- */
-public:
-  u8 const* GetFrequencies(int idx) const {
-    return m_frequencies[idx]; }
-  u8 GetMaxFrequency(int idx) const {
-    u8 mx = 1; for (int i = 0; i < m_count[idx]; ++i)
-    mx = std::max(mx, m_frequencies[idx][i]); return mx; }
-
-private:
-  u8    m_frequencies[4][16];
 #endif
 };
 #endif

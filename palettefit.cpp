@@ -315,7 +315,7 @@ void PaletteFit::SumError(u8 (&closest)[4][16], vQuantizer &q, int mode, Scr4 &e
     // cache some values
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
-    u8 const* freq = m_palette->GetFrequencies(s);
+    Scr4 const* freq = m_palette->GetWeights(s);
 
     // snap floating-point-values to the integer-lattice
     Vec4 start = q.SnapToLattice(m_start[s], sb, 1 << SBSTART);

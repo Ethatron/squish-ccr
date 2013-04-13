@@ -50,30 +50,33 @@ private:
 
   doinline
   void ErrorEndPoints(int set, Vec4 const &metric, vQuantizer &q, int sb, u8 (&closest)[16],
-		      Vec4 const* values, u8 const* freq,
+		      Vec4 const* values, Scr4 const* freq,
 		      int ib, int idxs);
   
   doinline
-  Scr4 ErrorInterpolants(Vec4 const &metric, vQuantizer &q, int sb, Vec4 const* values, u8 const* freq,
+  Scr4 ErrorInterpolants(Vec4 const &metric, vQuantizer &q, int sb,
+			 Vec4 const* values, Scr4 const* freq,
 			 int ib, int idxs, Vec4 &value0, Vec4 &value1, int closest0, int closest1);
   doinline
-  Scr4 ErrorInterpolantsS(Vec4 const &metric, vQuantizer &q, int sb, Vec4 const* values, u8 const* freq,
+  Scr4 ErrorInterpolantsS(Vec4 const &metric, vQuantizer &q, int sb,
+			  Vec4 const* values, Scr4 const* freq,
 			  int ib, int idxs, Vec4 &value0, int closest0);
   doinline
-  Scr4 ErrorInterpolantsE(Vec4 const &metric, vQuantizer &q, int sb, Vec4 const* values, u8 const* freq,
+  Scr4 ErrorInterpolantsE(Vec4 const &metric, vQuantizer &q, int sb,
+			  Vec4 const* values, Scr4 const* freq,
 			  int ib, int idxs, Vec4 &value1, int closest1);
   
   doinline
   void BetterInterpolants(int set, Vec4 const &metric, vQuantizer &q, int sb, u8 (&closest)[16],
-			  Vec4 const* values, u8 const* freq,
+			  Vec4 const* values, Scr4 const* freq,
 			  int ib, int idxs, Vec4 &value0, Vec4 &value1, int closest0, int closest1);
   doinline
   void BetterInterpolantsS(int set, Vec4 const &metric, vQuantizer &q, int sb, u8 (&closest)[16],
-			   Vec4 const* values, u8 const* freq,
+			   Vec4 const* values, Scr4 const* freq,
 			   int ib, int idxs, Vec4 &value0, int closest0);
   doinline
   void BetterInterpolantsE(int set, Vec4 const &metric, vQuantizer &q, int sb, u8 (&closest)[16],
-			   Vec4 const* values, u8 const* freq,
+			   Vec4 const* values, Scr4 const* freq,
 			   int ib, int idxs, Vec4 &value1, int closest1);
 #endif
 

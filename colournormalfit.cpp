@@ -46,7 +46,7 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  float const* weights = m_colours->GetWeights();
+  Scr3 const* weights = m_colours->GetWeights();
 
 #ifdef	FEATURE_NORMALFIT_PROJECT
   Sym3x3 covariance;
@@ -238,7 +238,7 @@ void ColourNormalFit::kMeans3()
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
   
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
   Vec3 c_start = m_start, c_end = m_end;
@@ -316,7 +316,7 @@ void ColourNormalFit::kMeans4()
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
   
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
   Vec3 c_start = m_start, c_end = m_end;
@@ -398,7 +398,7 @@ void ColourNormalFit::Permute3()
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
   
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
   Scr3 berror = Scr3(16.0f);
@@ -473,7 +473,7 @@ void ColourNormalFit::Permute4()
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
   
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
   Scr3 berror = Scr3(16.0f);
@@ -549,7 +549,7 @@ void ColourNormalFit::Compress3(void* block)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
   
   // use a fitting algorithm
   m_start = m_start_candidate;
@@ -623,7 +623,7 @@ void ColourNormalFit::Compress4(void* block)
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();
-  u8 const* freq = m_colours->GetFrequencies();
+  Scr3 const* freq = m_colours->GetWeights();
   
   // use a fitting algorithm
   m_start = m_start_candidate;

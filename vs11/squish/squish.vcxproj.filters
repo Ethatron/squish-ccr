@@ -215,6 +215,9 @@
     <ClInclude Include="..\..\bitoneset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\helpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\texture_compression_s3tc.txt">

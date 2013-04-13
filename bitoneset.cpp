@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include "bitoneset.h"
+#include "helpers.h"
 
 namespace squish {
 
@@ -80,10 +81,9 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
       m_remap[i] = -1;
       continue;
     }
-
-    // ensure there is always non-zero weight even for zero alpha
-    u8    w = rgba[4 * i + 3] | (u8)wgta;
-    float W = (float)(w + 1) / 256.0f;
+    
+    // calculate point's weights
+    Weight<u8> wa(rgba, i, (u8)wgta);
 
     // loop over previous matches for a match
     u8 *rgbvalue = &rgbx[4 * i + 0];
@@ -97,11 +97,8 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
 
 	// map to this point and increase the weight
 	m_remap[i] = (char)index;
-	m_weights[index] += W;
+	m_weights[index] += wa.GetWeights();
 	m_unweighted = false;
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[index] += 1;
-#endif
 	break;
       }
     }
@@ -123,11 +120,8 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
 	// add the point
 	m_remap[i] = (char)index;
 	m_points[index] = Vec3(r, g, b);
-	m_weights[index] = W;
-	m_unweighted = m_unweighted && !(u8)(~w);
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[index] = 1;
-#endif
+	m_weights[index] = wa.GetWeights();
+	m_unweighted = m_unweighted & wa.IsOne();
 
 	// remember match for successive checks
 	*((int *)crgbvalue) = *((int *)rgbvalue);
@@ -162,11 +156,8 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
       // add the point
       m_count = 1;
       m_points[0] = sum * (1.0f / 16.0f);
-      m_weights[0] = 1.0f;
+      m_weights[0] = Scr3(1.0f);
       m_unweighted = true;
-#ifdef	FEATURE_EXACT_ERROR
-      m_frequencies[0] = 16;
-#endif
     }
     else {
       for (int i = 0, index; i < 16; ++i) {
@@ -264,10 +255,9 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
       m_remap[i] = -1;
       continue;
     }
-
-    // ensure there is always non-zero weight even for zero alpha
-    Scr4  w = Max(Vec4(rgba[4 * i + 3]), wgta);
-    float W = w.GetX();
+    
+    // calculate point's weights
+    Weight<f23> wa(rgba, i, wgta);
 
     // loop over previous matches for a match
     Vec3 *rgbvalue = &rgbx[i];
@@ -281,11 +271,8 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
 
 	// map to this point and increase the weight
 	m_remap[i] = (char)index;
-	m_weights[index] += W;
+	m_weights[index] += wa.GetWeights();
 	m_unweighted = false;
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[index] += 1;
-#endif
 	break;
       }
     }
@@ -309,11 +296,8 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
 	// add the point
 	m_remap[i] = (char)index;
 	m_points[index] = *(rgbvalue);
-	m_weights[index] = W;
-	m_unweighted = m_unweighted && !CompareFirstLessThan(w, Scr4(1.0f));
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[index] = 1;
-#endif
+	m_weights[index] = wa.GetWeights();
+	m_unweighted = m_unweighted & wa.IsOne();
 
 	// remember match for successive checks
 	*(crgbvalue) = *(rgbvalue);
@@ -350,11 +334,8 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
       // add the point
       m_count = 1;
       m_points[0] = sum * (1.0f / 16.0f);
-      m_weights[0] = 1.0f;
+      m_weights[0] = Scr3(1.0f);
       m_unweighted = true;
-#ifdef	FEATURE_EXACT_ERROR
-      m_frequencies[0] = 16;
-#endif
     }
     else {
       for (int i = 0, index; i < 16; ++i) {

@@ -1784,6 +1784,12 @@ public:
 		m_v = _mm_mul_ps( m_v, v.m_v );
 		return *this;
 	}
+	
+	Vec3& operator/=( Vec3 v )
+	{
+		*this *= Reciprocal( v );
+		return *this;
+	}
 
 	Vec3& operator/=( float v )
 	{
@@ -2323,6 +2329,11 @@ public:
 	{
 		m_v = arg.m_v;
 		return *this;
+	}
+	
+	operator Vec3()
+	{
+		return Vec3(m_v);
 	}
 
 	explicit Vec4(float s) : m_v( _mm_set1_ps( s ) ) {}

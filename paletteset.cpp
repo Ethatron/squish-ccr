@@ -25,6 +25,7 @@
    -------------------------------------------------------------------------- */
 
 #include "paletteset.h"
+#include "helpers.h"
 
 namespace squish {
 
@@ -246,8 +247,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
   // check the compression mode for btc
   bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
-  bool const seperateAlpha = ((flags & kExcludeAlphaFromPalette) == 0) &&  m_seperatealpha;
-  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0) && !m_mergedalpha;
+  bool const seperateAlpha = ((flags & kExcludeAlphaFromPalette) == 0) & ( m_seperatealpha);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0) & (!m_mergedalpha);
   bool const killByAlpha   = ((flags & kWeightColourByAlpha    ) != 0);
 
   // build mapped data
@@ -298,7 +299,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
     ___a[1 * i + 0] = temp[rot[3]];
 
     // check for transparency (after blanking out)
-    m_transparent = m_transparent || (temp[3] < 255);
+    m_transparent = m_transparent | (temp[3] < 255);
 
 #ifdef FEATURE_IGNORE_ALPHA0
     // kill colour
@@ -306,7 +307,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 #endif
 
     // temporary, TODO: remove it
-    m_weights[3][i] = Vec4(rgba[4 * i + 3] + 1) * Vec4(1.0f / 256.0f);
+    m_weights[3][i] = Weight<u8>(rgba, i, 0).GetWeights();
   }
   
   // clean initial state
@@ -340,10 +341,9 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	continue;
       }
       
-      // ensure there is always non-zero weight even for zero alpha
-      u8   w = rgba[4 * i + 3] | wgtx;
-      Vec4 W = Vec4(w + 1) * Vec4(1.0f / 256.0f);
-    
+      // calculate point's weights
+      Weight<u8> wa(rgba, i, wgtx);
+
       // loop over previous matches for a match
       u8 *rgbvalue = &rgbx[4 * i + 0];
       for (index = 0; index < m_count[s]; ++index) {
@@ -356,11 +356,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 	  // map to this point and increase the weight
 	  m_remap[s][i] = (char)index;
-	  m_weights[s][index] += W;
+	  m_weights[s][index] += wa.GetWeights();
 	  m_unweighted[s] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][index] += 1;
-#endif
 	  break;
 	}
       }
@@ -383,11 +380,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  // add the point
 	  m_remap[s][i] = (char)index;
 	  m_points[s][index] = Vec4(r, g, b, a);
-	  m_weights[s][index] = W;
-	  m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][index] = 1;
-#endif
+	  m_weights[s][index] = wa.GetWeights();
+	  m_unweighted[s] = m_unweighted[s] & wa.IsOne();
 
 	  // remember match for successive checks
 	  *((int *)crgbvalue) = *((int *)rgbvalue);
@@ -411,7 +405,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	// a) there are no colours in the set, just add one
 	// a) there are no colour-alphas in the set, just add one
 	// b) there don't exist a alpha == 0 in the set, just add one
-	if ((m_count[s] == 0) || (!m_seperatealpha && m_transparent)) {
+	if ((m_count[s] == 0) | (!m_seperatealpha & m_transparent)) {
 	  Vec4 sum = Vec4(0.0f);
 	  int num = 0;
 	  int p = m_count[s];
@@ -438,17 +432,17 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  }
 	  
 	  sum /= num;
-	  if (!m_seperatealpha && m_transparent)
+	  if (!m_seperatealpha & m_transparent)
 	    sum = KillW(sum);
+	  
+	  // calculate point's weights
+	  Weight<u8> wa(0, wgtx);
 
 	  // add the point
 	  m_count[s]++;
 	  m_points[s][p] = sum;
-	  m_weights[s][p] = Vec4(num * (wgtx + 1)) * Vec4(1.0f / 256.0f);
-	  m_unweighted[s] = m_unweighted[s] && (num == 1);
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][p] = (u8)num;
-#endif
+	  m_weights[s][p] = wa.GetWeights() * num;
+	  m_unweighted[s] = m_unweighted[s] & wa.IsOne() & (num == 1);
 
 #ifdef	FEATURE_TEST_LINES
 	  // if -1, all bytes are identical, checksum to check which bytes flip
@@ -489,10 +483,9 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 	  continue;
 	}
-
-        // ensure there is always non-zero weight even for zero alpha
-        u8   w = rgba[4 * i + 3] | ___w;
-        Vec4 W = Vec4(w + 1) * Vec4(1.0f / 256.0f);
+	
+	// calculate point's weights
+	Weight<u8> wa(rgba, i, ___w);
 	
 	// loop over previous matches for a match
 	u8 *avalue = &___a[1 * i + 0];
@@ -506,11 +499,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
 	    // map to this point and increase the weight
 	    m_remap[a][i] = (char)index;
-	    m_weights[a][index] += W;
+	    m_weights[a][index] += wa.GetWeights();
 	    m_unweighted[a] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	    m_frequencies[a][index] += 1;
-#endif
 	    break;
 	  }
 	}
@@ -530,11 +520,8 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    // add the point
 	    m_remap[a][i] = (char)index;
 	    m_points[a][index] = Vec4(c);
-	    m_weights[a][index] = W;
-	    m_unweighted[s] = m_unweighted[s] && !(u8)(~w);
-#ifdef	FEATURE_EXACT_ERROR
-	    m_frequencies[a][index] = 1;
-#endif
+	    m_weights[a][index] = wa.GetWeights();
+	    m_unweighted[s] = m_unweighted[s] & wa.IsOne();
 	    
 	    // remember match for successive checks
 	    *cavalue = *avalue;
@@ -547,7 +534,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	// separate alpha does have rotations
 	{
 	  // a) there are no colours in the set, just add one
-	  if ((m_count[a] == 0) || (!m_rotid && m_transparent)) {
+	  if ((m_count[a] == 0) | (!m_rotid & m_transparent)) {
 	    Vec4 sum = Vec4(0.0f);
 	    int num = 0;
 	    int p = m_count[a];
@@ -573,15 +560,15 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    sum /= num;
 	    if (!m_rotid && m_transparent)
 	      sum = Vec4(0.0f);
+	    
+	    // calculate point's weights
+	    Weight<u8> wa(0, ___w);
 
 	    // add the point
 	    m_count[a]++;
 	    m_points[a][p] = sum;
-	    m_weights[a][p] = Vec4(num * (___w + 1)) * Vec4(1.0f / 256.0f);
-	    m_unweighted[a] = m_unweighted[a] && (num == 1);
-#ifdef	FEATURE_EXACT_ERROR
-	    m_frequencies[a][p] = (u8)num;
-#endif
+	    m_weights[a][p] = wa.GetWeights() * num;
+	    m_unweighted[a] = m_unweighted[a] & wa.IsOne() & (num == 1);
 	  }
 	  else {
 	    int hmpf = 0; hmpf = 0; 
@@ -604,7 +591,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   }
 
   // clear if we're suppose to throw alway alpha
-  m_transparent = m_transparent && !clearAlpha;
+  m_transparent = m_transparent & !clearAlpha;
 }
 
 void PaletteSet::BuildSet(u16 const* rgba, int mask, int flags) {
@@ -678,8 +665,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 
       rgbx = KillW(rgba);
       
-      // ensure there is always non-zero weight even for zero alpha
-      Vec4 W = Max(m_weights[3][i], wgtx);
+      // calculate point's weights
+      Weight<Scr4> wa(m_weights, i, wgtx);
 	
       // loop over previous matches for a match
       for (index = 0; index < m_count[s]; ++index) {
@@ -689,11 +676,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 
 	  // map to this point and increase the weight
 	  m_remap[s][i] = (char)index;
-	  m_weights[s][index] += W;
+	  m_weights[s][index] += wa.GetWeights();
 	  m_unweighted[s] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][index] += 1;
-#endif
 	  break;
 	}
       }
@@ -707,11 +691,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	  // add the point
 	  m_remap[s][i] = (char)index;
 	  m_points[s][index] = rgbx;
-	  m_weights[s][index] = W;
-	  m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][index] = 1;
-#endif
+	  m_weights[s][index] = wa.GetWeights();
+	  m_unweighted[s] = m_unweighted[s] & wa.IsOne();
 
 #ifdef	FEATURE_TEST_LINES
 	  // if -1, all bytes are identical, checksum to check which bytes flip
@@ -724,8 +705,9 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       // TODO: if alpha==0 don't add this colour
       {
 	___a = rgba.SplatW();
-
-	Vec4 A = Max(m_weights[3][i], ___w);
+	
+	// calculate point's weights
+	Weight<Scr4> aw(m_weights, i, ___w);
 	
 	// loop over previous matches for a match
 	for (index = 0; index < m_count[a]; ++index) {
@@ -735,11 +717,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 
 	    // map to this point and increase the weight
 	    m_remap[a][i] = (char)index;
-	    m_weights[a][index] += W;
+	    m_weights[a][index] += aw.GetWeights();
 	    m_unweighted[a] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	    m_frequencies[a][index] += 1;
-#endif
 	    break;
 	  }
 	}
@@ -753,11 +732,8 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	    // add the point
 	    m_remap[a][i] = (char)index;
 	    m_points[a][index] = ___a;
-	    m_weights[a][index] = W;
-	    m_unweighted[a] = m_unweighted[a] && !CompareFirstLessThan(W, Vec4(1.0f));
-#ifdef	FEATURE_EXACT_ERROR
-	    m_frequencies[a][index] = 1;
-#endif
+	    m_weights[a][index] = aw.GetWeights();
+	    m_unweighted[a] = m_unweighted[a] & aw.IsOne();
 	  }
 	}
       }
@@ -786,7 +762,7 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
   assert(m_seperatealpha == false);
 
   // check the compression mode for btc
-  bool const weightByAlpha = ((flags & kWeightColourByAlpha) != 0) && !m_mergedalpha;
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha) != 0) & (!m_mergedalpha);
 
   // build mapped data
   Vec4 const wgta = weightByAlpha ? Vec4(0.0f) : Vec4(1.0f);
@@ -826,8 +802,8 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
       // TODO: kill off alpha will kill the weighting
       Vec4 rgba = palette.m_points[0][uindex];
       
-      // ensure there is always non-zero weight even for zero alpha
-      Vec4 W = Max(m_weights[3][i], wgta);
+      // calculate point's weights
+      Weight<Scr4> wa(m_weights, i, wgta);
 
       int index;
       if ((index = gotcha[uindex]) >= 0) {
@@ -836,11 +812,8 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 
 	// map to this point and increase the weight
 	m_remap[s][i] = (char)index;
-	m_weights[s][index] += W;
+	m_weights[s][index] += wa.GetWeights();
 	m_unweighted[s] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[s][index] += 1;
-#endif
 	continue;
       }
       
@@ -851,11 +824,8 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 	// add the point
 	m_remap[s][i] = (char)index;
 	m_points[s][index] = rgba;
-	m_weights[s][index] = W;
-	m_unweighted[s] = m_unweighted[s] && !CompareFirstLessThan(W, Vec4(1.0f));
-#ifdef	FEATURE_EXACT_ERROR
-	m_frequencies[s][index] = 1;
-#endif
+	m_weights[s][index] = wa.GetWeights();
+	m_unweighted[s] = m_unweighted[s] & wa.IsOne();
 
 #ifdef	FEATURE_TEST_LINES
 	// if -1, all bytes are identical, checksum to check which bytes flip
@@ -897,9 +867,6 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 	  m_points[s][0] = pnt;
 	  m_weights[s][0] = Vec4(1.0f);
 	  m_unweighted[s] = false;
-#ifdef	FEATURE_EXACT_ERROR
-	  m_frequencies[s][0] = (u8)1;
-#endif
 
 #ifdef	FEATURE_TEST_LINES
 	  // if -1, all bytes are identical, checksum to check which bytes flip
@@ -1024,7 +991,7 @@ void PaletteSet_CCR::CountSet(tile_barrier barrier, const int thread, pixel16 rg
 	    );
 
 	    m_remap[i] = index;
-	    m_transparent = m_transparent || (indexAlpha && rgba[i][0]);
+	    m_transparent = m_transparent | (indexAlpha & rgba[i][0]);
           }
 
           // ensure there is always non-zero weight even for zero alpha
