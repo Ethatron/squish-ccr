@@ -68,6 +68,7 @@ public:
   void ChangePalette(PaletteSet const* palette) { m_palette = palette; }
   void ChangeFlags(int flags) { m_flags = flags; }
   void ChangeSwap(int swap) { m_swapindex = swap; }
+  void ChangeMode(int mode) { m_sharedmap = GetSharedMap(m_mode = mode); }
   void ChangeShared(int shared) { m_sharedbits = SR(shared); }
 
   // query some values

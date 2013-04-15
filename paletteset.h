@@ -43,7 +43,7 @@ public:
   static void GetMasks(int flags, int partition, int (&masks)[4]);
 
   int SetMode(int flags);
-  int SetMode(int flags, int partition, int rotation);
+  int SetMode(int flags, int part_or_rot);
 
   // maximum number of different sets, aligned, the real limit is 3
 #define	PS_MAX	4
@@ -51,18 +51,18 @@ public:
 public:
   // constructor for regular operation (with and without initial partition/rotation)
   PaletteSet(u8  const* rgba, int mask, int flags);
-  PaletteSet(u8  const* rgba, int mask, int flags, int partition, int rotation);
+  PaletteSet(u8  const* rgba, int mask, int flags, int part_or_rot);
   
   PaletteSet(u16 const* rgba, int mask, int flags);
-  PaletteSet(u16 const* rgba, int mask, int flags, int partition, int rotation);
+  PaletteSet(u16 const* rgba, int mask, int flags, int part_or_rot);
 
   PaletteSet(f23 const* rgba, int mask, int flags);
-  PaletteSet(f23 const* rgba, int mask, int flags, int partition, int rotation);
+  PaletteSet(f23 const* rgba, int mask, int flags, int part_or_rot);
 
   // constructors for managing backups and permutations of palette-sets
   PaletteSet() {};
   PaletteSet(PaletteSet const &palette) { memcpy(this, &palette, sizeof(*this)); };
-  PaletteSet(PaletteSet const &palette, int mask, int flags, int partition, int rotation);
+  PaletteSet(PaletteSet const &palette, int mask, int flags, int part_or_rot);
 
 private:
   void BuildSet(u8  const* rgba, int mask, int flags);
@@ -91,6 +91,11 @@ public:
     /*(m_numsets > 0 ? m_count[0] : 0)*/ (m_seperatealpha ? m_count[m_numsets + 0] : 0) +
       (m_numsets > 1 ? m_count[1] : 0) /*(m_seperatealpha ? m_count[m_numsets + 1] : 0)*/ +
       (m_numsets > 2 ? m_count[2] : 0) /*(m_seperatealpha ? m_count[m_numsets + 2] : 0)*/; }
+  int GetOptimal() const {
+    return            (m_count[0] <= 1) &
+    /*(m_numsets > 0 ? m_count[0] <= 1 : 1)*/ (m_seperatealpha ? m_count[m_numsets + 0] <= 1 : 1) &
+      (m_numsets > 1 ? m_count[1] <= 1 : 1) /*(m_seperatealpha ? m_count[m_numsets + 1] <= 1 : 1)*/ &
+      (m_numsets > 2 ? m_count[2] <= 1 : 1) /*(m_seperatealpha ? m_count[m_numsets + 2] <= 1 : 1)*/; }
 
   // map from the set to indices and back to colours
   void RemapIndices(u8 const* source, u8* target, int set) const;

@@ -142,20 +142,20 @@ doinline int PaletteSet::SetMode(int flags) {
   return flags;
 }
 
-doinline int PaletteSet::SetMode(int flags, int partition, int rotation) {
+doinline int PaletteSet::SetMode(int flags, int part_or_rot) {
   /* determine the number of sets and select the partition
   if ((0))
     m_numsets = 1, m_partmask = partitionmasks_1[m_partid = 0]; */
   if (((flags & kVariableCodingModes) == kVariableCodingMode2) ||
       ((flags & kVariableCodingModes) == kVariableCodingMode4) ||
       ((flags & kVariableCodingModes) == kVariableCodingMode8))
-    m_numsets = 2, m_partmask = partitionmasks_2[m_partid = partition];
+    m_numsets = 2, m_partmask = partitionmasks_2[m_partid = part_or_rot];
   if (((flags & kVariableCodingModes) == kVariableCodingMode1) ||
       ((flags & kVariableCodingModes) == kVariableCodingMode3))
-    m_numsets = 3, m_partmask = partitionmasks_3[m_partid = partition];
+    m_numsets = 3, m_partmask = partitionmasks_3[m_partid = part_or_rot];
   if (((flags & kVariableCodingModes) == kVariableCodingMode5) ||
       ((flags & kVariableCodingModes) == kVariableCodingMode6))
-    m_seperatealpha = true, m_rotid = rotation;
+    m_seperatealpha = true, m_rotid = part_or_rot;
   if (((flags & kVariableCodingModes) == kVariableCodingMode7) ||
       ((flags & kVariableCodingModes) == kVariableCodingMode8))
     m_mergedalpha = true;
@@ -202,35 +202,35 @@ PaletteSet::PaletteSet(f23 const* rgba, int mask, int flags)
   BuildSet(rgba, mask, SetMode(flags));
 }
 
-PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int partition, int rotation)
+PaletteSet::PaletteSet(u8 const* rgba, int mask, int flags, int part_or_rot)
   : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
     m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
 {
   // make the set
-  BuildSet(rgba, mask, SetMode(flags, partition, rotation));
+  BuildSet(rgba, mask, SetMode(flags, part_or_rot));
 }
 
-PaletteSet::PaletteSet(u16 const* rgba, int mask, int flags, int partition, int rotation)
+PaletteSet::PaletteSet(u16 const* rgba, int mask, int flags, int part_or_rot)
   : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
     m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
 {
   // make the set
-  BuildSet(rgba, mask, SetMode(flags, partition, rotation));
+  BuildSet(rgba, mask, SetMode(flags, part_or_rot));
 }
 
-PaletteSet::PaletteSet(f23 const* rgba, int mask, int flags, int partition, int rotation)
+PaletteSet::PaletteSet(f23 const* rgba, int mask, int flags, int part_or_rot)
   : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
     m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
 {
   // make the set
-  BuildSet(rgba, mask, SetMode(flags, partition, rotation));
+  BuildSet(rgba, mask, SetMode(flags, part_or_rot));
 }
 
-PaletteSet::PaletteSet(PaletteSet const &palette, int mask, int flags, int partition, int rotation)
+PaletteSet::PaletteSet(PaletteSet const &palette, int mask, int flags, int part_or_rot)
   : m_numsets(1), m_rotid(0), m_partid(0), m_partmask(0xFFFF),
     m_seperatealpha(false), m_mergedalpha(false), m_transparent(false)
 {
-  flags = SetMode(flags, partition, rotation);
+  flags = SetMode(flags, part_or_rot);
 
   // make, permute or copy the new set
   if (m_seperatealpha)
@@ -666,7 +666,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
       rgbx = KillW(rgba);
       
       // calculate point's weights
-      Weight<Scr4> wa(m_weights, i, wgtx);
+      Weight<Scr4> wa(palette.m_weights, i, wgtx);
 	
       // loop over previous matches for a match
       for (index = 0; index < m_count[s]; ++index) {
@@ -707,7 +707,7 @@ void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
 	___a = rgba.SplatW();
 	
 	// calculate point's weights
-	Weight<Scr4> aw(m_weights, i, ___w);
+	Weight<Scr4> aw(palette.m_weights, i, ___w);
 	
 	// loop over previous matches for a match
 	for (index = 0; index < m_count[a]; ++index) {
@@ -803,7 +803,7 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
       Vec4 rgba = palette.m_points[0][uindex];
       
       // calculate point's weights
-      Weight<Scr4> wa(m_weights, i, wgta);
+      Weight<Scr4> wa(palette.m_weights, i, wgta);
 
       int index;
       if ((index = gotcha[uindex]) >= 0) {
@@ -848,7 +848,7 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
       m_weights[a][i] = Sqrt(m_weights[a][i]);
 #endif
   }
-
+  
   // clear if we're suppose to throw alway alpha
   m_transparent = palette.m_transparent;
   

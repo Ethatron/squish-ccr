@@ -54,7 +54,7 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   else if (perceptual)	// linear RGB luminance
     m_metric = Vec4(0.2126f, 0.7152f, 0.0722f, 0.0f);
   else
-    m_metric = Vec4(0.3333f, 0.3334f, 0.3333f, 0.0f);
+    m_metric = Vec4(0.3333f, 0.3333f, 0.3333f, 0.0f);
 
   // cache some values
   bool const unweighted = m_colours->IsUnweighted();

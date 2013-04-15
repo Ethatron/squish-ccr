@@ -49,7 +49,7 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   else if (perceptual)	// linear RGB luminance
     m_metric = Vec3(0.2126f, 0.7152f, 0.0722f);
   else
-    m_metric = Vec3(0.3333f, 0.3334f, 0.3333f);
+    m_metric = Vec3(0.3333f, 0.3333f, 0.3333f);
 
   // initialize the best error
   m_besterror = Scr3(FLT_MAX);
@@ -311,7 +311,7 @@ void ColourRangeFit_CCR::AssignSet(tile_barrier barrier, const int thread, Colou
     else if (metric == SQUISH_METRIC_PERCEPTUAL)
       m_metric = float3(0.2126f, 0.7152f, 0.0722f);
     else
-      m_metric = float3(0.3333f, 0.3334f, 0.3333f);
+      m_metric = float3(0.3333f, 0.3333f, 0.3333f);
   }
 
   // cache some values

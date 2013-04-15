@@ -180,7 +180,7 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
   else if (perceptual)	// linear RGB luminance
     m_metric[0] = Vec4(0.2126f, 0.7152f, 0.0722f, 1.0000f);
   else
-    m_metric[0] = Vec4(0.3333f, 0.3334f, 0.3333f, 1.0000f);
+    m_metric[0] = Vec4(0.3333f, 0.3333f, 0.3333f, 1.0000f);
 
   // sum is 1.0f
   if (!m_palette->IsTransparent())
@@ -198,7 +198,7 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
   // split metric into two, double sum is 1.0f
   if (m_palette->IsSeperateAlpha()) {
     // alpha-metric in xyz
-    m_metric[2] = KillW(m_metric[0].SplatW()) * Vec4(0.3333f, 0.3334f, 0.3333f, 0.0000f);
+    m_metric[2] = KillW(m_metric[0].SplatW()) * Vec4(0.3333f, 0.3333f, 0.3333f, 0.0000f);
 
     // alpha-metric in w
     m_metric[1] = OnlyW(m_metric[0]);
