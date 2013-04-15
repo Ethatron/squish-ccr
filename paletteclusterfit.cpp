@@ -1623,6 +1623,26 @@ void PaletteClusterFit::CompressS23(void* block, vQuantizer &q, int mode)
   // the error coming back from the palettesinglefit is not entirely exact with OLD_QUANTIZERR
   if (!(error < m_besterror))
     return;
+  
+#ifndef NDEBUG
+  fprintf(stderr, "ClstrFit m: %1d, s: %1d+%1d, n:", mode, isets, asets);
+  fprintf(stderr, " %2d", 0 < (isets + asets) ? m_palette->GetCount(0) : 0);
+  fprintf(stderr, " %2d", 1 < (isets + asets) ? m_palette->GetCount(1) : 0);
+  fprintf(stderr, " %2d", 2 < (isets + asets) ? m_palette->GetCount(2) : 0);
+  fprintf(stderr, ", c: %1d, a: %1d", cb, ab);
+  if (GetPartitionBits(mode) > 0)
+    fprintf(stderr, ", p: %2d",  m_palette->GetPartition());
+  else if (GetRotationBits(mode) > 0)
+    fprintf(stderr, ", r: %2d", m_palette->GetRotation());
+  else
+    fprintf(stderr, ", r: --");
+  if (GetSelectionBits(mode) > 0)
+    fprintf(stderr, ", i: %1d,%1d", !m_swapindex ? ib : jb, !m_swapindex ? jb : ib);
+  else
+    fprintf(stderr, ", i:  %1d ", ib);
+  
+  fprintf(stderr, ", e: %.8f (< %.8f)\n", error.X(), m_besterror.X() == FLT_MAX ? -1.0f : m_besterror.X());
+#endif
 #endif
 
   // use these shared bit configuration

@@ -174,7 +174,7 @@ struct statistics gstat = {0};
 #endif
 
 template<typename dtyp>
-void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
+float CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
 {
 #if !defined(NDEBUG) && defined(DEBUG_SETTING)
 #define DEBUG_MODE	kVariableCodingMode1
@@ -386,9 +386,6 @@ void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
       // do a range fit (which uses single palette fit if appropriate)
       PaletteRangeFit fit(&palette, flags + mode);
       
-      // update with old best error (reset IsBest)
-      fit.SetError(error);
-
       // TODO: swap & shared are mutual exclusive
 
       // search for the best swap
@@ -397,12 +394,15 @@ void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
 	// search for the best shared bit
 	for (int b = sb; b <= eb; b++) {
 	  fit.ChangeShared(b);
+	  
+	  // update with old best error (reset IsBest)
+	  fit.SetError(error);
 
 	  // we could code it lossless, no point in trying any further at all
 	  fit.PaletteRangeFit::Compress(block, qnt, mnum);
 	  if (fit.IsBest()) {
 	    if (fit.Lossless())
-	      return;
+	      return 0.0f;
 
 #if   !defined(TRACK_STATISTICS) && !defined(VERIFY_QUANTIZER)
 	    if (cluster)
@@ -416,11 +416,11 @@ void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
 	      better  = true;
 	    }
 	  }
+      
+	  // update with new best error
+	  error = fit.GetError();
 	}
       }
-      
-      // update with new best error
-      error = fit.GetError();
     }
 
     // check the compression type and compress palette of the chosen partition even better
@@ -430,9 +430,6 @@ void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
       // default to a cluster fit (could be iterative or not)
       PaletteClusterFit fit(&bestpal, flags + mode);
       
-      // update with old best error (reset IsBest)
-      fit.SetError(error);
-
       // we want the whole shebang, this takes looong!
       if (degree < (kColourClusterFit * 15))
 	sb = eb = bestbit;
@@ -445,12 +442,15 @@ void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
 	// search for the best shared bit
 	for (int b = sb; b <= eb; b++) {
 	  fit.ChangeShared(b);
+	  
+	  // update with old best error (reset IsBest)
+	  fit.SetError(error);
 
 	  // we could code it lossless, no point in trying any further at all
 	  fit.PaletteClusterFit::Compress(block, qnt, mnum);
 	  if (fit.IsBest()) {
 	    if (fit.Lossless())
-	      return;
+	      return 0.0f;
 
 	    if (cluster || 1)
 	      besttyp = 1;
@@ -459,11 +459,11 @@ void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
 #if defined(TRACK_STATISTICS)
 	  gstat.btr_cluster[mnum][fit.IsBest() ? 1 : 0]++;
 #endif
+      
+	  // update with new best error
+	  error = fit.GetError();
 	}
       }
-      
-      // update with new best error
-      error = fit.GetError();
     }
 
 #if defined(TRACK_STATISTICS)
@@ -504,10 +504,12 @@ void CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
 #if defined(VERIFY_ENCODER)
   DecompressPaletteBtc((u8*)rgba, block);
 #endif
+
+  return error.X();
 }
 
 template<typename dtyp>
-void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
+float CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
 {
   vQuantizer q7778(7, 7, 7, 8);
   vQuantizer q5556(5, 5, 5, 6);
@@ -585,14 +587,18 @@ void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
   };
 
   // use the same data-structure all the time
-  PaletteSet bestpal;
-  int bestqnt = -1;
-  int bestmde = -1;
-  int bestswp = -1;
-  int bestbit = -1;
-  int besttyp = -1;
+  PaletteSet bestpal[2];
+  Vec4 bestblock[2];
+  int bestqnt[2] = {-1,-1};
+  int bestmde[2] = {-1,-1};
+  int bestswp[2] = {-1,-1};
+  int bestbit[2] = {-1,-1};
+  int besttyp[2] = {-1,-1};
 
-  Scr4 error(FLT_MAX);
+  Scr4 error[2]; 
+  
+  error[0] = Scr4(FLT_MAX);
+  error[1] = Scr4(FLT_MAX);
 
   // number of cases to walk through
   int numm = flags &  ( kVariableCodingModes),
@@ -644,7 +650,7 @@ void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
 	  epr = (er ? er : ep);
       
       // signal if we do we have anything better this iteration of the search
-      bool better = false;
+      bool better[2] = {false,false};
 
       for (int pr = spr; pr <= epr; pr++) {
 	// create the minimal point set
@@ -653,9 +659,6 @@ void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
 	// do a range fit (which uses single palette fit if appropriate)
 	PaletteRangeFit fit(&palette, flags + caseorder[sm].mode);
 	
-	// update with old best error (reset IsBest)
-	fit.SetError(error);
-
 	// exclude mode 1 from the upper partitions
 	if ((em == 7) && (pr >= (1 << 4)))
 	  em = em - 1;
@@ -663,6 +666,7 @@ void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
 	for (int m = sm; m <= em; m++) {
 	  int mode = caseorder[m].mode;
 	  int mnum = caseorder[m].mnum;
+	  int mofs = (flags & kColourRangeFit ? 0 : m - sm);
 
 	  // a mode has a specific number of sets, and variable rotations and partitions
 	  int numx = PaletteFit::GetSelectionBits(mnum);
@@ -701,30 +705,36 @@ void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
 	    // search for the best shared bit
 	    for (int b = sb; b <= eb; b++) {
 	      fit.ChangeShared(b);
+	      
+	      // update with old best error (reset IsBest)
+	      fit.SetError(error[mofs]);
 
 	      // we could code it lossless, no point in trying any further at all
 	      fit.PaletteRangeFit::Compress(block, *caseqnt[m].qnt, mnum);
 	      if (fit.IsBest()) {
 		if (fit.Lossless())
-		  return;
+		  return 0.0f;
 
 #if   !defined(TRACK_STATISTICS) && !defined(VERIFY_QUANTIZER)
 		if ((flags & kColourRangeFit) == 0)
 #endif
 		{
-		  bestqnt = m,
-		  bestmde = mode,
-		  bestpal = palette,
-		  bestswp = x,
-		  bestbit = b,
-		  besttyp = 0,
-		  better  = true;
+		  bestqnt[mofs] = m,
+		  bestmde[mofs] = mode,
+		  bestpal[mofs] = palette,
+		  bestswp[mofs] = x,
+		  bestbit[mofs] = b,
+		  besttyp[mofs] = 0,
+		  better [mofs]  = true;
+
+		  LoadUnaligned(bestblock[mofs], block);
 		}
+	      
+		// update with new best error
+		error[mofs] = fit.GetError();
 	      }
 	    }
 	  }
-
-	  error = fit.GetError();
 	}
 
 #if 0
@@ -739,89 +749,105 @@ void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
 	  return;
 #endif
       }
-
-      // a mode has a specific number of sets, and variable rotations and partitions
-      int mode = bestmde;
-      int mnum = (mode >> 24) - 1;
-      int numi = PaletteFit::GetIndexBits(mnum);
-
-      // check if we can do a cascade with the cluster-fit (merged alpha 4 bit is the only exception)
-      bool cluster = ((flags & kColourRangeFit) == 0) && (((numi >>  0) & 0xFF) <= CLUSTERINDICES)
-						      && (((numi >> 16) & 0xFF) <= CLUSTERINDICES);
-
-      // check the compression type and compress palette of the chosen partition even better
-      if (better && cluster) {
-	int degree = (flags & kColourIterativeClusterFits);
-
-	// default to a cluster fit (could be iterative or not)
-	PaletteClusterFit fit(&bestpal, flags + mode);
       
-	// update with old best error (reset IsBest)
-	fit.SetError(error);
+      if (flags & kColourRangeFit)
+	continue;
 
-	// a mode has a specific number of sets, and variable rotations and partitions
-	int numx = PaletteFit::GetSelectionBits(mnum);
-	int numb = PaletteFit::GetSharedBits   (mnum);
+      Scr4 tobeat = Min(error[0], error[1]);
+      if (better[0] | better[1]) {
+	// ambiguous result, choose the better
+	if (better[0] & better[1])
+	  StoreUnaligned(bestblock[error[1] < error[0]], block);
 
-	// search through index-swaps
-	int sx =                             0,
-	    ex =               (1 << numx) - 1;
-	// search through shared bits
+	for (int m = 0; m <= 1; m++) {
+	  if (better[m]) {
+	    // a mode has a specific number of sets, and variable rotations and partitions
+	    int mode = bestmde[m];
+	    int mnum = (mode >> 24) - 1;
+	    int numi = PaletteFit::GetIndexBits(mnum);
+
+	    // check if we can do a cascade with the cluster-fit (merged alpha 4 bit is the only exception)
+	    bool cluster = (((numi >>  0) & 0xFF) <= CLUSTERINDICES)
+			&& (((numi >> 16) & 0xFF) <= CLUSTERINDICES);
+
+	    // check the compression type and compress palette of the chosen partition even better
+	    if (cluster) {
+	      int degree = (flags & kColourIterativeClusterFits);
+
+	      // default to a cluster fit (could be iterative or not)
+	      PaletteClusterFit fit(&bestpal[m], flags + mode);
+
+	      // a mode has a specific number of sets, and variable rotations and partitions
+	      int numx = PaletteFit::GetSelectionBits(mnum);
+	      int numb = PaletteFit::GetSharedBits   (mnum);
+
+	      // search through index-swaps
+	      int sx =                             0,
+		  ex =               (1 << numx) - 1;
+	      // search through shared bits
 #ifdef FEATURE_SHAREDBITS_TRIALS
-	int sb = (numb > 0   ?               0 : SBSKIP),
-	    eb = (numb > 0   ?       numb      : SBSKIP);
+	      int sb = (numb > 0   ?               0 : SBSKIP),
+		  eb = (numb > 0   ?       numb      : SBSKIP);
 #else
-	int sb = (numb > 0   ?          SBSKIP : SBSKIP),
-	    eb = (numb > 0   ?          SBSKIP : SBSKIP);
+	      int sb = (numb > 0   ?          SBSKIP : SBSKIP),
+		  eb = (numb > 0   ?          SBSKIP : SBSKIP);
 #endif
 	  
 #if	defined(FEATURE_SHAREDBITS_TRIALS)
-	// if we see we have no transparent values, force all shared bits to 1, or non-opaque codebook-entries occur
-	// the all transparent case isn't so crucial, when we use IGNORE_ALPHA0 it's redundant to force 0 anyway
-	if (!bestpal.IsTransparent() && bestpal.IsMergedAlpha())
-	  sb = eb;
-	// otherwise just use the most occurring bit (parity) for all other cases
-	// otherwise just use the most occurring bit (parity) for all non-alpha cases
-	else if (((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLYOPAQUE)) ||
-		  ((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLY) && (mode != kVariableCodingMode7) && !bestpal.IsTransparent()) ||
-		  ((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_LOWPRC) && (mode < kVariableCodingMode5) && (mode != kVariableCodingMode1)))
-	  sb = eb = SBSKIP;
+	      // if we see we have no transparent values, force all shared bits to 1, or non-opaque codebook-entries occur
+	      // the all transparent case isn't so crucial, when we use IGNORE_ALPHA0 it's redundant to force 0 anyway
+	      if (!bestpal[m].IsTransparent() && bestpal[m].IsMergedAlpha())
+		sb = eb;
+	      // otherwise just use the most occurring bit (parity) for all other cases
+	      // otherwise just use the most occurring bit (parity) for all non-alpha cases
+	      else if (((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLYOPAQUE)) ||
+			((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_ALPHAONLY) && (mode != kVariableCodingMode7) && !bestpal[m].IsTransparent()) ||
+			((FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_LOWPRC) && (mode < kVariableCodingMode5) && (mode != kVariableCodingMode1)))
+		sb = eb = SBSKIP;
 #endif
 
-	// we want the whole shebang, this takes looong!
-	if (degree < (kColourClusterFit * 15))
-	  sb = eb = bestbit;
-	if (degree < (kColourClusterFit * 14))
-	  sx = ex = bestswp;
+	      // we want the whole shebang, this takes looong!
+	      if (degree < (kColourClusterFit * 15))
+		sb = eb = bestbit[m];
+	      if (degree < (kColourClusterFit * 14))
+		sx = ex = bestswp[m];
     
-	// TODO: swap & shared are mutual exclusive
-	fit.ChangeMode(mnum);
-	// search for the best swap
-	for (int x = sx; x <= ex; x++) {
-	  fit.ChangeSwap(x);
-	  // search for the best shared bit
-	  for (int b = sb; b <= eb; b++) {
-	    fit.ChangeShared(b);
+	      // TODO: swap & shared are mutual exclusive
+	      fit.ChangeMode(mnum);
+	      // search for the best swap
+	      for (int x = sx; x <= ex; x++) {
+		fit.ChangeSwap(x);
+		// search for the best shared bit
+		for (int b = sb; b <= eb; b++) {
+		  fit.ChangeShared(b);
+	    
+		  // update with old best error (reset IsBest)
+		  fit.SetError(tobeat);
 
-	    // we could code it lossless, no point in trying any further at all
-	    fit.PaletteClusterFit::Compress(block, *caseqnt[bestqnt].qnt, mnum);
-	    if (fit.IsBest()) {
-	      if (fit.Lossless())
-		return;
+		  // we could code it lossless, no point in trying any further at all
+		  fit.PaletteClusterFit::Compress(block, *caseqnt[bestqnt[m]].qnt, mnum);
+		  if (fit.IsBest()) {
+		    if (fit.Lossless())
+		      return 0.0f;
 
-	      if (cluster || 1)
-		besttyp = 1;
-	    }
+		    if (cluster || 1)
+		      besttyp[m] = 1;
+      
+		    // update with new best error
+		    tobeat = fit.GetError();
+		  }
 
 #if defined(TRACK_STATISTICS)
-	    gstat.btr_cluster[mnum][fit.IsBest() ? 1 : 0]++;
+		  gstat.btr_cluster[mnum][fit.IsBest() ? 1 : 0]++;
 #endif
+		}
+	      }
+	    }
 	  }
 	}
-      
-	// update with new best error
-	error = fit.GetError();
       }
+
+      error[0] = error[1] = tobeat;
     }
   }
 
@@ -833,6 +859,8 @@ void CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
   gstat.win_mode     [(bestmde >> 24) - 1]++;
   gstat.win_cluster  [(bestmde >> 24) - 1][besttyp]++;
 #endif
+
+  return error[0].X();
 }
 
 template<typename dtyp>
@@ -978,10 +1006,26 @@ void CompressMaskedPaletteBtc7(dtyp const* rgba, int mask, void* block, int flag
 {
   // get the block locations
   void* mixedBlock = block;
-
+  
+#ifndef NDEBUG
   // compress color and alpha merged if necessary
-  CompressPaletteBtc7a(rgba, mask, mixedBlock, flags);
-//CompressPaletteBtc7b(rgba, mask, mixedBlock, flags);
+  fprintf(stderr, "CompressPaletteBtc7a\n");
+  float errora = CompressPaletteBtc7a(rgba, mask, mixedBlock, flags);
+  fprintf(stderr, "CompressPaletteBtc7b\n");
+  float errorb = CompressPaletteBtc7b(rgba, mask, mixedBlock, flags);
+
+  if (errorb > errora) {
+    bool damn = true; damn = false;
+
+    fprintf(stderr, "CompressPaletteBtc7b\n");
+    errorb = CompressPaletteBtc7b(rgba, mask, mixedBlock, flags);
+  }
+  else if (errorb < errora) {
+    bool cool = true; cool = false;
+  }
+#else
+  CompressPaletteBtc7b(rgba, mask, mixedBlock, flags);
+#endif
 }
 
 void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
