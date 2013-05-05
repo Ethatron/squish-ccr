@@ -3023,6 +3023,11 @@ public:
 	{
 		return _mm_comilt_ss( left.m_v, right.m_v );
 	}
+	
+	friend int CompareFirstLessEqualTo( Vec4::Arg left, Vec4::Arg right )
+	{
+		return _mm_comile_ss( left.m_v, right.m_v );
+	}
 
 	friend int CompareFirstGreaterThan( Vec4::Arg left, Vec4::Arg right )
 	{

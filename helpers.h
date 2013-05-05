@@ -105,6 +105,18 @@ public:
     w = Max(Scr4(rgba[(4 * pos) + 3]), wgt);
     W = Scr4(w);
   }
+  
+  doinline Weight(const f23 a, const f23 wgt) {
+    // ensure there is always non-zero weight even for zero alpha
+    w = Max(Scr4(a), Scr4(wgt));
+    W = w;
+  }
+  
+  doinline Weight(const f23 a, const Scr4 &wgt) {
+    // ensure there is always non-zero weight even for zero alpha
+    w = Max(Scr4(a), wgt);
+    W = w;
+  }
 
   doinline float GetWeight() const {
     return W.X(); }

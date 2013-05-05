@@ -600,8 +600,358 @@ void PaletteSet::BuildSet(u16 const* rgba, int mask, int flags) {
 }
 
 void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
-  /* TODO */
-  /*abort()*/;
+//const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
+//const float *aLUT   = ComputeGammaLUT(false);
+
+  // check the compression mode for btc
+  bool const clearAlpha    = ((flags & kExcludeAlphaFromPalette) != 0);
+  bool const seperateAlpha = ((flags & kExcludeAlphaFromPalette) == 0) & ( m_seperatealpha);
+  bool const weightByAlpha = ((flags & kWeightColourByAlpha    ) != 0) & (!m_mergedalpha);
+  bool const killByAlpha   = ((flags & kWeightColourByAlpha    ) != 0);
+
+  // build mapped data
+  Vec4 const mska = !seperateAlpha ? Scr4(1.0f) : Scr4(1.0f, 1.0f, 1.0f, 0.0f);
+  Vec4 const clra = !clearAlpha    ? Vec4(0.0f) : Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+  Scr4 const wgta =  weightByAlpha ? Scr4(0.0f) : Scr4(1.0f);
+  Scr4 const klla =  killByAlpha   ? Scr4(0.0f) : Scr4(1.0f);
+
+  Vec4 rgbx[16]; Scr4 wgtx = wgta;
+  Scr4 ___a[16], ___w = Scr4(1.0f);
+  int amask = mask;
+
+  /* Apply the component rotation, while preserving semantics:
+   * - swap: aa, ra, ga, ba
+   * - LUTs: always pull from the right transform
+   * - weights: never make alpha weighted by itself
+   *   TODO: as we have no separate component weighting currently we
+   *         have to turn alpha-weighting off to allow the cluster-fit
+   *         to work (same weight for a AGB-point fe., R-point is ok)
+   */
+//int rot[4] = {0,1,2,3};
+//const float *caLUTs[] = {
+//  rgbLUT, rgbLUT, rgbLUT, aLUT};
+
+  switch (m_rotid) {
+    case 1:  wgtx = Scr4(1.0f); ___w = wgta; break;
+    case 2:  wgtx = Scr4(1.0f); ___w = wgta; break;
+    case 3:  wgtx = Scr4(1.0f); ___w = wgta; break;
+//  default: wgtx = wgta; ___w = Scr4(1.0f); break;
+  }
+
+  for (int i = 0; i < 16; ++i) {
+    Vec4 temp(&rgba[4 * i + 0], &rgba[4 * i + 1], &rgba[4 * i + 2], &rgba[4 * i + 3]);
+
+#ifdef FEATURE_IGNORE_ALPHA0
+    // kill colour
+    amask &= ~(CompareFirstLessEqualTo(Max(temp.SplatW(), klla), Vec4(0.0f)) << i);
+#endif
+
+    // clear alpha
+    temp = Max(temp, clra);
+
+    // check for transparency (after blanking out)
+    m_transparent = m_transparent | !!CompareFirstLessThan(temp.SplatW(), Vec4(1.0f));
+
+    // swap channel-weights
+    switch (m_rotid) {
+      case 1:  temp = Exchange<0,3>(temp); break;
+      case 2:  temp = Exchange<1,3>(temp); break;
+      case 3:  temp = Exchange<2,3>(temp); break;
+//    default: temp = Exchange<3,3>(temp); break;
+    }
+  
+    // clear channel 3
+    rgbx[i] = Min(temp, mska);
+
+    // separate channel 3
+    ___a[i] = temp.SplatW();
+
+    // temporary, TODO: remove it
+    m_weights[3][i] = Weight<f23>(rgba, i, Scr4(0.0f)).GetWeights();
+  }
+  
+  // clean initial state
+  m_count     [0] = m_count     [1] =
+  m_count     [2] = m_count     [3] = 0;
+  m_unweighted[0] = m_unweighted[1] =
+  m_unweighted[2] = m_unweighted[3] = true;
+
+  // TODO: should not be necessary (VC bug?)
+  memset(m_remap, 0x00, sizeof(m_remap));
+
+  // required for being able to reorder the contents of "rgbx"
+  assert(m_numsets == 1);
+  for (int s = 0; s < m_numsets; s++) {
+    // combined alpha, exclusion and selection mask
+    int pmask = amask & m_mask[s];
+    
+#ifdef	FEATURE_TEST_LINES
+    Col4 m_cnst_s_(~0);
+    Col4 m_grey_s_(~0);
+#endif
+
+    // create the minimal set, O(16*count/2)
+    for (int i = 0, index; i < 16; ++i) {
+      // check this pixel is enabled
+      int bit = 1 << i;
+      if ((pmask & bit) == 0) {
+	if ((amask & bit) == 0)
+	  m_remap[s][i] = -1;
+
+	continue;
+      }
+      
+      // calculate point's weights
+      Weight<f23> wa(rgba, i, wgtx);
+
+      // loop over previous matches for a match
+      Vec4 *rgbvalue = &rgbx[i];
+      for (index = 0; index < m_count[s]; ++index) {
+	Vec4 *crgbvalue = &rgbx[index];
+	
+	// check for a match
+	if (*(rgbvalue) == *(crgbvalue)) {
+	  // get the index of the match
+	  assume (index >= 0 && index < 16);
+
+	  // map to this point and increase the weight
+	  m_remap[s][i] = (char)index;
+	  m_weights[s][index] += wa.GetWeights();
+	  m_unweighted[s] = false;
+	  break;
+	}
+      }
+      
+      // re-use the memory of already processed pixels
+      assert(index <= i); {
+	Vec4 *crgbvalue = &rgbx[index];
+
+	// allocate a new point
+	if (index == m_count[s]) {
+	  // get the index of the match and advance
+	  m_count[s] = index + 1;
+
+	  // normalize coordinates to [0,1]
+//	  const float *r = &caLUTs[0][rgbvalue[0]];
+//	  const float *g = &caLUTs[1][rgbvalue[1]];
+//	  const float *b = &caLUTs[2][rgbvalue[2]];
+//	  const float *a = &caLUTs[3][rgbvalue[3]];
+
+	  // add the point
+	  m_remap[s][i] = (char)index;
+	  m_points[s][index] = *(rgbvalue);
+	  m_weights[s][index] = wa.GetWeights();
+	  m_unweighted[s] = m_unweighted[s] & wa.IsOne();
+
+	  // remember match for successive checks
+	  *(crgbvalue) = *(rgbvalue);
+
+#ifdef	FEATURE_TEST_LINES
+	  // if -1, all bytes are identical, checksum to check which bytes flip
+	  m_cnst_s_ &= CompareAllEqualTo_M4(m_points[s][index], m_points[s][0]);
+	  m_grey_s_ &= CompareAllEqualTo_M4(m_points[s][index], RotateLeft<1>(m_points[s][index]));
+
+//	  m_cnst[s] |= (*((int *)rgbx    ) ^ (*((int *)rgbvalue)) >> 0);
+//	  m_grey[s] |= (*((int *)rgbvalue) ^ (*((int *)rgbvalue)) >> 8);
+#endif
+	}
+      }
+    }
+    
+#ifdef FEATURE_IGNORE_ALPHA0
+    if ((amask != 0xFFFF)) {
+      // non-separate alpha doesn't have rotations
+      if (!m_rotid) {
+	// a) there are no colours in the set, just add one
+	// a) there are no colour-alphas in the set, just add one
+	// b) there don't exist a alpha == 0 in the set, just add one
+	if ((m_count[s] == 0) | (!m_seperatealpha & m_transparent)) {
+	  Vec4 sum = Vec4(0.0f);
+	  int num = 0;
+	  int p = m_count[s];
+
+	  for (int i = 0; i < 16; ++i) {
+	    int bit = 1 << i;
+
+	    /* assign blanked out pixels when weighting
+	     */
+	    if ((amask & bit) == 0) {
+	      m_remap[s][i] = (u8)p;
+
+	      Vec4 *rgbvalue = &rgbx[i];
+	    
+	      // normalize coordinates to [0,1]
+//	      const float *r = &caLUTs[0][rgbvalue[0]];
+//	      const float *g = &caLUTs[1][rgbvalue[1]];
+//	      const float *b = &caLUTs[2][rgbvalue[2]];
+//	      const float *a = &caLUTs[3][rgbvalue[3]];
+
+	      sum += *(rgbvalue);
+	      num += 1;
+	    }
+	  }
+	  
+	  sum /= num;
+	  if (!m_seperatealpha & m_transparent)
+	    sum = KillW(sum);
+	  
+	  // calculate point's weights
+	  Weight<f23> wa(0.0f, wgtx);
+
+	  // add the point
+	  m_count[s]++;
+	  m_points[s][p] = sum;
+	  m_weights[s][p] = wa.GetWeights() * num;
+	  m_unweighted[s] = m_unweighted[s] & wa.IsOne() & (num == 1);
+
+#ifdef	FEATURE_TEST_LINES
+	  // if -1, all bytes are identical, checksum to check which bytes flip
+	  m_cnst_s_ &= CompareAllEqualTo_M4(sum, m_points[s][0]);
+	  m_grey_s_ &= CompareAllEqualTo_M4(sum, RotateLeft<1>(sum));
+#endif
+	}
+      }
+      else {
+	int hmpf = 0; hmpf = 0;
+      }
+    }
+#endif
+    
+#ifdef	FEATURE_TEST_LINES
+    m_cnst[s] = ~m_cnst_s_.GetM8();
+    m_grey[s] = ~m_grey_s_.GetM8();
+#endif
+
+#ifdef	FEATURE_WEIGHTS_ROOTED
+    // square root the weights
+    for (int i = 0; i < m_count[s]; ++i)
+      m_weights[s][i] = Sqrt(m_weights[s][i]);
+#endif
+    
+    // TODO: if not m_transparent this all becomes a constant!
+    if (m_seperatealpha) {
+      // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
+      int a = s + m_numsets;
+
+      // create the minimal set
+      for (int i = 0, index; i < 16; ++i) {
+	// check this pixel is enabled
+	int bit = 1 << i;
+	if ((pmask & bit) == 0) {
+	  if ((amask & bit) == 0)
+	    m_remap[a][i] = -1;
+
+	  continue;
+	}
+	
+	// calculate point's weights
+	Weight<f23> wa(rgba, i, ___w);
+	
+	// loop over previous matches for a match
+	Scr4 *avalue = &___a[i];
+	for (index = 0; index < m_count[a]; ++index) {
+	  Scr4 *cavalue = &___a[index];
+
+	  // check for a match
+	  if (*avalue == *cavalue) {
+	    // get the index of the match
+	    assume (index >= 0 && index < 16);
+
+	    // map to this point and increase the weight
+	    m_remap[a][i] = (char)index;
+	    m_weights[a][index] += wa.GetWeights();
+	    m_unweighted[a] = false;
+	    break;
+	  }
+	}
+
+	// re-use the memory of already processed pixels
+	assert(index <= i); {
+	  Scr4 *cavalue = &___a[1 * index + 0];
+
+	  // allocate a new point
+	  if (index == m_count[a]) {
+	    // get the index of the match and advance
+	    m_count[a] = index + 1;
+
+	    // normalize coordinates to [0,1]
+//	    const float *c = &caLUTs[3][avalue[0]];
+
+	    // add the point
+	    m_remap[a][i] = (char)index;
+	    m_points[a][index] = *(avalue);
+	    m_weights[a][index] = wa.GetWeights();
+	    m_unweighted[s] = m_unweighted[s] & wa.IsOne();
+	    
+	    // remember match for successive checks
+	    *cavalue = *avalue;
+	  }
+	}
+      }
+      
+#ifdef FEATURE_IGNORE_ALPHA0
+      if ((amask != 0xFFFF)) {
+	// separate alpha does have rotations
+	{
+	  // a) there are no colours in the set, just add one
+	  if ((m_count[a] == 0) | (!m_rotid & m_transparent)) {
+	    Vec4 sum = Vec4(0.0f);
+	    int num = 0;
+	    int p = m_count[a];
+
+	    for (int i = 0; i < 16; ++i) {
+	      int bit = 1 << i;
+
+	      /* assign blanked out pixels when weighting
+	       */
+	      if ((amask & bit) == 0) {
+		m_remap[a][i] = (u8)p;
+	      
+		Scr4 *avalue = &___a[1 * i + 0];
+	    
+		// normalize coordinates to [0,1]
+//		const float *c = &caLUTs[3][avalue[0]];
+
+		sum += *(avalue);
+		num += 1;
+	      }
+	    }
+	    
+	    sum /= num;
+	    if (!m_rotid && m_transparent)
+	      sum = Vec4(0.0f);
+	    
+	    // calculate point's weights
+	    Weight<f23> wa(0.0f, ___w);
+
+	    // add the point
+	    m_count[a]++;
+	    m_points[a][p] = sum;
+	    m_weights[a][p] = wa.GetWeights() * num;
+	    m_unweighted[a] = m_unweighted[a] & wa.IsOne() & (num == 1);
+	  }
+	  else {
+	    int hmpf = 0; hmpf = 0; 
+	  }
+	}
+      }
+#endif
+      
+#ifdef	FEATURE_TEST_LINES
+      m_cnst[a] = 0;
+      m_grey[a] = 0;
+#endif
+
+#ifdef FEATURE_WEIGHTS_ROOTED
+      // square root the weights
+      for (int i = 0; i < m_count[a]; ++i)
+	m_weights[a][i] = Sqrt(m_weights[a][i]);
+#endif
+    }
+  }
+
+  // clear if we're suppose to throw alway alpha
+  m_transparent = m_transparent & !clearAlpha;
 }
 
 void PaletteSet::BuildSet(PaletteSet const &palette, int mask, int flags) {
