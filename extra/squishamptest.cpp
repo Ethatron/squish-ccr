@@ -259,7 +259,7 @@ void TestTwoColour( int flags )
 
 int main()
 {
-	TestOneColourRandom( kBtc1 | kColourRangeFit );
+	TestOneColourRandom( kBtc1 + kColourRangeFit );
 	TestOneColour( kBtc1 );
 	TestTwoColour( kBtc1 );
 }

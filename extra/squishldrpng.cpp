@@ -337,7 +337,7 @@ PngImage::PngImage( std::string const& fileName )
   m_height = height;
   m_colour = ( ( colourType & PNG_COLOR_MASK_COLOR ) != 0 );
   m_alpha = ( ( colourType & PNG_COLOR_MASK_ALPHA ) != 0 );
-  m_stride = ( m_colour ? 3 : 1 ) + ( m_alpha ? 1 : 0 ) * sizeof( u8 );
+  m_stride = ( ( m_colour ? 3 : 1 ) + ( m_alpha ? 1 : 0 ) ) * sizeof( u8 );
 
   // get the image rows
 #if (PNG_LIBPNG_VER_MINOR >= 3)
