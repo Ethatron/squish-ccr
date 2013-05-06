@@ -5,7 +5,7 @@
 #include <map>
 
 struct qerror {
-  
+
   /* calculate the largest left-aligned multiplier which repeats
    * values at most "codebits" long:
    *  codebits = 8 -> 0x01010101 (repeated 4 times)
@@ -17,7 +17,7 @@ struct qerror {
       return (1U << (numbits - codebits)) + reconstructor(numbits - codebits, codebits);
     return 0U;
   }
-  
+
   /* calculate a reconstruction of value p with "codebits" length
    * with "precisionbits" length at left-aligned "position":
    *  position = 16, precision 8: 0b0000000000000000RRRRRRRR00000000
@@ -35,7 +35,7 @@ struct qerror {
       return val & cot;
     return val;
   }
-  
+
   /* shovel the highest possible number off the given error-value
    * which fits into "codebits" at left-aligned "position",
    * the value is precisely reconstructed/evaluated as defined by the
@@ -817,7 +817,7 @@ int main(int argc, char **argv) {
   s += os;
   e -= oe;
 #endif
-  
+
 #if 0
 template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 4>
 struct distributed1x1D {
@@ -833,7 +833,7 @@ public:
    */
 
 };
-  
+
 template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 8, const int payload1 = 8>
 struct distributed2x1D {
 
@@ -841,7 +841,7 @@ public:
   static const int fragments    = 2;
   static const int size		= sizeof(DataType) * 8;
   static const int precision    = -(overlap * (fragments - 1)) + payload0 + payload1;
-  
+
   /* ...XXXXXXXXXXXXXX	  original number
    * ........1111?....	  bits of fragment 1, with overlap bit
    * ............00000?	  bits of fragment 0, with overlap bit
@@ -849,7 +849,7 @@ public:
    */
 
 };
-  
+
 template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 5, const int payload1 = 6, const int payload2 = 5>
 struct distributed3x1D {
 
@@ -857,7 +857,7 @@ public:
   static const int fragments    = 3;
   static const int size		= sizeof(DataType) * 8;
   static const int precision    = -(overlap * (fragments - 1)) + payload0 + payload1 + payload2;
-  
+
   /* ...XXXXXXXXXXXXXX	  original number
    * ...22222?........	  bits of fragment 2, with overlap bit
    * ........1111?....	  bits of fragment 1, with overlap bit
@@ -866,7 +866,7 @@ public:
    */
 
 };
-  
+
 template<class DataType = unsigned short, const int overlap = 1, const int payload0 = 4, const int payload1 = 4, const int payload2 = 4, const int payload3 = 4>
 struct distributed4x1D {
 
@@ -874,7 +874,7 @@ public:
   static const int fragments    = 4;
   static const int size		= sizeof(DataType) * 8;
   static const int precision    = -(overlap * (fragments - 1)) + payload0 + payload1 + payload2 + payload3;
-  
+
   /* ....XXXXXXXXXXXXX	  original number
    * ....333?.........	  bits of fragment 3, with overlap bit
    * .......222?......	  bits of fragment 2, with overlap bit
@@ -882,7 +882,7 @@ public:
    * .............0000?	  bits of fragment 0, with overlap bit
    * ....3332221110000	  combined number
    */
-  
+
 private:
   /* ---------------------------------------------------------------------------
    */
@@ -890,7 +890,8 @@ private:
   }
 };
 #endif
-  
+
+#if 1
   unsigned int ming = 0xFFFFFFFF, maxg = 0x00000000;
   unsigned int minb = 0xFFFFFFFF, maxb = 0x00000000;
   unsigned int minr = 0xFFFFFFFF, maxr = 0x00000000;
@@ -921,7 +922,7 @@ private:
     ee = e; ge = qerror::code<NB,6,8>(ee);
 
     // ensure truncation to next lower reconstruction value
-    if (gt = gr > e) gp -= 1, 
+    if (gt = gr > e) gp -= 1,
 //    gr = (gp * ((1 << 12) + (1 << 6) + (1 << 0))) >> ((3 * 6) - (NB - 0));
       gr = ((gp << 2) + (gp >> 4)) << (NB - 8);
 
@@ -947,7 +948,7 @@ private:
     ee = e; be = qerror::code<NB-5,5,8>(ee);
 
     // ensure truncation to next lower reconstruction value
-    if (bt = br > e) bp -= 1, 
+    if (bt = br > e) bp -= 1,
 //    br = (bp * ((1 << 5) + (1 << 0))) >> ((2 * 5) - (NB - 5));
       br = ((bp << 3) + (bp >> 2)) << (NB - 5 - 8);
 
@@ -973,7 +974,7 @@ private:
     ee = e; re = qerror::code<NB-5-4,5,8>(ee);
 
     // ensure truncation to next lower reconstruction value
-    if (rt = rr > e) rp -= 1, 
+    if (rt = rr > e) rp -= 1,
 //    rr = (rp * ((1 << 0))) >> ((1 * 5) - (NB - 5 - 4));
       rr = ((rp << 3) + (rp >> 2)) >> 3;
 
@@ -983,10 +984,121 @@ private:
     assert(re == rp);
     minr = std::min(minr, ee);
     maxr = std::max(maxr, ee);
-    fprintf(stderr, "0x%04x - (0x%04x + 0x%04x + 0x%04x [%c%c%c]) => 0x%04x\n", i, gr, br, rr, gt ? 't' : ' ', bt ? 't' : ' ', rt ? 't' : ' ', e);
+
+    ge = ((ge << 2) + (ge >> 4));
+    re = ((re << 3) + (re >> 2));
+    be = ((be << 3) + (be >> 2));
+
+#define GB	6
+#define BB	5
+#define RB	5
+    fprintf(stderr, "0x%04x - (0x%04x + 0x%04x + 0x%04x [%c%c%c]) => 0x%04x + 0x%04x + 0x%04x = 0x%04x [%8.4f%] => 0x%04x\n",
+      i, gr, br, rr, gt ? 't' : ' ', bt ? 't' : ' ', rt ? 't' : ' ',
+      ge, be, re,
+      ((
+        (ge << (0 + RB + BB - 1)) +
+        (be << (0 + RB      - 1)) +
+        (re << (0              ))
+       ) >> (8 - RB)),
+      ge * (1.0f * (1 << (0 + RB + BB - 1)) / (1 << (NB + (8 - RB)))) +
+      be * (1.0f * (1 << (0 + RB      - 1)) / (1 << (NB + (8 - RB)))) +
+      re * (1.0f * (1 << (0              )) / (1 << (NB + (8 - RB)))),
+      e);
   }
 
   fprintf(stderr, "g [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", ming, maxg, 0x1FF);
   fprintf(stderr, "b [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minb, maxb, 0x01F);
   fprintf(stderr, "r [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minr, maxr, 0x000);
+#endif
+
+#if 0
+#define S1(x)  int(x)
+  const int weights_int[5][16] = {
+    {S1(0)                                                                                                                        },  // 0
+    {S1(0),                                                                                                                 S1(64)},  // 1
+    {S1(0),                                 S1(21),                                 S1(43),                                 S1(64)},  // 2
+    {S1(0),          S1(9),         S1(18),         S1(27),                 S1(37),         S1(46),         S1(55),         S1(64)},  // 3
+    {S1(0),  S1(4),  S1(9), S1(13), S1(17), S1(21), S1(26), S1(30), S1(34), S1(38), S1(43), S1(47), S1(51), S1(55), S1(60), S1(64)}   // 4
+  };
+
+  for (int type = 0; type <= 1; type++) {
+    int mini = 3, maxi = 4;
+    int minb = 5, maxb = 6;
+    int mins = 0, maxs = 0;
+    if (type == 1) {
+      mini = 4, maxi = 16;
+      minb = 4, maxb = 8;
+      mins = 0, maxs = 2;
+    }
+
+  for (int ipol = mini; ipol <= maxi; (ipol == 3 ? ipol++ : ipol *= 2))
+  for (int bits = minb; bits <= maxb; bits++)
+  for (int shrd = mins; shrd <= maxs; shrd++) {
+    bool hit[16][1 << 8] = {{0}};
+
+    for (int st = 0; st < (1 << bits); st++)
+    for (int en = 0; en < (1 << bits); en++) {
+      int sst = st;
+      int sen = en;
+
+      // clear shared bit
+      if (shrd == 1)
+      	sst &= ~1, sen &= ~1;
+      // set shared bit
+      else if (shrd == 2)
+      	sst |=  1, sen |=  1;
+
+      int rst = (sst * (1 << bits) + sst) >> (2 * bits - 8);
+      int ren = (sen * (1 << bits) + sen) >> (2 * bits - 8);
+
+      for (int i = 0; i < ipol; i++) {
+	int ist = rst * (           i);
+	int ien = ren * (ipol - 1 - i);
+	int imd = (ist + ien) / (ipol - 1);
+
+        if (type == 1) {
+          int             lut = 0;
+          if (ipol >=  2) lut = 1;
+          if (ipol >=  4) lut = 2;
+          if (ipol >=  8) lut = 3;
+          if (ipol >= 16) lut = 4;
+
+	  ist = rst * weights_int[lut][           i];
+	  ien = ren * weights_int[lut][ipol - 1 - i];
+	  imd = (ist + ien) / 64;
+        }
+
+	hit[i][imd] = true;
+      }
+    }
+
+    fprintf(stderr, "%s: %d bits (shared %s) with %d intermediates:\n", !type ? "BC1" : "BC7", bits, shrd == 0 ? "disabled" : (shrd == 1 ? "cleared" : "set"), ipol);
+    for (int i = 0; i < ipol; i++) {
+      float error = 0.0f;
+      int num = 0;
+      for (int p = 0; p < 256; p++) {
+        num += hit[i][p];
+        if (!hit[i][p]) {
+          int s = 1;
+
+          for (; s < 256; s++) {
+            if ((p - s) >= 0) {
+              if (hit[i][p - s])
+              	break;
+            }
+            else if ((p + s) < 256) {
+              if (hit[i][p + s])
+              	break;
+            }
+          }
+
+          error += s * s;
+        }
+      }
+
+      fprintf(stderr, " %2d: %7.3f%%, %8.4f RMSE\n", i, num * 100.0f / 256.0f, sqrtf(error / 256.0f));
+    }
+  }
+  }
+#endif
 }
