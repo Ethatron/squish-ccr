@@ -259,7 +259,7 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 
   u8 rgbx[4 * 16], wgtx = wgta;
   u8 ___a[1 * 16], ___w = 0xFF;
-  int amask = mask;
+  int amask = 0;
 
   /* Apply the component rotation, while preserving semantics:
    * - swap: aa, ra, ga, ba
@@ -283,6 +283,11 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
   for (int i = 0; i < 16; ++i) {
     u8 temp[4];
 
+#ifdef FEATURE_IGNORE_ALPHA0
+    // kill colour
+    amask += (!(rgba[4 * i + 3] | klla)) << i;
+#endif
+
     // clear alpha
     temp[0] = rgba[4 * i + 0];
     temp[1] = rgba[4 * i + 1];
@@ -301,15 +306,13 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
     // check for transparency (after blanking out)
     m_transparent = m_transparent | (temp[3] < 255);
 
-#ifdef FEATURE_IGNORE_ALPHA0
-    // kill colour
-    amask &= ~((rgba[4 * i + 3] | klla) ? 0 : 1 << i);
-#endif
-
     // temporary, TODO: remove it
     m_weights[3][i] = Weight<u8>(rgba, i, 0).GetWeights();
   }
   
+  // combined mask
+  amask = mask & (~amask);
+
   // clean initial state
   m_count     [0] = m_count     [1] =
   m_count     [2] = m_count     [3] = 0;
@@ -617,7 +620,7 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
 
   Vec4 rgbx[16]; Scr4 wgtx = wgta;
   Scr4 ___a[16], ___w = Scr4(1.0f);
-  int amask = mask;
+  int amask = 0;
 
   /* Apply the component rotation, while preserving semantics:
    * - swap: aa, ra, ga, ba
@@ -639,11 +642,11 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
   }
 
   for (int i = 0; i < 16; ++i) {
-    Vec4 temp(&rgba[4 * i + 0], &rgba[4 * i + 1], &rgba[4 * i + 2], &rgba[4 * i + 3]);
+    Vec4 temp; LoadUnaligned(temp, &rgba[4 * i]);
 
 #ifdef FEATURE_IGNORE_ALPHA0
     // kill colour
-    amask &= ~(CompareFirstLessEqualTo(Max(temp.SplatW(), klla), Vec4(0.0f)) << i);
+    amask += CompareFirstLessEqualTo(Max(temp.SplatW(), klla), Vec4(0.0f)) << i;
 #endif
 
     // clear alpha
@@ -670,6 +673,9 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
     m_weights[3][i] = Weight<f23>(rgba, i, Scr4(0.0f)).GetWeights();
   }
   
+  // combined mask
+  amask = mask & (~amask);
+
   // clean initial state
   m_count     [0] = m_count     [1] =
   m_count     [2] = m_count     [3] = 0;
@@ -867,7 +873,7 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
 
 	// re-use the memory of already processed pixels
 	assert(index <= i); {
-	  Scr4 *cavalue = &___a[1 * index + 0];
+	  Scr4 *cavalue = &___a[index];
 
 	  // allocate a new point
 	  if (index == m_count[a]) {
@@ -907,7 +913,7 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
 	      if ((amask & bit) == 0) {
 		m_remap[a][i] = (u8)p;
 	      
-		Scr4 *avalue = &___a[1 * i + 0];
+		Scr4 *avalue = &___a[i];
 	    
 		// normalize coordinates to [0,1]
 //		const float *c = &caLUTs[3][avalue[0]];

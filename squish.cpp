@@ -1551,7 +1551,7 @@ void CompressImage(u8 const* rgba, int width, int height, void* blocks, int flag
   flags = SanitizeFlags(flags);
 
   // initialize the block output
-  u8* targetBlock = reinterpret_cast< u8* >(blocks);
+  unsigned char* targetBlock = reinterpret_cast< unsigned char* >(blocks);
   int bytesPerBlock = 16;
   
   /**/ if ((flags & kBtcp) <= kBtc3)
@@ -1609,7 +1609,7 @@ void DecompressImage(u8* rgba, int width, int height, void const* blocks, int fl
   flags = SanitizeFlags(flags);
 
   // initialize the block input
-  u8 const* sourceBlock = reinterpret_cast< u8 const* >(blocks);
+  unsigned char const* sourceBlock = reinterpret_cast< unsigned char const* >(blocks);
   int bytesPerBlock = 16;
   
   /**/ if ((flags & kBtcp) <= kBtc3)
