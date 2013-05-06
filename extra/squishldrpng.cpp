@@ -45,7 +45,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <png.h>
 #include <intrin.h>
 
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
 #include <chrono>
 using namespace std::chrono;
 #include <windows.h>
@@ -392,7 +392,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
   clock_t start = std::clock();
   unsigned char* _targetBlock = targetData.Get();
   
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
   concurrency::parallel_for(0, height, 4, [&](int y) {
 #else
   for (int y = 0; y < height; y += 4) {
@@ -491,7 +491,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
       fprintf(stderr, "\n");
     }
   }
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
   );
 #endif
 
@@ -593,7 +593,7 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
   clock_t start = std::clock();
   unsigned char const* _sourceBlock = sourceData.Get();
 
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
   concurrency::parallel_for(0, height, 4, [&](int y) {
 #else
   for (int y = 0; y < height; y += 4) {
@@ -680,7 +680,7 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
       fprintf(stderr, "\n");
     }
   }
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
   );
 #endif
 
@@ -802,7 +802,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
   Mem benchData(benchDataSize);
 
   int num = std::max(1, 8192 / width) * std::max(1, 8192 / width) * 2;
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
 //high_resolution_clock::time_point start;
 //high_resolution_clock::time_point end;
 //duration<double> curduration;
@@ -829,14 +829,14 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
     unsigned char* _targetBlock = benchData.Get();
 
     // loop over blocks and compress them
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
 //  start = high_resolution_clock::now();
     QueryPerformanceCounter(&start);
 #else
     start = std::clock();
 #endif
     
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
     concurrency::parallel_for(0, height, 4, [&](int y) {
 #else
     for (int y = 0; y < height; y += 4) {
@@ -892,11 +892,11 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 	targetBlock += bytesPerBlock;
       }
     }
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
     );
 #endif
 
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
 //  end = high_resolution_clock::now();
 //  curduration = duration_cast< duration<double> >(end - start);
 //  minduration = std::min(minduration, curduration.count());
@@ -923,7 +923,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
     unsigned char const* sourceBlock = benchData.Get();
 
     // loop over blocks and compress them
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
 //  start = high_resolution_clock::now();
     QueryPerformanceCounter(&start);
 #else
@@ -952,7 +952,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
       }
     }
 
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(NDEBUG)
 //  end = high_resolution_clock::now();
 //  curduration = duration_cast< duration<double> >(end - start);
 //  minduration = std::min(minduration, curduration.count());
