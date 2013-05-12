@@ -125,83 +125,16 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
     
     start = centroidn + principle * min;
     end   = centroidn + principle * max;
+
+    start = Normalize(start);
+    end   = Normalize(end  );
     
     start = (start * scalei) - offset;
     end   = (end   * scalei) - offset;
 #else
-    Scr3 div = Reciprocal(Dot(principle, principle));
-    Vec3 rec = Reciprocal(    principle            );
-    Scr3 len, min, max;
-    Vec3 chk;
-
     // compute the projection
-    min = max = Dot(values[0] - centroid, principle);
-
-    for (int i = 1; i < count; ++i) {
-      len = Dot(values[i] - centroid, principle);
-      min = Min(min, len);
-      max = Max(max, len);
-    }
-
-    start = centroid + principle * min * div;
-    end   = centroid + principle * max * div;
+    GetPrincipleProjection(start, end, principle, centroid, count, values);
 #endif
-
-#if 1
-    // intersect negative undershoot with axis-plane(s), clamp to 0.0
-    chk = start;
-    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
-
-      start -= principle * hin;
-      chk = start;
-    }
-
-    // intersect negative undershoot with axis-plane(s), clamp to 0.0
-    chk = end;
-    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
-
-      end -= principle * hin;
-      chk = end;
-    }
-
-    // intersect positive overshoot with axis-plane(s), clamp to 1.0
-    chk = start - Vec3(1.0f);
-    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
-
-      start -= principle * hax;
-      chk = start - Vec3(1.0f);
-    }
-
-    // intersect positive overshoot with axis-plane(s), clamp to 1.0
-    chk = end - Vec3(1.0f);
-    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
-
-      end -= principle * hax;
-      chk = end - Vec3(1.0f);
-    }
-#else
-    start = (scale * (offset + start));
-    end   = (scale * (offset + end  ));
-
-    start = Normalize(start);
-    end   = Normalize(end  );
-
-    start = (start * scalei) - offset;
-    end   = (end   * scalei) - offset;
-#endif
-
-/*  assert(HorizontalMin(start).X() > -0.0001);
-    assert(HorizontalMin(end  ).X() > -0.0001);
-    assert(HorizontalMax(start).X() <  1.0001);
-    assert(HorizontalMax(end  ).X() <  1.0001);	 */
 #else
     Scr3 min, max;
 
@@ -243,7 +176,7 @@ void ColourNormalFit::kMeans3()
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
   Vec3 c_start = m_start, c_end = m_end;
   Vec3 l_start = m_start, l_end = m_end;
-  Scr3 berror = Scr3(16.0f);
+  Scr3 berror = Scr3(DEVIANCE_MAXSUM);
   
   int trie = 1 + (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
   do {
@@ -255,38 +188,21 @@ void ColourNormalFit::kMeans3()
     
     // create a codebook
     // resolve "metric * (value - code)" to "metric * value - metric * code"
-    Vec3 codes[3]; Codebook3(codes, c_start, c_end);
+    Vec3 codes[3]; Codebook3n(codes, c_start, c_end);
 
-    codes[0] = Normalize(scale * (offset + codes[0]));
-    codes[1] = Normalize(scale * (offset + codes[1]));
-    codes[2] = Normalize(scale * (offset + codes[2]));
-
-    Scr3 merror = Scr3(16.0f);
+    Scr3 merror = Scr3(DEVIANCE_BASE);
     for (int i = 0; i < count; ++i) {
-      // find the closest code
-      Scr3 dist;
-      Vec3 value = Normalize(scale * (offset + values[i]));
       int idx = 0;
 
-      {
-	Scr3 d0 = Dot(value, codes[0]);
-	Scr3 d1 = Dot(value, codes[1]);
-	Scr3 d2 = Dot(value, codes[2]);
+      // find the closest code
+      Vec3 value = Normalize(scale * (offset + values[i]));
+      Scr3 dist; MinDeviance3<true>(dist, idx, value, codes);
 
-	// encourage OoO
-	Scr3 da = Max(d0, d1);
-	Scr3 db =    (d2    );
-	dist    = Max(da, db);
-
-	// will cause VS to make them all cmovs
-	if (d2 == dist) { idx = 2; }
-	if (d1 == dist) { idx = 1; }
-	if (d0 == dist) { idx = 0; }
-      }
-      
       // accumulate the error
+      AddDeviance(dist, merror, freq[i]);
+      
+      // accumulate the mean
       means[idx] += value * freq[i];
-      merror     -= dist  * freq[i];
     }
     
     if (berror > merror) {
@@ -321,7 +237,7 @@ void ColourNormalFit::kMeans4()
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
   Vec3 c_start = m_start, c_end = m_end;
   Vec3 l_start = m_start, l_end = m_end;
-  Scr3 berror = Scr3(16.0f);
+  Scr3 berror = Scr3(DEVIANCE_MAXSUM);
   
   int trie = 1 + (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
   do {
@@ -333,42 +249,21 @@ void ColourNormalFit::kMeans4()
     means[3] = Vec3(0.0f);
     
     // create a codebook
-    // resolve "metric * (value - code)" to "metric * value - metric * code"
-    Vec3 codes[4]; Codebook4(codes, c_start, c_end);
-    
-    codes[0] = Normalize(scale * (offset + codes[0]));
-    codes[1] = Normalize(scale * (offset + codes[1]));
-    codes[2] = Normalize(scale * (offset + codes[2]));
-    codes[3] = Normalize(scale * (offset + codes[3]));
+    Vec3 codes[4]; Codebook4n(codes, c_start, c_end);
 
-    Scr3 merror = Scr3(16.0f);
+    Scr3 merror = Scr3(DEVIANCE_BASE);
     for (int i = 0; i < count; ++i) {
-      // find the closest code
-      Scr3 dist;
-      Vec3 value = Normalize(scale * (offset + values[i]));
       int idx = 0;
 
-      {
-	Scr3 d0 = Dot(value, codes[0]);
-	Scr3 d1 = Dot(value, codes[1]);
-	Scr3 d2 = Dot(value, codes[2]);
-	Scr3 d3 = Dot(value, codes[3]);
-
-	// encourage OoO
-	Scr3 da = Max(d0, d1);
-	Scr3 db = Max(d2, d3);
-	dist    = Max(da, db);
-
-	// will cause VS to make them all cmovs
-	if (d3 == dist) { idx = 3; }
-	if (d2 == dist) { idx = 2; }
-	if (d1 == dist) { idx = 1; }
-	if (d0 == dist) { idx = 0; }
-      }
+      // find the closest code
+      Vec3 value = Normalize(scale * (offset + values[i]));
+      Scr3 dist; MinDeviance4<true>(dist, idx, value, codes);
       
       // accumulate the error
+      AddDeviance(dist, merror, freq[i]);
+      
+      // accumulate the mean
       means[idx] += value * freq[i];
-      merror     -= dist  * freq[i];
     }
   
     if (berror > merror) {
@@ -401,7 +296,7 @@ void ColourNormalFit::Permute3()
   Scr3 const* freq = m_colours->GetWeights();
   
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
-  Scr3 berror = Scr3(16.0f);
+  Scr3 berror = Scr3(DEVIANCE_MAXSUM);
   
   Vec3 c_start = m_start;
   Vec3 c_end   = m_end;
@@ -427,31 +322,16 @@ void ColourNormalFit::Permute3()
 
     // create a codebook
     // resolve "metric * (value - code)" to "metric * value - metric * code"
-    Vec3 codes[3]; Codebook3(codes, p_start, p_end);
+    Vec3 codes[3]; Codebook3n(codes, p_start, p_end);
 
-    codes[0] = Normalize(scale * (offset + codes[0]));
-    codes[1] = Normalize(scale * (offset + codes[1]));
-    codes[2] = Normalize(scale * (offset + codes[2]));
-
-    Scr3 merror = Scr3(16.0f);
+    Scr3 merror = Scr3(DEVIANCE_BASE);
     for (int i = 0; i < count; ++i) {
       // find the closest code
-      Scr3 dist;
       Vec3 value = Normalize(scale * (offset + values[i]));
-
-      {
-	Scr3 d0 = Dot(value, codes[0]);
-	Scr3 d1 = Dot(value, codes[1]);
-	Scr3 d2 = Dot(value, codes[2]);
-
-	// encourage OoO
-	Scr3 da = Max(d0, d1);
-	Scr3 db =    (d2    );
-	dist    = Max(da, db);
-      }
+      Scr3 dist; MinDeviance3<false>(dist, i, value, codes);
       
       // accumulate the error
-      merror -= dist * freq[i];
+      AddDeviance(dist, merror, freq[i]);
     }
     
     if (berror > merror) {
@@ -476,7 +356,7 @@ void ColourNormalFit::Permute4()
   Scr3 const* freq = m_colours->GetWeights();
   
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
-  Scr3 berror = Scr3(16.0f);
+  Scr3 berror = Scr3(DEVIANCE_MAXSUM);
   
   Vec3 c_start = m_start;
   Vec3 c_end   = m_end;
@@ -501,34 +381,16 @@ void ColourNormalFit::Permute4()
     p_end   = q.SnapToLattice(c_end   + p_end);
 
     // create a codebook
-    // resolve "metric * (value - code)" to "metric * value - metric * code"
-    Vec3 codes[4]; Codebook4(codes, p_start, p_end);
+    Vec3 codes[4]; Codebook4n(codes, p_start, p_end);
 
-    codes[0] = Normalize(scale * (offset + codes[0]));
-    codes[1] = Normalize(scale * (offset + codes[1]));
-    codes[2] = Normalize(scale * (offset + codes[2]));
-    codes[3] = Normalize(scale * (offset + codes[3]));
-
-    Scr3 merror = Scr3(16.0f);
+    Scr3 merror = Scr3(DEVIANCE_BASE);
     for (int i = 0; i < count; ++i) {
       // find the closest code
-      Scr3 dist;
       Vec3 value = Normalize(scale * (offset + values[i]));
-
-      {
-	Scr3 d0 = Dot(value, codes[0]);
-	Scr3 d1 = Dot(value, codes[1]);
-	Scr3 d2 = Dot(value, codes[2]);
-	Scr3 d3 = Dot(value, codes[3]);
-
-	// encourage OoO
-	Scr3 da = Max(d0, d1);
-	Scr3 db = Max(d2, d3);
-	dist    = Max(da, db);
-      }
+      Scr3 dist; MinDeviance4<false>(dist, i, value, codes);
       
       // accumulate the error
-      merror -= dist * freq[i];
+      AddDeviance(dist, merror, freq[i]);
     }
     
     if (berror > merror) {
@@ -561,43 +423,24 @@ void ColourNormalFit::Compress3(void* block)
   
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"
-  Vec3 codes[3]; Codebook3(codes, m_start, m_end);
-
-  codes[0] = Normalize(scale * (offset + codes[0]));
-  codes[1] = Normalize(scale * (offset + codes[1]));
-  codes[2] = Normalize(scale * (offset + codes[2]));
+  Vec3 codes[3]; Codebook3n(codes, m_start, m_end);
 
   // match each point to the closest code
   u8 closest[16];
 
-  Scr3 error = Scr3(16.0f);
+  Scr3 error = Scr3(DEVIANCE_BASE);
   for (int i = 0; i < count; ++i) {
-    // find the closest code
-    Scr3 dist;
-    Vec3 value = Normalize(scale * (offset + values[i]));
     int idx = 0;
 
-    {
-      Scr3 d0 = Dot(value, codes[0]);
-      Scr3 d1 = Dot(value, codes[1]);
-      Scr3 d2 = Dot(value, codes[2]);
+    // find the closest code
+    Vec3 value = Normalize(scale * (offset + values[i]));
+    Scr3 dist; MinDeviance3<true>(dist, idx, value, codes);
 
-      // encourage OoO
-      Scr3 da = Max(d0, d1);
-      Scr3 db =    (d2    );
-      dist    = Max(da, db);
-
-      // will cause VS to make them all cmovs
-      if (d2 == dist) { idx = 2; }
-      if (d1 == dist) { idx = 1; }
-      if (d0 == dist) { idx = 0; }
-    }
+    // accumulate the error
+    AddDeviance(dist, error, freq[i]);
 
     // save the index
     closest[i] = (u8)idx;
-
-    // accumulate the error
-    error -= dist * freq[i];
   }
 
   // save this scheme if it wins
@@ -606,9 +449,7 @@ void ColourNormalFit::Compress3(void* block)
     m_besterror = error;
 
     // remap the indices
-    u8 indices[16];
-
-    m_colours->RemapIndices(closest, indices);
+    u8 indices[16]; m_colours->RemapIndices(closest, indices);
 
     // save the block
     WriteColourBlock3(m_start, m_end, indices, block);
@@ -634,47 +475,24 @@ void ColourNormalFit::Compress4(void* block)
 //  Permute4();
   
   // create a codebook
-  // resolve "metric * (value - code)" to "metric * value - metric * code"
-  Vec3 codes[4]; Codebook4(codes, m_start, m_end);
-  
-  codes[0] = Normalize(scale * (offset + codes[0]));
-  codes[1] = Normalize(scale * (offset + codes[1]));
-  codes[2] = Normalize(scale * (offset + codes[2]));
-  codes[3] = Normalize(scale * (offset + codes[3]));
+  Vec3 codes[4]; Codebook4n(codes, m_start, m_end);
 
   // match each point to the closest code
   u8 closest[16];
 
-  Scr3 error = Scr3(16.0f);
+  Scr3 error = Scr3(DEVIANCE_BASE);
   for (int i = 0; i < count; ++i) {
-    // find the closest code
-    Scr3 dist;
-    Vec3 value = Normalize(scale * (offset + values[i]));
     int idx = 0;
 
-    {
-      Scr3 d0 = Dot(value, codes[0]);
-      Scr3 d1 = Dot(value, codes[1]);
-      Scr3 d2 = Dot(value, codes[2]);
-      Scr3 d3 = Dot(value, codes[3]);
-
-      // encourage OoO
-      Scr3 da = Max(d0, d1);
-      Scr3 db = Max(d2, d3);
-      dist    = Max(da, db);
-
-      // will cause VS to make them all cmovs
-      if (d3 == dist) { idx = 3; }
-      if (d2 == dist) { idx = 2; }
-      if (d1 == dist) { idx = 1; }
-      if (d0 == dist) { idx = 0; }
-    }
-
-    // save the index
-    closest[i] = (u8)idx;
+    // find the closest code
+    Vec3 value = Normalize(scale * (offset + values[i]));
+    Scr3 dist; MinDeviance4<true>(dist, idx, value, codes);
 
     // accumulate the error
     error -= dist * freq[i];
+
+    // save the index
+    closest[i] = (u8)idx;
   }
 
   // save this scheme if it wins
@@ -683,9 +501,7 @@ void ColourNormalFit::Compress4(void* block)
     m_besterror = error;
 
     // remap the indices
-    u8 indices[16];
-
-    m_colours->RemapIndices(closest, indices);
+    u8 indices[16]; m_colours->RemapIndices(closest, indices);
 
     // save the block
     WriteColourBlock4(m_start, m_end, indices, block);

@@ -30,12 +30,6 @@
 
 namespace squish {
   
-#ifdef	FEATURE_NORMALFIT_UNITGUARANTEE
-#define DISARM	true
-#else
-#define DISARM	false
-#endif
-
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
@@ -264,7 +258,5 @@ void DecompressNormalsCtx1(f23* xyzd, void const* block)
  */
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #endif
-
-#undef DISARM
 
 } // namespace squish

@@ -854,6 +854,91 @@ void EstimatePrincipleComponent(Sym4x4 const& matrix, Vec4 &out)
 }
 
 /* -----------------------------------------------------------------------------
+ */
+template<class VecX, class ScrX>
+void GetPrincipleProjection(VecX &enter, VecX &leave, VecX const &principle, VecX const &centroid, int n, VecX const* points)
+{
+  ScrX div = Reciprocal(Dot(principle, principle));
+  VecX rec = Reciprocal(    principle            );
+  ScrX len, min, max;
+  VecX chk;
+
+  // compute the projection
+  min = max = Dot(points[0] - centroid, principle);
+
+  for (int i = 1; i < n; ++i) {
+    len = Dot(points[i] - centroid, principle);
+    min = Min(min, len);
+    max = Max(max, len);
+  }
+
+  VecX start = centroid + principle * min * div;
+  VecX end   = centroid + principle * max * div;
+    
+  // take care that low magnitude overshoots can have very high
+  // derivatives on the other axis (-0.0039 in R may be +1 in G,
+  // thus we at least go to -0.0039/255 to get +1/255 -> 1/255²)
+
+  // intersect negative undershoot with axis-plane(s), clamp to 0.0
+  chk = start;
+  while (CompareAnyLessThan(chk, VecX(-1.0f / (255.0f * 255.0f)))) {
+    VecX fct = chk * rec;
+    VecX hin = Select(fct, chk, HorizontalMin(chk));
+
+    start -= principle * hin;
+    chk = start;
+  }
+
+  // intersect negative undershoot with axis-plane(s), clamp to 0.0
+  chk = end;
+  while (CompareAnyLessThan(chk, VecX(-1.0f / (255.0f * 255.0f)))) {
+    VecX fct = chk * rec;
+    VecX hin = Select(fct, chk, HorizontalMin(chk));
+
+    end -= principle * hin;
+    chk = end;
+  }
+
+  // intersect positive overshoot with axis-plane(s), clamp to 1.0
+  chk = start - VecX(1.0f);
+  while (CompareAnyGreaterThan(chk, VecX(1.0f / (255.0f * 255.0f)))) {
+    VecX fct = chk * rec;
+    VecX hax = Select(fct, chk, HorizontalMax(chk));
+
+    start -= principle * hax;
+    chk = start - VecX(1.0f);
+  }
+
+  // intersect positive overshoot with axis-plane(s), clamp to 1.0
+  chk = end - VecX(1.0f);
+  while (CompareAnyGreaterThan(chk, VecX(1.0f / (255.0f * 255.0f)))) {
+    VecX fct = chk * rec;
+    VecX hax = Select(fct, chk, HorizontalMax(chk));
+
+    end -= principle * hax;
+    chk = end - VecX(1.0f);
+  }
+
+/*assert(HorizontalMin(start).X() > -0.0001);
+  assert(HorizontalMin(end  ).X() > -0.0001);
+  assert(HorizontalMax(start).X() <  1.0001);
+  assert(HorizontalMax(end  ).X() <  1.0001);	 */
+
+  enter = start;
+  leave = end;
+}
+
+void GetPrincipleProjection(Vec3 &enter, Vec3 &leave, Vec3 const &principle, Vec3 const &centroid, int n, Vec3 const* points)
+{
+  GetPrincipleProjection<Vec3, Scr3>(enter, leave, principle, centroid, n, points);
+}
+
+void GetPrincipleProjection(Vec4 &enter, Vec4 &leave, Vec4 const &principle, Vec4 const &centroid, int n, Vec4 const* points)
+{
+  GetPrincipleProjection<Vec4, Scr4>(enter, leave, principle, centroid, n, points);
+}
+
+/* -----------------------------------------------------------------------------
  * float q = LUTindex / ((1 << b) - 1);
  * int t = (int)floor(q * 255.0f) >> (8 - b);
  * int d = (t << (8 - b)); d |= (d >> (b)); d |= (d >> (2 * b)); d |= (d >> (3 * b));

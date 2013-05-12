@@ -147,23 +147,13 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
       // resolve "metric * (value - code)" to "metric * value - metric * code"
       int ccs = CodebookP(codes, ib, metric * vstart, metric * vend);
 
-      Scr4 error = Scr4(0.0f);
+      Scr4 error = Scr4(DISTANCE_BASE);
       for (int i = 0; i < count; ++i) {
 	Scr4 dist = Scr4(FLT_MAX);
 	Vec4 value = metric * values[i];
 	
-	for (int j = 0; j < ccs; j += 4) {
-	  Scr4 d0 = LengthSquared(value - codes[j + 0]);
-	  Scr4 d1 = LengthSquared(value - codes[j + 1]);
-	  Scr4 d2 = LengthSquared(value - codes[j + 2]);
-	  Scr4 d3 = LengthSquared(value - codes[j + 3]);
-
-	  // encourage OoO
-	  Scr4 da = Min(d0, d1);
-	  Scr4 db = Min(d2, d3);
-	  dist = Min(da, dist);
-	  dist = Min(db, dist);
-	}
+	for (int j = 0; j < ccs; j += 4)
+	  MinDistance4<false>(dist, i, value, codes, j);
 
 	// accumulate the error
 	error += dist * freq[i];
@@ -194,24 +184,8 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
     Vec4 value = metric * values[i];
     int idx = 0;
     
-    for (int j = 0; j < ccs; j += 0) {
-      Scr4 d0 = LengthSquared(value - codes[j + 0]);
-      Scr4 d1 = LengthSquared(value - codes[j + 1]);
-      Scr4 d2 = LengthSquared(value - codes[j + 2]);
-      Scr4 d3 = LengthSquared(value - codes[j + 3]);
-
-      // encourage OoO
-      Scr4 da = Min(d0, d1);
-      Scr4 db = Min(d2, d3);
-      dist = Min(da, dist);
-      dist = Min(db, dist);
-
-      // will cause VS to make them all cmovs
-      if (d0 == dist) { idx = j; } j++;
-      if (d1 == dist) { idx = j; } j++;
-      if (d2 == dist) { idx = j; } j++;
-      if (d3 == dist) { idx = j; } j++;
-    }
+    for (int j = 0; j < ccs; j += 0)
+      MinDistance4<true>(dist, idx, value, codes, j);
 
     // save the index
     closest[i] = (u8)idx;

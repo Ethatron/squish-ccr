@@ -774,6 +774,24 @@ static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
   }
 }
 
+static doinline void passreg Codebook6(s8 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    int c = codes[0 + i];
+    int d = codes[1 + i];
+
+    {
+      codes[2 + i] = (s8)((4*c + 1*d) / 5);
+      codes[3 + i] = (s8)((3*c + 2*d) / 5);
+      codes[4 + i] = (s8)((2*c + 3*d) / 5);
+      codes[5 + i] = (s8)((1*c + 4*d) / 5);
+      codes[6 + i] = (s8)-127;
+      codes[7 + i] = (s8) 127;
+    }
+  }
+}
+
 static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
@@ -788,6 +806,24 @@ static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
       codes[5 + i] = (u8)((3*c + 4*d) / 7);
       codes[6 + i] = (u8)((2*c + 5*d) / 7);
       codes[7 + i] = (u8)((1*c + 6*d) / 7);
+    }
+  }
+}
+
+static doinline void passreg Codebook8(s8 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    int c = codes[0 + i];
+    int d = codes[1 + i];
+
+    {
+      codes[2 + i] = (s8)((6*c + 1*d) / 7);
+      codes[3 + i] = (s8)((5*c + 2*d) / 7);
+      codes[4 + i] = (s8)((4*c + 3*d) / 7);
+      codes[5 + i] = (s8)((3*c + 4*d) / 7);
+      codes[6 + i] = (s8)((2*c + 5*d) / 7);
+      codes[7 + i] = (s8)((1*c + 6*d) / 7);
     }
   }
 }
@@ -855,6 +891,66 @@ static doinline void passreg Codebook8(Vec4 (&codes)[8], Vec4::Arg start, Vec4::
   codes[5] = (1.0f / 7.0f) * start + (6.0f / 7.0f) * end;
 }
 
+/* -----------------------------------------------------------------------------
+ */
+#ifdef	FEATURE_NORMALFIT_UNITGUARANTEE
+#define DISARM	true
+#else
+#define DISARM	false
+#endif
+
+static doinline void passreg Codebook3n(Vec3 (&codes)[3], Vec3::Arg start, Vec3::Arg end) ccr_restricted
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+
+  Codebook3(codes, start, end);
+
+  codes[0] = Normalize(scale * (offset + codes[0]));
+  codes[1] = Normalize(scale * (offset + codes[1]));
+  codes[2] = Normalize(scale * (offset + codes[2]));
+}
+
+static doinline void passreg Codebook4n(Vec3 (&codes)[4], Vec3::Arg start, Vec3::Arg end) ccr_restricted
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+
+  Codebook4(codes, start, end);
+
+  codes[0] = Normalize(scale * (offset + codes[0]));
+  codes[1] = Normalize(scale * (offset + codes[1]));
+  codes[2] = Normalize(scale * (offset + codes[2]));
+  codes[3] = Normalize(scale * (offset + codes[3]));
+}
+
+static doinline void passreg Codebook3nc(Vec3 (&codes)[3], Vec3::Arg start, Vec3::Arg end) ccr_restricted
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+
+  Codebook3(codes, start, end);
+  
+  codes[0] = Complement<DISARM>(scale * (offset + codes[0]));
+  codes[1] = Complement<DISARM>(scale * (offset + codes[1]));
+  codes[2] = Complement<DISARM>(scale * (offset + codes[2]));
+}
+
+static doinline void passreg Codebook4nc(Vec3 (&codes)[4], Vec3::Arg start, Vec3::Arg end) ccr_restricted
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+
+  Codebook4(codes, start, end);
+
+  codes[0] = Complement<DISARM>(scale * (offset + codes[0]));
+  codes[1] = Complement<DISARM>(scale * (offset + codes[1]));
+  codes[2] = Complement<DISARM>(scale * (offset + codes[2]));
+  codes[3] = Complement<DISARM>(scale * (offset + codes[3]));
+}
+
+/* -----------------------------------------------------------------------------
+ */
 // http://embeddedgurus.com/stack-overflow/2009/06/division-of-integers-by-constants/
 // Divide by 5:  (((uint32_t)A * (uint32_t)0xCCCD) >> 16) >> 2
 // Divide by 7: ((((uint32_t)A * (uint32_t)0x2493) >> 16) + A) >> 1) >> 2
@@ -939,6 +1035,194 @@ static int passreg CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_res
 }
 
 #endif
+
+/* *****************************************************************************
+ */
+#define	DISTANCE_BASE	0.0f
+
+template<const bool which, const int elements>
+static doinline void MinDistance3(Scr3 &dist, int &index, Vec3 &value, Vec3 (&codes)[elements]) {
+  Scr3 d0 = LengthSquared(value - codes[0]);
+  Scr3 d1 = LengthSquared(value - codes[1]);
+  Scr3 d2 = LengthSquared(value - codes[2]);
+
+  // encourage OoO
+  Scr3 da = Min(d0, d1);
+  Scr3 db =    (d2    );
+  dist    = Min(da, db);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d2 == dist) { index = 2; }
+    if (d1 == dist) { index = 1; }
+    if (d0 == dist) { index = 0; }
+  }
+}
+
+template<const bool which, const int elements>
+static doinline void MinDistance4(Scr3 &dist, int &index, Vec3 &value, Vec3 (&codes)[elements]) {
+  Scr3 d0 = LengthSquared(value - codes[0]);
+  Scr3 d1 = LengthSquared(value - codes[1]);
+  Scr3 d2 = LengthSquared(value - codes[2]);
+  Scr3 d3 = LengthSquared(value - codes[3]);
+
+  // encourage OoO
+  Scr3 da = Min(d0, d1);
+  Scr3 db = Min(d2, d3);
+  dist = Min(da, db);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d3 == dist) { index = 3; }
+    if (d2 == dist) { index = 2; }
+    if (d1 == dist) { index = 1; }
+    if (d0 == dist) { index = 0; }
+  }
+}
+
+template<const bool which, const int elements>
+static doinline void MinDistance4(Scr4 &dist, int &index, Vec4 &value, Vec4 (&codes)[elements], int &offset) {
+  Scr4 d0 = LengthSquared(value - codes[offset + 0]);
+  Scr4 d1 = LengthSquared(value - codes[offset + 1]);
+  Scr4 d2 = LengthSquared(value - codes[offset + 2]);
+  Scr4 d3 = LengthSquared(value - codes[offset + 3]);
+
+  // encourage OoO
+  Scr4 da = Min(d0, d1);
+  Scr4 db = Min(d2, d3);
+  dist = Min(da, dist);
+  dist = Min(db, dist);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d0 == dist) { index = offset; } offset++;
+    if (d1 == dist) { index = offset; } offset++;
+    if (d2 == dist) { index = offset; } offset++;
+    if (d3 == dist) { index = offset; } offset++;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+ */
+#define	DEVIANCE_SQUARE
+#ifndef	DEVIANCE_SQUARE
+#define	DEVIANCE_BASE	16.0f
+#define	DEVIANCE_MAX	-1.0f	// largest angle
+#define	DEVIANCE_MAXSUM	32.0f	// 16 * [-1,+1]
+#else
+#define	DEVIANCE_BASE	0.0f
+#define	DEVIANCE_MAX	-1.0f	// largest angle
+#define	DEVIANCE_MAXSUM	64.0f	// 16 * [-2, 0]²
+#endif
+
+template<typename dtyp>
+static doinline void AddDeviance(dtyp const &dist, dtyp &error) {
+#ifndef	DEVIANCE_SQUARE
+  error -= dist;
+#else
+  // convert range [-1,+1] -> [-2,0]
+  dtyp ang = dist + dtyp(DEVIANCE_MAX);
+  dtyp sqr = ang * ang;
+
+  error += sqr;
+#endif
+}
+
+template<typename dtyp>
+static doinline void AddDeviance(dtyp const &dist, dtyp &error, dtyp const &freq) {
+#ifndef	DEVIANCE_SQUARE
+  error -= dist * freq;
+#else
+  // convert range [-1,+1] -> [-2,0]
+  dtyp ang = dist + dtyp(DEVIANCE_MAX);
+  dtyp sqr = ang * ang;
+
+  error += sqr * freq;
+#endif
+}
+
+template<const bool which, const int elements>
+static doinline void MinDeviance3(Scr3 &dist, int &index, Vec3 const &value, Vec3 const (&codes)[elements]) {
+  Scr3 d0 = Dot(value, codes[0]);
+  Scr3 d1 = Dot(value, codes[1]);
+  Scr3 d2 = Dot(value, codes[2]);
+
+  // encourage OoO
+  Scr3 da = Max(d0, d1);
+  Scr3 db =    (d2    );
+  dist    = Max(da, db);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d2 == dist) { index = 2; }
+    if (d1 == dist) { index = 1; }
+    if (d0 == dist) { index = 0; }
+  }
+}
+
+template<const bool which, const int elements>
+static doinline void MinDeviance4(Scr3 &dist, int &index, Vec3 const &value, Vec3 const (&codes)[elements]) {
+  Scr3 d0 = Dot(value, codes[0]);
+  Scr3 d1 = Dot(value, codes[1]);
+  Scr3 d2 = Dot(value, codes[2]);
+  Scr3 d3 = Dot(value, codes[3]);
+
+  // encourage OoO
+  Scr3 da = Max(d0, d1);
+  Scr3 db = Max(d2, d3);
+  dist    = Max(da, db);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d3 == dist) { index = 3; }
+    if (d2 == dist) { index = 2; }
+    if (d1 == dist) { index = 1; }
+    if (d0 == dist) { index = 0; }
+  }
+}
+
+/* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ */
+template<const bool which, const int elements>
+static doinline void MinDeviance3c(Scr3 &dist, int &index, Vec3 const &value, Vec3 const (&codes)[elements]) {
+  Scr3 d0 = Dot(value, codes[0]);
+  Scr3 d1 = Dot(value, codes[1]);
+  Scr3 d2 = Dot(value, codes[2]);
+  
+  // select the smallest deviation (NaN as first arg is ignored!)
+  dist = Max(d0, Scr3(DEVIANCE_MAX));
+  dist = Max(d1, dist);
+  dist = Max(d2, dist);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d2 == dist) { index = 2; }
+    if (d1 == dist) { index = 1; }
+    if (d0 == dist) { index = 0; }
+  }
+}
+
+template<const bool which, const int elements>
+static doinline void MinDeviance4c(Scr3 &dist, int &index, Vec3 const &value, Vec3 const (&codes)[elements]) {
+  Scr3 d0 = Dot(value, codes[0]);
+  Scr3 d1 = Dot(value, codes[1]);
+  Scr3 d2 = Dot(value, codes[2]);
+  Scr3 d3 = Dot(value, codes[3]);
+
+  // select the smallest deviation (NaN as first arg is ignored!)
+  dist = Max(d0, Scr3(DEVIANCE_MAX));
+  dist = Max(d1, dist);
+  dist = Max(d2, dist);
+  dist = Max(d3, dist);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d3 == dist) { index = 3; }
+    if (d2 == dist) { index = 2; }
+    if (d1 == dist) { index = 1; }
+    if (d0 == dist) { index = 0; }
+  }
+}
 
 /* *****************************************************************************
  */

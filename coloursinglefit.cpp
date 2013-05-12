@@ -83,9 +83,7 @@ void ColourSingleFit::Compress3(void* block)
     m_besterror = error;
 
     // remap the indices
-    u8 indices[16];
-
-    m_colours->RemapIndices(&m_index, indices);
+    u8 indices[16]; m_colours->RemapIndices(&m_index, indices);
 
     // save the block
     WriteColourBlock3(m_start, m_end, indices, block);
@@ -111,9 +109,7 @@ void ColourSingleFit::Compress4(void* block)
     m_besterror = error;
 
     // remap the indices
-    u8 indices[16];
-
-    m_colours->RemapIndices(&m_index, indices);
+    u8 indices[16]; m_colours->RemapIndices(&m_index, indices);
 
     // save the block
     WriteColourBlock4(m_start, m_end, indices, block);

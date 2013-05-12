@@ -32,12 +32,6 @@
 
 namespace squish {
   
-#ifdef	FEATURE_NORMALFIT_UNITGUARANTEE
-#define DISARM	true
-#else
-#define DISARM	false
-#endif
-
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
@@ -250,7 +244,7 @@ void BitoneNormalFit::kMeans4()
   
   Vec3 c_start = m_start, c_end = m_end;
   Vec3 l_start = m_start, l_end = m_end;
-  Scr3 berror = Scr3(16.0f);
+  Scr3 berror = Scr3(DEVIANCE_MAXSUM);
   
   int trie = 1 + (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
   do {
@@ -263,47 +257,21 @@ void BitoneNormalFit::kMeans4()
     
     // create a codebook
     // resolve "metric * (value - code)" to "metric * value - metric * code"
-    Vec3 codes[4]; Codebook4(codes, c_start, c_end);
-    
-    codes[0] = scale * (offset + codes[0]);
-    codes[1] = scale * (offset + codes[1]);
-    codes[2] = scale * (offset + codes[2]);
-    codes[3] = scale * (offset + codes[3]);
+    Vec3 codes[4]; Codebook4nc(codes, c_start, c_end);
 
-    codes[0] = Complement<DISARM>(codes[0]);
-    codes[1] = Complement<DISARM>(codes[1]);
-    codes[2] = Complement<DISARM>(codes[2]);
-    codes[3] = Complement<DISARM>(codes[3]);
-
-    Scr3 merror = Scr3(16.0f);
+    Scr3 merror = Scr3(DEVIANCE_BASE);
     for (int i = 0; i < count; ++i) {
-      // find the closest code
-      Scr3 dist = Scr3(-1.0f);
-      Vec3 value = Normalize(scale * (offset + values[i]));
       int idx = 0;
 
-      {
-	Scr3 d0 = Dot(value, codes[0]);
-	Scr3 d1 = Dot(value, codes[1]);
-	Scr3 d2 = Dot(value, codes[2]);
-	Scr3 d3 = Dot(value, codes[3]);
-	
-	// select the smallest deviation (NaN as first arg is ignored!)
-	dist = Max(d0, dist);
-	dist = Max(d1, dist);
-	dist = Max(d2, dist);
-	dist = Max(d3, dist);
+      // find the closest code
+      Vec3 value = Normalize(scale * (offset + values[i]));
+      Scr3 dist; MinDeviance4c<true>(dist, idx, value, codes);
 
-	// will cause VS to make them all cmovs
-	if (d3 == dist) { idx = 3; }
-	if (d2 == dist) { idx = 2; }
-	if (d1 == dist) { idx = 1; }
-	if (d0 == dist) { idx = 0; }
-      }
-      
       // accumulate the error
+      AddDeviance(dist, merror, freq[i]);
+      
+      // accumulate the mean
       means[idx] += value * freq[i];
-      merror     -= dist  * freq[i];
     }
   
     if (berror > merror) {
@@ -342,7 +310,7 @@ void BitoneNormalFit::Permute4()
   Vec3 const* values = m_bitones->GetPoints();
   Scr3 const* freq = m_bitones->GetWeights();
   
-  Scr3 berror = Scr3(16.0f);
+  Scr3 berror = Scr3(DEVIANCE_MAXSUM);
   
   Vec3 c_start = scale * (offset + m_start);
   Vec3 c_end   = scale * (offset + m_end);
@@ -375,39 +343,16 @@ void BitoneNormalFit::Permute4()
 
     // create a codebook
     // resolve "metric * (value - code)" to "metric * value - metric * code"
-    Vec3 codes[4]; Codebook4(codes, p_start, p_end);
-    
-    codes[0] = scale * (offset + codes[0]);
-    codes[1] = scale * (offset + codes[1]);
-    codes[2] = scale * (offset + codes[2]);
-    codes[3] = scale * (offset + codes[3]);
+    Vec3 codes[4]; Codebook4nc(codes, p_start, p_end);
 
-    codes[0] = Complement<DISARM>(codes[0]);
-    codes[1] = Complement<DISARM>(codes[1]);
-    codes[2] = Complement<DISARM>(codes[2]);
-    codes[3] = Complement<DISARM>(codes[3]);
-
-    Scr3 merror = Scr3(16.0f);
+    Scr3 merror = Scr3(DEVIANCE_BASE);
     for (int i = 0; i < count; ++i) {
       // find the closest code
-      Scr3 dist = Scr3(-1.0f);
       Vec3 value = Normalize(scale * (offset + values[i]));
+      Scr3 dist; MinDeviance4c<false>(dist, i, value, codes);
 
-      {
-	Scr3 d0 = Dot(value, codes[0]);
-	Scr3 d1 = Dot(value, codes[1]);
-	Scr3 d2 = Dot(value, codes[2]);
-	Scr3 d3 = Dot(value, codes[3]);
-	
-	// select the smallest deviation (NaN as first arg is ignored!)
-	dist = Max(d0, dist);
-	dist = Max(d1, dist);
-	dist = Max(d2, dist);
-	dist = Max(d3, dist);
-      }
-      
       // accumulate the error
-      merror -= dist * freq[i];
+      AddDeviance(dist, merror, freq[i]);
     }
     
     if (berror > merror) {
@@ -440,52 +385,24 @@ void BitoneNormalFit::Compress4(void* block)
   
   // create a codebook
   // resolve "metric * (value - code)" to "metric * value - metric * code"
-  Vec3 codes[4]; Codebook4(codes, m_start, m_end);
-  
-  codes[0] = scale * (offset + codes[0]);
-  codes[1] = scale * (offset + codes[1]);
-  codes[2] = scale * (offset + codes[2]);
-  codes[3] = scale * (offset + codes[3]);
-
-  codes[0] = Complement<DISARM>(codes[0]);
-  codes[1] = Complement<DISARM>(codes[1]);
-  codes[2] = Complement<DISARM>(codes[2]);
-  codes[3] = Complement<DISARM>(codes[3]);
+  Vec3 codes[4]; Codebook4nc(codes, m_start, m_end);
 
   // match each point to the closest code
   u8 closest[16];
 
-  Scr3 error = Scr3(16.0f);
+  Scr3 error = Scr3(DEVIANCE_BASE);
   for (int i = 0; i < count; ++i) {
-    // find the closest code
-    Scr3 dist = Scr3(-1.0f);
-    Vec3 value = Normalize(scale * (offset + values[i]));
     int idx = 0;
 
-    {
-      Scr3 d0 = Dot(value, codes[0]);
-      Scr3 d1 = Dot(value, codes[1]);
-      Scr3 d2 = Dot(value, codes[2]);
-      Scr3 d3 = Dot(value, codes[3]);
+    // find the closest code
+    Vec3 value = Normalize(scale * (offset + values[i]));
+    Scr3 dist; MinDeviance4c<true>(dist, i, value, codes);
 
-      // select the smallest deviation (NaN as first arg is ignored!)
-      dist = Max(d0, dist);
-      dist = Max(d1, dist);
-      dist = Max(d2, dist);
-      dist = Max(d3, dist);
-
-      // will cause VS to make them all cmovs
-      if (d3 == dist) { idx = 3; }
-      if (d2 == dist) { idx = 2; }
-      if (d1 == dist) { idx = 1; }
-      if (d0 == dist) { idx = 0; }
-    }
+    // accumulate the error
+    AddDeviance(dist, error, freq[i]);
 
     // save the index
     closest[i] = (u8)idx;
-
-    // accumulate the error
-    error -= dist * freq[i];
   }
 
   // save this scheme if it wins
@@ -494,9 +411,7 @@ void BitoneNormalFit::Compress4(void* block)
     m_besterror = error;
 
     // remap the indices
-    u8 indices[16];
-
-    m_bitones->RemapIndices(closest, indices);
+    u8 indices[16]; m_bitones->RemapIndices(closest, indices);
 
     // save the block
     WriteBitoneBlock4(m_start, m_end, indices, block);
@@ -508,7 +423,5 @@ void BitoneNormalFit::Compress4(void* block)
  */
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #endif
-
-#undef DISARM
 
 } // namespace squish

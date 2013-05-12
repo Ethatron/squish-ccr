@@ -39,12 +39,6 @@
 
 namespace squish {
   
-#ifdef	FEATURE_NORMALFIT_UNITGUARANTEE
-#define DISARM	true
-#else
-#define DISARM	false
-#endif
-
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
@@ -64,7 +58,7 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
   const Vec4 offset = Vec4(-1.0f * 127.5f);
 
   // fit each coord value to the codebook
-  Scr4 error = Scr4(16.0f);
+  Scr4 error = Scr4(DEVIANCE_BASE);
 
   for (int i = 0; i < 16; ++i) {
     // check this pixel is valid
@@ -82,7 +76,7 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
     Vec4 valz = xyz[i].SplatZ();
 
     // find the closest code
-    Scr4 dist = Vec4(-1.0f);
+    Scr4 dist = Vec4(DEVIANCE_MAX);
 
     int idxx = 0;
     int idxy = 0;
@@ -120,7 +114,7 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
     indicesy[i] = (u8)idxy;
 
     // accumulate the error (sine)
-    error -= dist;
+    AddDeviance(dist, error);
   }
 
   // return the total error
@@ -135,11 +129,11 @@ static Vec4 GetError(Vec4 const* xyz, int mask,
   const Vec4 offset = Vec4(-1.0f * 127.5f);
 
   // initial values
-  Vec4 error = Vec4(16.0f);
+  Vec4 error = Vec4(DEVIANCE_BASE);
 
   for (int v = 0; v < 16; v++) {
     // find the closest code
-    Vec4 dists = Vec4(-1.0f);
+    Vec4 dists = Vec4(DEVIANCE_MAX);
 
     // fetch floating point vector
     Vec4 valx = xyz[v].SplatX();
@@ -167,7 +161,7 @@ static Vec4 GetError(Vec4 const* xyz, int mask,
     } while (--g >= 0);
 
     // accumulate the error (sine)
-    error -= dists;
+    AddDeviance(dists, error);
   }
   
   // return the total error
@@ -281,12 +275,12 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
       _cby[7] =                                 cmpeey                     ; _cby[7] = scale * (offset + Truncate(_cby[7]));
     }
 
-    Vec4 error0x  = Vec4(16.0f);
-    Vec4 error0y  = Vec4(16.0f);
-    Vec4 error1xy = Vec4(16.0f);
-    Vec4 error2xy = Vec4(16.0f);
-    Vec4 error3xy = Vec4(16.0f);
-    Vec4 error4xy = Vec4(16.0f);
+    Vec4 error0x  = Vec4(DEVIANCE_BASE);
+    Vec4 error0y  = Vec4(DEVIANCE_BASE);
+    Vec4 error1xy = Vec4(DEVIANCE_BASE);
+    Vec4 error2xy = Vec4(DEVIANCE_BASE);
+    Vec4 error3xy = Vec4(DEVIANCE_BASE);
+    Vec4 error4xy = Vec4(DEVIANCE_BASE);
     for (int v = 0; v < 16; v++) {
       // find the closest code
       Vec4 valx = xyz[v].SplatX();
@@ -360,12 +354,12 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
       } while(--j >= 0);
 
       // accumulate the error (sine)
-      error0x  -= dist0x ;
-      error0y  -= dist0y ;
-      error1xy -= dist1xy;
-      error2xy -= dist2xy;
-      error3xy -= dist3xy;
-      error4xy -= dist4xy;
+      AddDeviance(dist0x , error0x );
+      AddDeviance(dist0y , error0y );
+      AddDeviance(dist1xy, error1xy);
+      AddDeviance(dist2xy, error2xy);
+      AddDeviance(dist3xy, error3xy);
+      AddDeviance(dist4xy, error4xy);
     }
 
     // encourage OoO
@@ -540,7 +534,7 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
     error1x1y = error1x2y = error1x3y = error1x4y =
     error2x1y = error2x2y = error2x3y = error2x4y =
     error3x1y = error3x2y = error3x3y = error3x4y =
-    error4x1y = error4x2y = error4x3y = error4x4y = Scr4(16.0f);
+    error4x1y = error4x2y = error4x3y = error4x4y = Scr4(DEVIANCE_BASE);
 
     for (int v = 0; v < 16; v++) {
       // find the closest code
@@ -645,30 +639,30 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
       }
 
       // accumulate the error (sine)
-      error0x1y -= dist0x1y;
-      error0x2y -= dist0x2y;
-      error0x3y -= dist0x3y;
-      error0x4y -= dist0x4y;
-      error1x1y -= dist1x1y;
-      error1x2y -= dist1x2y;
-      error1x3y -= dist1x3y;
-      error1x4y -= dist1x4y;
-      error2x1y -= dist2x1y;
-      error2x2y -= dist2x2y;
-      error2x3y -= dist2x3y;
-      error2x4y -= dist2x4y;
-      error3x1y -= dist3x1y;
-      error3x2y -= dist3x2y;
-      error3x3y -= dist3x3y;
-      error3x4y -= dist3x4y;
-      error4x1y -= dist4x1y;
-      error4x2y -= dist4x2y;
-      error4x3y -= dist4x3y;
-      error4x4y -= dist4x4y;
-      error1x0y -= dist1x0y;
-      error2x0y -= dist2x0y;
-      error3x0y -= dist3x0y;
-      error4x0y -= dist4x0y;
+      AddDeviance(dist0x1y, error0x1y);
+      AddDeviance(dist0x2y, error0x2y);
+      AddDeviance(dist0x3y, error0x3y);
+      AddDeviance(dist0x4y, error0x4y);
+      AddDeviance(dist1x1y, error1x1y);
+      AddDeviance(dist1x2y, error1x2y);
+      AddDeviance(dist1x3y, error1x3y);
+      AddDeviance(dist1x4y, error1x4y);
+      AddDeviance(dist2x1y, error2x1y);
+      AddDeviance(dist2x2y, error2x2y);
+      AddDeviance(dist2x3y, error2x3y);
+      AddDeviance(dist2x4y, error2x4y);
+      AddDeviance(dist3x1y, error3x1y);
+      AddDeviance(dist3x2y, error3x2y);
+      AddDeviance(dist3x3y, error3x3y);
+      AddDeviance(dist3x4y, error3x4y);
+      AddDeviance(dist4x1y, error4x1y);
+      AddDeviance(dist4x2y, error4x2y);
+      AddDeviance(dist4x3y, error4x3y);
+      AddDeviance(dist4x4y, error4x4y);
+      AddDeviance(dist1x0y, error1x0y);
+      AddDeviance(dist2x0y, error2x0y);
+      AddDeviance(dist3x0y, error3x0y);
+      AddDeviance(dist4x0y, error4x0y);
     }
 
     Scr4                   merrx = error0x0y;
@@ -1160,7 +1154,5 @@ void DecompressNormalsBtc5(f23* xyzd, void const* blockx, void const* blocky)
  */
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
 #endif
-
-#undef DISARM
 
 } // namespace squish

@@ -31,6 +31,8 @@
 
 namespace squish {
   
+/* *****************************************************************************
+ */
 template<typename dtyp>
 class Weight;
 

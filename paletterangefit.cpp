@@ -93,72 +93,10 @@ PaletteRangeFit::PaletteRangeFit(PaletteSet const* palette, int flags, int swap,
       }
 
       // get the min and max range as the codebook endpoints
+
 #ifdef	FEATURE_RANGEFIT_PROJECT
-      Scr4 div = Reciprocal(Dot(principle, principle));
-      Vec4 rec = Reciprocal(    principle            );
-      Scr4 len, min, max;
-      Vec4 chk;
-
       // compute the projection
-      min = max = Dot(values[0] - centroid, principle);
-
-      for (int i = 1; i < count; ++i) {
-	len = Dot(values[i] - centroid, principle);
-	min = Min(min, len);
-	max = Max(max, len);
-      }
-
-      start = centroid + principle * min * div;
-      end   = centroid + principle * max * div;
-
-      // take care that low magnitude overshoots can have very high
-      // derivatives on the other axis (-0.0039 in R may be +1 in G,
-      // thus we at least go to -0.0039/255 to get +1/255 -> 1/255²)
-
-      // intersect with negative axis-plane, clamp to 0.0
-      chk = start;
-      while (CompareAnyLessThan(chk, Vec4(-1.0f / (255.0f * 255.0f)))) {
-	Vec4 fct = chk * rec;
-	Vec4 hin = Select(fct, chk, HorizontalMin(chk));
-
-	start -= principle * hin;
-	chk = start;
-      }
-
-      // intersect negative undershoot with axis-plane(s), clamp to 0.0
-      chk = end;
-      while (CompareAnyLessThan(chk, Vec4(-1.0f / (255.0f * 255.0f)))) {
-	Vec4 fct = chk * rec;
-	Vec4 hin = Select(fct, chk, HorizontalMin(chk));
-
-	end -= principle * hin;
-	chk = end;
-      }
-
-      // intersect positive overshoot with axis-plane(s), clamp to 1.0
-      chk = start - Vec4(1.0f);
-      while (CompareAnyGreaterThan(chk, Vec4(1.0f / (255.0f * 255.0f)))) {
-	Vec4 fct = chk * rec;
-	Vec4 hax = Select(fct, chk, HorizontalMax(chk));
-
-	start -= principle * hax;
-	chk = start - Vec4(1.0f);
-      }
-
-      // intersect positive overshoot with axis-plane(s), clamp to 1.0
-      chk = end - Vec4(1.0f);
-      while (CompareAnyGreaterThan(chk, Vec4(1.0f / (255.0f * 255.0f)))) {
-	Vec4 fct = chk * rec;
-	Vec4 hax = Select(fct, chk, HorizontalMax(chk));
-
-	end -= principle * hax;
-	chk = end - Vec4(1.0f);
-      }
-
-/*    assert(HorizontalMin(start).X() > -0.0001);
-      assert(HorizontalMin(end  ).X() > -0.0001);
-      assert(HorizontalMax(start).X() <  1.0001);
-      assert(HorizontalMax(end  ).X() <  1.0001);  */
+      GetPrincipleProjection(start, end, principle, centroid, count, values);
 #else
       Scr4 min, max;
 
@@ -238,7 +176,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
   q.ChangeShared(cb, cb, cb, ab, zb);
 
   // match each point to the closest code
-  Scr4 error = Scr4(0.0f);
+  Scr4 error = Scr4(DISTANCE_BASE);
   a16 u8 closest[4][16];
 
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
@@ -317,35 +255,19 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
       int ccs = CodebookP(codes, kb, metric * start, metric * end);
 
       for (int i = 0; i < count; ++i) {
-	// find the closest code
-	Scr4 dist = Scr4(FLT_MAX);
-	Vec4 value = metric * values[i];
 	int idx = 0;
 
-	for (int j = 0; j < ccs; j += 0) {
-	  Scr4 d0 = LengthSquared(value - codes[j + 0]);
-	  Scr4 d1 = LengthSquared(value - codes[j + 1]);
-	  Scr4 d2 = LengthSquared(value - codes[j + 2]);
-	  Scr4 d3 = LengthSquared(value - codes[j + 3]);
-
-	  // encourage OoO
-	  Scr4 da = Min(d0, d1);
-	  Scr4 db = Min(d2, d3);
-	  dist = Min(da, dist);
-	  dist = Min(db, dist);
-
-	  // will cause VS to make them all cmovs
-	  if (d0 == dist) { idx = j; } j++;
-	  if (d1 == dist) { idx = j; } j++;
-	  if (d2 == dist) { idx = j; } j++;
-	  if (d3 == dist) { idx = j; } j++;
-	}
-
-	// save the index
-	closest[s][i] = (u8)idx;
+	// find the closest code
+	Vec4 value = metric * values[i];
+	Scr4 dist = Scr4(FLT_MAX);
+	for (int j = 0; j < ccs; j += 0)
+	  MinDistance4<true>(dist, idx, value, codes, j);
 
 	// accumulate the error
 	error += dist * freq[i];
+
+	// save the index
+	closest[s][i] = (u8)idx;
       }
 
 #elif	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS == SHAREDBITS_TRIAL_PERMUTE)
@@ -367,23 +289,12 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 	// resolve "metric * (value - code)" to "metric * value - metric * code"
 	int ccs = CodebookP(codes, kb, metric * start, metric * end);
 
-	Scr4 lerror = Scr4(0.0f);
+	Scr4 lerror = Scr4(DISTANCE_BASE);
 	for (int i = 0; i < count; ++i) {
-	  Scr4 dist = Scr4(FLT_MAX);
 	  Vec4 value = metric * values[i];
-	  
-	  for (int j = 0; j < ccs; j += 4) {
-	    Scr4 d0 = LengthSquared(value - codes[j + 0]);
-	    Scr4 d1 = LengthSquared(value - codes[j + 1]);
-	    Scr4 d2 = LengthSquared(value - codes[j + 2]);
-	    Scr4 d3 = LengthSquared(value - codes[j + 3]);
-
-	    // encourage OoO
-	    Scr4 da = Min(d0, d1);
-	    Scr4 db = Min(d2, d3);
-	    dist = Min(da, dist);
-	    dist = Min(db, dist);
-	  }
+	  Scr4 dist = Scr4(FLT_MAX);
+	  for (int j = 0; j < ccs; j += 4)
+	    MinDistance4<false>(dist, i, value, codes, j);
 
 	  // accumulate the error
 	  lerror += dist * freq[i];

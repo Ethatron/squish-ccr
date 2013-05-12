@@ -65,67 +65,8 @@ BitoneRangeFit::BitoneRangeFit(BitoneSet const* bitones, int flags)
 
   if (count > 0) {
 #ifdef	FEATURE_RANGEFIT_PROJECT
-    Scr3 div = Reciprocal(Dot(principle, principle));
-    Vec3 rec = Reciprocal(    principle            );
-    Scr3 len, min, max;
-    Vec3 chk;
-
     // compute the projection
-    min = max = Dot(values[0] - centroid, principle);
-
-    for (int i = 1; i < count; ++i) {
-      len = Dot(values[i] - centroid, principle);
-      min = Min(min, len);
-      max = Max(max, len);
-    }
-
-    start = centroid + principle * min * div;
-    end   = centroid + principle * max * div;
-
-    // intersect negative undershoot with axis-plane(s), clamp to 0.0
-    chk = start;
-    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
-
-      start -= principle * hin;
-      chk = start;
-    }
-
-    // intersect negative undershoot with axis-plane(s), clamp to 0.0
-    chk = end;
-    while (CompareAnyLessThan(chk, Vec3(-1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hin = Select(fct, chk, HorizontalMin(chk));
-
-      end -= principle * hin;
-      chk = end;
-    }
-
-    // intersect positive overshoot with axis-plane(s), clamp to 1.0
-    chk = start - Vec3(1.0f);
-    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
-
-      start -= principle * hax;
-      chk = start - Vec3(1.0f);
-    }
-
-    // intersect positive overshoot with axis-plane(s), clamp to 1.0
-    chk = end - Vec3(1.0f);
-    while (CompareAnyGreaterThan(chk, Vec3(1.0f / 65536))) {
-      Vec3 fct = chk * rec;
-      Vec3 hax = Select(fct, chk, HorizontalMax(chk));
-
-      end -= principle * hax;
-      chk = end - Vec3(1.0f);
-    }
-
-/*  assert(HorizontalMin(start).X() > -0.0001);
-    assert(HorizontalMin(end  ).X() > -0.0001);
-    assert(HorizontalMax(start).X() <  1.0001);
-    assert(HorizontalMax(end  ).X() <  1.0001);	 */
+    GetPrincipleProjection(start, end, principle, centroid, count, values);
 #else
     Scr3 min, max;
 
@@ -167,36 +108,19 @@ void BitoneRangeFit::Compress4(void* block)
   // match each point to the closest code
   u8 closest[16];
 
-  Scr3 error = Scr3(0.0f);
+  Scr3 error = Scr3(DISTANCE_BASE);
   for (int i = 0; i < count; ++i) {
-    // find the closest code
-    Scr3 dist;
-    Vec3 value = values[i];
     int idx = 0;
 
-    {
-      Scr3 d0 = LengthSquared(value - codes[0]);
-      Scr3 d1 = LengthSquared(value - codes[1]);
-      Scr3 d2 = LengthSquared(value - codes[2]);
-      Scr3 d3 = LengthSquared(value - codes[3]);
-
-      // encourage OoO
-      Scr3 da = Min(d0, d1);
-      Scr3 db = Min(d2, d3);
-      dist    = Min(da, db);
-
-      // will cause VS to make them all cmovs
-      if (d3 == dist) { idx = 3; }
-      if (d2 == dist) { idx = 2; }
-      if (d1 == dist) { idx = 1; }
-      if (d0 == dist) { idx = 0; }
-    }
-
-    // save the index
-    closest[i] = (u8)idx;
+    // find the closest code
+    Vec3 value = values[i];
+    Scr3 dist; MinDistance4<true>(dist, idx, value, codes);
 
     // accumulate the error
     error += dist * freq[i];
+
+    // save the index
+    closest[i] = (u8)idx;
   }
 
   // save this scheme if it wins
@@ -205,9 +129,7 @@ void BitoneRangeFit::Compress4(void* block)
     m_besterror = error;
 
     // remap the indices
-    u8 indices[16];
-
-    m_bitones->RemapIndices(closest, indices);
+    u8 indices[16]; m_bitones->RemapIndices(closest, indices);
 
     // save the block
     WriteBitoneBlock4(m_start, m_end, indices, block);

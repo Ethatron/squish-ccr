@@ -2066,7 +2066,7 @@ public:
 	}
 	
 	template<const bool disarm>
-	friend Vec3 Complement( Vec3 &left )
+	friend Vec3 Complement( Arg left )
 	{
 		__m128 ren, res, rez;
 
@@ -2363,6 +2363,13 @@ public:
 	}
 	
 	Vec4( const unsigned short* x ) {
+	  __m128i v = _mm_setzero_si128();
+
+	  m_v = _mm_cvtepi32_ps( _mm_insert_epi16( v, *x, 0 ) );
+	  m_v = _mm_shuffle_ps( m_v, m_v, SQUISH_SSE_SPLAT( 0 ) );
+	}
+	
+	Vec4( const signed short* x ) {
 	  __m128i v = _mm_setzero_si128();
 
 	  m_v = _mm_cvtepi32_ps( _mm_insert_epi16( v, *x, 0 ) );
@@ -2812,7 +2819,7 @@ public:
 	}
 	
 	template<const bool disarm, const bool killw>
-	friend Vec4 Complement( Arg &left )
+	friend Vec4 Complement( Arg left )
 	{
 		__m128 ren, res, rez;
 

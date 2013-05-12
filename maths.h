@@ -262,6 +262,8 @@ void EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec3 &out);
 void EstimatePrincipleComponent(Sym2x2 const& smatrix, Vec4 &out);
 void EstimatePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out);
 void EstimatePrincipleComponent(Sym4x4 const& smatrix, Vec4 &out);
+void GetPrincipleProjection(Vec3 &enter, Vec3 &leave, Vec3 const &principle, Vec3 const &centroid, int n, Vec3 const* points);
+void GetPrincipleProjection(Vec4 &enter, Vec4 &leave, Vec4 const &principle, Vec4 const &centroid, int n, Vec4 const* points);
 
 #ifdef FEATURE_POWERESTIMATE
 #define GetPrincipleComponent(covariance, m_principle)	EstimatePrincipleComponent(covariance, m_principle)
