@@ -972,7 +972,7 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
 
 #undef	FIT_THRESHOLD
 
-void CompressNormalsBtc5(u8 const* xyzd, int mask, void* blockx, void* blocky, int flags)
+void CompressNormalsBtc5u(u8 const* xyzd, int mask, void* blockx, void* blocky, int flags)
 {
   const Vec4 scale  = Vec4( 1.0f / 127.5f);
   const Vec4 offset = Vec4(-1.0f * 127.5f);
@@ -989,7 +989,7 @@ void CompressNormalsBtc5(u8 const* xyzd, int mask, void* blockx, void* blocky, i
   CompressNormalBtc5(xyz, mask, blockx, blocky, flags);
 }
 
-void CompressNormalsBtc5(u16 const* xyzd, int mask, void* blockx, void* blocky, int flags)
+void CompressNormalsBtc5u(u16 const* xyzd, int mask, void* blockx, void* blocky, int flags)
 {
   const Vec4 scale  = Vec4( 1.0f / 32767.5f);
   const Vec4 offset = Vec4(-1.0f * 32767.5f);
@@ -1006,7 +1006,7 @@ void CompressNormalsBtc5(u16 const* xyzd, int mask, void* blockx, void* blocky, 
   CompressNormalBtc5(xyz, mask, blockx, blocky, flags);
 }
 
-void CompressNormalsBtc5(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags)
+void CompressNormalsBtc5u(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags)
 {
   Vec4 xyz[16];
 
@@ -1082,7 +1082,7 @@ static void ReadNormalBlock(
   }
 }
   
-void DecompressNormalsBtc5(u8* xyzd, void const* blockx, void const* blocky)
+void DecompressNormalsBtc5u(u8* xyzd, void const* blockx, void const* blocky)
 {
   const Vec3 scale  = Vec3( 1.0f / 127.5f);
   const Vec3 offset = Vec3(-1.0f * 127.5f);
@@ -1105,7 +1105,7 @@ void DecompressNormalsBtc5(u8* xyzd, void const* blockx, void const* blocky)
   }
 }
 
-void DecompressNormalsBtc5(u16* xyzd, void const* blockx, void const* blocky)
+void DecompressNormalsBtc5u(u16* xyzd, void const* blockx, void const* blocky)
 {
   const Vec3 scale   = Vec3( 1.0f / 127.5f);
   const Vec3 offset  = Vec3(-1.0f * 127.5f);
@@ -1129,7 +1129,7 @@ void DecompressNormalsBtc5(u16* xyzd, void const* blockx, void const* blocky)
   }
 }
 
-void DecompressNormalsBtc5(f23* xyzd, void const* blockx, void const* blocky)
+void DecompressNormalsBtc5u(f23* xyzd, void const* blockx, void const* blocky)
 {
   const Vec3 scale  = Vec3( 1.0f / 127.5f);
   const Vec3 offset = Vec3(-1.0f * 127.5f);

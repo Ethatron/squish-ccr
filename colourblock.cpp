@@ -150,7 +150,7 @@ void ReadColourBlock(
   }
 }
 
-void DecompressColoursBtc1(u8* rgba, void const* block, bool isBtc1)
+void DecompressColoursBtc1u(u8* rgba, void const* block, bool isBtc1)
 {
   u8 codes[16];
   u8 indices[16];
@@ -168,7 +168,7 @@ void DecompressColoursBtc1(u8* rgba, void const* block, bool isBtc1)
   }
 }
 
-void DecompressColoursBtc1(u16* rgba, void const* block, bool isBtc1)
+void DecompressColoursBtc1u(u16* rgba, void const* block, bool isBtc1)
 {
   u8 codes[16];
   u8 indices[16];
@@ -186,7 +186,7 @@ void DecompressColoursBtc1(u16* rgba, void const* block, bool isBtc1)
   }
 }
 
-void DecompressColoursBtc1(f23* rgba, void const* block, bool isBtc1)
+void DecompressColoursBtc1u(f23* rgba, void const* block, bool isBtc1)
 {
   u8 codes[16];
   u8 indices[16];

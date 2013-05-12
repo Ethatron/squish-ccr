@@ -45,9 +45,9 @@ namespace squish {
   void DecompressBitoneCtx1(u16* rgba, void const* block);
   void DecompressBitoneCtx1(f23* rgba, void const* block);
 
-  void DecompressNormalsCtx1(u8 * xyzd, void const* block);
-  void DecompressNormalsCtx1(u16* xyzd, void const* block);
-  void DecompressNormalsCtx1(f23* xyzd, void const* block);
+  void DecompressNormalsCtx1u(u8 * xyzd, void const* block);
+  void DecompressNormalsCtx1u(u16* xyzd, void const* block);
+  void DecompressNormalsCtx1u(f23* xyzd, void const* block);
 #endif
 
 // -----------------------------------------------------------------------------

@@ -714,27 +714,31 @@ static doinline void passreg UnpackFrom(Col4 (&field)[3][FIELDN]) ccr_restricted
   }
 }
 
-/* -----------------------------------------------------------------------------
+/* *****************************************************************************
+ * http://embeddedgurus.com/stack-overflow/2009/06/division-of-integers-by-constants/
+ * Divide by 3:  (((uint32_t)A * (uint32_t)0xAAAB) >> 16) >> 1
+ * Divide by 5:  (((uint32_t)A * (uint32_t)0xCCCD) >> 16) >> 2
+ * Divide by 7: ((((uint32_t)A * (uint32_t)0x2493) >> 16) + A) >> 1) >> 2
  */
 static doinline void passreg Codebook3(u8 (&codes)[4*4], bool bw) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 3; ++i) {
-    int c = codes[0 + i];
-    int d = codes[4 + i];
+    const int c = codes[0 + i];
+    const int d = codes[4 + i];
 
     if (bw) {
-      codes[ 8 + i] = (u8)((1*c + 1*d) / 2);
+      codes[ 8 + i] = (u8)(((1 * c + 1 * d)         ) >>  1);
       codes[12 + i] = 0;
     }
     else {
-      codes[ 8 + i] = (u8)((2*c + 1*d) / 3);
-      codes[12 + i] = (u8)((1*c + 2*d) / 3);
+      codes[ 8 + i] = (u8)(((2 * c + 1 * d) * 0xAAAB) >> 17);
+      codes[12 + i] = (u8)(((1 * c + 2 * d) * 0xAAAB) >> 17);
     }
   }
 
   // fill in alpha for the intermediate values
-  codes[ 8 + 3] = 255;
+  codes[ 8 + 3] =          255;
   codes[12 + 3] = bw ? 0 : 255;
 }
 
@@ -742,12 +746,18 @@ static doinline void passreg Codebook4(u8 (&codes)[4*4]) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 3; ++i) {
-    int c = codes[0 + i];
-    int d = codes[4 + i];
+    const int c = codes[0 + i];
+    const int d = codes[4 + i];
 
     {
-      codes[ 8 + i] = (u8)((2*c + 1*d) / 3);
-      codes[12 + i] = (u8)((1*c + 2*d) / 3);
+      int i21 = ((2 * c + 1 * d) * 0xAAAB);
+      
+      codes[ 8 + i] = (u8)(i21 >> 18);
+      codes[12 + i] = (u8)(c + d - codes[ 8 + i]);
+      /*
+      codes[ 8 + i] = (u8)(((2 * c + 1 * d) * 0xAAAB) >> 17);
+      codes[12 + i] = (u8)(((1 * c + 2 * d) * 0xAAAB) >> 17);
+      */
     }
   }
 
@@ -760,14 +770,23 @@ static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 1; ++i) {
-    int c = codes[0 + i];
-    int d = codes[1 + i];
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
 
     {
-      codes[2 + i] = (u8)((4*c + 1*d) / 5);
-      codes[3 + i] = (u8)((3*c + 2*d) / 5);
-      codes[4 + i] = (u8)((2*c + 3*d) / 5);
-      codes[5 + i] = (u8)((1*c + 4*d) / 5);
+      int i41 = ((4 * c + 1 * d) * 0xCCCD);
+      int i32 = ((3 * c + 2 * d) * 0xCCCD);
+      
+      codes[2 + i] = (u8)(i41 >> 18);
+      codes[3 + i] = (u8)(i32 >> 18);
+      codes[4 + i] = (u8)(c + d - codes[2 + i]);
+      codes[5 + i] = (u8)(c + d - codes[3 + i]);
+      /*
+      codes[2 + i] = (u8)(((4 * c + 1 * d) * 0xCCCD) >> 18);
+      codes[3 + i] = (u8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
+      codes[4 + i] = (u8)(((2 * c + 3 * d) * 0xCCCD) >> 18);
+      codes[5 + i] = (u8)(((1 * c + 4 * d) * 0xCCCD) >> 18);
+      */
       codes[6 + i] = (u8)0;
       codes[7 + i] = (u8)255;
     }
@@ -778,14 +797,23 @@ static doinline void passreg Codebook6(s8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 1; ++i) {
-    int c = codes[0 + i];
-    int d = codes[1 + i];
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
 
     {
-      codes[2 + i] = (s8)((4*c + 1*d) / 5);
-      codes[3 + i] = (s8)((3*c + 2*d) / 5);
-      codes[4 + i] = (s8)((2*c + 3*d) / 5);
-      codes[5 + i] = (s8)((1*c + 4*d) / 5);
+      int i41 = ((4 * c + 1 * d) * 0xCCCD);
+      int i32 = ((3 * c + 2 * d) * 0xCCCD);
+      
+      codes[2 + i] = (s8)(i41 >> 18);
+      codes[3 + i] = (s8)(i32 >> 18);
+      codes[4 + i] = (s8)(c + d - codes[2 + i]);
+      codes[5 + i] = (s8)(c + d - codes[3 + i]);
+      /*
+      codes[2 + i] = (s8)(((4 * c + 1 * d) * 0xCCCD) >> 18);
+      codes[3 + i] = (s8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
+      codes[4 + i] = (s8)(((2 * c + 3 * d) * 0xCCCD) >> 18);
+      codes[5 + i] = (s8)(((1 * c + 4 * d) * 0xCCCD) >> 18);
+      */
       codes[6 + i] = (s8)-127;
       codes[7 + i] = (s8) 127;
     }
@@ -796,16 +824,29 @@ static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 1; ++i) {
-    int c = codes[0 + i];
-    int d = codes[1 + i];
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
+//    int cd;
 
     {
-      codes[2 + i] = (u8)((6*c + 1*d) / 7);
-      codes[3 + i] = (u8)((5*c + 2*d) / 7);
-      codes[4 + i] = (u8)((4*c + 3*d) / 7);
-      codes[5 + i] = (u8)((3*c + 4*d) / 7);
-      codes[6 + i] = (u8)((2*c + 5*d) / 7);
-      codes[7 + i] = (u8)((1*c + 6*d) / 7);
+      int i61 = ((6 * c + 1 * d));
+      int i52 = ((5 * c + 2 * d));
+      int i43 = ((4 * c + 3 * d));
+      
+      codes[2 + i] = (u8)((((i61 * 0x2493) >> 16) + i61) >> 3);
+      codes[3 + i] = (u8)((((i52 * 0x2493) >> 16) + i52) >> 3);
+      codes[4 + i] = (u8)((((i43 * 0x2493) >> 16) + i43) >> 3);
+      codes[5 + i] = (u8)(c + d - codes[2 + i]);
+      codes[6 + i] = (u8)(c + d - codes[3 + i]);
+      codes[7 + i] = (u8)(c + d - codes[4 + i]);
+      /*
+      cd = (6 * c + 1 * d); codes[2 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (5 * c + 2 * d); codes[3 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (4 * c + 3 * d); codes[4 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (3 * c + 4 * d); codes[5 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (2 * c + 5 * d); codes[6 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (1 * c + 6 * d); codes[7 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      */
     }
   }
 }
@@ -814,16 +855,29 @@ static doinline void passreg Codebook8(s8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
   for (int i = 0; i < 1; ++i) {
-    int c = codes[0 + i];
-    int d = codes[1 + i];
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
+//    int cd;
 
     {
-      codes[2 + i] = (s8)((6*c + 1*d) / 7);
-      codes[3 + i] = (s8)((5*c + 2*d) / 7);
-      codes[4 + i] = (s8)((4*c + 3*d) / 7);
-      codes[5 + i] = (s8)((3*c + 4*d) / 7);
-      codes[6 + i] = (s8)((2*c + 5*d) / 7);
-      codes[7 + i] = (s8)((1*c + 6*d) / 7);
+      int i61 = ((6 * c + 1 * d));
+      int i52 = ((5 * c + 2 * d));
+      int i43 = ((4 * c + 3 * d));
+      
+      codes[2 + i] = (s8)((((i61 * 0x2493) >> 16) + i61) >> 3);
+      codes[3 + i] = (s8)((((i52 * 0x2493) >> 16) + i52) >> 3);
+      codes[4 + i] = (s8)((((i43 * 0x2493) >> 16) + i43) >> 3);
+      codes[5 + i] = (s8)(c + d - codes[2 + i]);
+      codes[6 + i] = (s8)(c + d - codes[3 + i]);
+      codes[7 + i] = (s8)(c + d - codes[4 + i]);
+      /*
+      cd = (6 * c + 1 * d); codes[2 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (5 * c + 2 * d); codes[3 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (4 * c + 3 * d); codes[4 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (3 * c + 4 * d); codes[5 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (2 * c + 5 * d); codes[6 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (1 * c + 6 * d); codes[7 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
+      */
     }
   }
 }
@@ -834,8 +888,8 @@ static int passreg CodebookP(u8 *codes, int bits) ccr_restricted
   for (int m = 0; m < 4; ++m) {
     const int j = (1 << bits) - 1;
 
-    int c = codes[0 * 4 + m];
-    int d = codes[j * 4 + m];
+    const int c = codes[0 * 4 + m];
+    const int d = codes[j * 4 + m];
 
     // the quantizer is not equi-distant, but it is symmetric
     for (int i = 1; i < j; i++) {
@@ -875,7 +929,7 @@ static doinline void passreg Codebook6(Vec4 (&codes)[8], Vec4::Arg start, Vec4::
   codes[3] = (3.0f / 5.0f) * start + (2.0f / 5.0f) * end;
   codes[4] = (2.0f / 5.0f) * start + (3.0f / 5.0f) * end;
   codes[5] = (1.0f / 5.0f) * start + (4.0f / 5.0f) * end;
-  codes[6] = Vec4(0.0f);
+  codes[6] = Vec4(  0.0f);
   codes[7] = Vec4(255.0f);
 }
 
@@ -951,14 +1005,11 @@ static doinline void passreg Codebook4nc(Vec3 (&codes)[4], Vec3::Arg start, Vec3
 
 /* -----------------------------------------------------------------------------
  */
-// http://embeddedgurus.com/stack-overflow/2009/06/division-of-integers-by-constants/
-// Divide by 5:  (((uint32_t)A * (uint32_t)0xCCCD) >> 16) >> 2
-// Divide by 7: ((((uint32_t)A * (uint32_t)0x2493) >> 16) + A) >> 1) >> 2
 static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg end) ccr_restricted
 {
-  Col8 smul = Col8(0x05, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00);
-  Col8 emul = Col8(0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00);
-  Col8 mask = Col8(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF);
+  const Col8 smul = Col8(0x05, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00);
+  const Col8 emul = Col8(0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00);
+  const Col8 mask = Col8(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF);
 
   // range [0,2*5*255]
   Col8 ipol = (smul * start) + (emul * end);
@@ -968,8 +1019,8 @@ static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg e
 
 static doinline void passreg Codebook8(Col8 &codes, Col8::Arg start, Col8::Arg end) ccr_restricted
 {
-  Col8 smul = Col8(0x07, 0x00, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01);
-  Col8 emul = Col8(0x00, 0x07, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
+  const Col8 smul = Col8(0x07, 0x00, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01);
+  const Col8 emul = Col8(0x00, 0x07, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
 
   // range [0,2*7*255]
   Col8 ipol = (smul * start) + (emul * end);
@@ -988,8 +1039,8 @@ static int passreg CodebookP(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg e
 
   // the quantizer is not equi-distant, but it is symmetric
   for (int i = 1; i < j; i++) {
-    Vec4 s = weights_V4[bits][j - i] * start;
-    Vec4 e = weights_V4[bits][i + 0] * end;
+    const Vec4 s = weights_V4[bits][j - i] * start;
+    const Vec4 e = weights_V4[bits][i + 0] * end;
 
     codes[i] = s + e;
   }
@@ -1006,8 +1057,8 @@ static int passreg CodebookP(Col4 *codes, int bits, Col4::Arg start, Col4::Arg e
 
   // the quantizer is not equi-distant, but it is symmetric
   for (int i = 1; i < j; i++) {
-    Col4 s = (weights_C4[bits][j - i]) * start;
-    Col4 e = (weights_C4[bits][i + 0]) * end;
+    const Col4 s = (weights_C4[bits][j - i]) * start;
+    const Col4 e = (weights_C4[bits][i + 0]) * end;
 
     codes[i] = (s + e + Col4(32)) >> 6;
   }
@@ -1025,8 +1076,8 @@ static int passreg CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_res
 
   // the quantizer is not equi-distant, but it is symmetric
   for (int i = 1; i < j; i++) {
-    Col4 s = (weights_C4[bits][j - i]) * start;
-    Col4 e = (weights_C4[bits][i + 0]) * end;
+    const Col4 s = (weights_C4[bits][j - i]) * start;
+    const Col4 e = (weights_C4[bits][i + 0]) * end;
 
     PackBytes((s + e + Col4(32)) >> 6, codes[i]);
   }

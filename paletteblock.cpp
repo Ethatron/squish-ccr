@@ -2360,7 +2360,7 @@ void ReadPaletteBlock4_m8(u8* rgba, void const* block) {
   ReadPaletteBlock<2, 2, 98>(partition, (int *)codes, blkl, blkh, (int *)rgba);
 }
 
-void DecompressPalettesBtc7(u8* rgba, void const* block)
+void DecompressPalettesBtc7u(u8* rgba, void const* block)
 {
   // get the block bytes
   u8 const* bytes = reinterpret_cast< u8 const* >(block);
@@ -2386,17 +2386,17 @@ void DecompressPalettesBtc7(u8* rgba, void const* block)
   }
 }
 
-void DecompressPalettesBtc7(u16* rgba, void const* block)
+void DecompressPalettesBtc7u(u16* rgba, void const* block)
 {
-  u8 bytes[4 * 16]; DecompressPalettesBtc7(bytes, block);
+  u8 bytes[4 * 16]; DecompressPalettesBtc7u(bytes, block);
 
   for (int v = 0; v < (4 * 16); v++)
     rgba[v] = bytes[v] * (65535 / 255);
 }
 
-void DecompressPalettesBtc7(f23* rgba, void const* block)
+void DecompressPalettesBtc7u(f23* rgba, void const* block)
 {
-  u8 bytes[4 * 16]; DecompressPalettesBtc7(bytes, block);
+  u8 bytes[4 * 16]; DecompressPalettesBtc7u(bytes, block);
 
   for (int v = 0; v < (4 * 16); v++)
     rgba[v] = bytes[v] * (1.0f / 255.0f);

@@ -41,7 +41,7 @@ namespace squish {
  */
 #if	!defined(SQUISH_USE_PRE)
 template<typename dtyp>
-void CompressAlphaBtc2(dtyp const* rgba, int mask, void* block, float scale)
+static void CompressAlphaBtc2u(dtyp const* rgba, int mask, void* block, float scale)
 {
   u8* bytes = reinterpret_cast< u8* >(block);
 
@@ -68,17 +68,15 @@ void CompressAlphaBtc2(dtyp const* rgba, int mask, void* block, float scale)
   }
 }
 
-void CompressAlphaBtc2(u8  const* rgba, int mask, void* block) {
-  CompressAlphaBtc2(rgba, mask, block, 15.0f / 255.0f); }
-
-void CompressAlphaBtc2(u16 const* rgba, int mask, void* block) {
-  CompressAlphaBtc2(rgba, mask, block, 15.0f / 65535.0f); }
-
-void CompressAlphaBtc2(f23 const* rgba, int mask, void* block) {
-  CompressAlphaBtc2(rgba, mask, block, 15.0f / 1.0f); }
+void CompressAlphaBtc2u(u8  const* rgba, int mask, void* block) {
+  CompressAlphaBtc2u(rgba, mask, block, 15.0f / 255.0f); }
+void CompressAlphaBtc2u(u16 const* rgba, int mask, void* block) {
+  CompressAlphaBtc2u(rgba, mask, block, 15.0f / 65535.0f); }
+void CompressAlphaBtc2u(f23 const* rgba, int mask, void* block) {
+  CompressAlphaBtc2u(rgba, mask, block, 15.0f / 1.0f); }
 
 template<typename dtyp>
-void DecompressAlphaBtc2(dtyp* rgba, void const* block, dtyp scale)
+static void DecompressAlphaBtc2u(dtyp* rgba, void const* block, dtyp scale)
 {
   u8 const* bytes = reinterpret_cast< u8 const* >(block);
 
@@ -97,14 +95,12 @@ void DecompressAlphaBtc2(dtyp* rgba, void const* block, dtyp scale)
   }
 }
 
-void DecompressAlphaBtc2(u8 * rgba, void const* block) {
-  DecompressAlphaBtc2(rgba, block, (u8 )(255 / 255)); }
-
-void DecompressAlphaBtc2(u16* rgba, void const* block) {
-  DecompressAlphaBtc2(rgba, block, (u16)(65535 / 255)); }
-
-void DecompressAlphaBtc2(f23* rgba, void const* block) {
-  DecompressAlphaBtc2(rgba, block, (f23)(1.0f / 255.0f)); }
+void DecompressAlphaBtc2u(u8 * rgba, void const* block) {
+  DecompressAlphaBtc2u(rgba, block, (u8 )(255 / 255)); }
+void DecompressAlphaBtc2u(u16* rgba, void const* block) {
+  DecompressAlphaBtc2u(rgba, block, (u16)(65535 / 255)); }
+void DecompressAlphaBtc2u(f23* rgba, void const* block) {
+  DecompressAlphaBtc2u(rgba, block, (f23)(1.0f / 255.0f)); }
 
 /* *****************************************************************************
  */
@@ -116,8 +112,10 @@ static void FixRange(int& min, int& max, int steps)
     min = std::max<int>(0x00, max - steps);
 }
 
+/* -----------------------------------------------------------------------------
+ */
 template<typename dtyp>
-static Scr4 FitCodes(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
+static Scr4 FitCodesL(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
 {
   // fit each alpha value to the codebook
   Scr4 err = Scr4(0.0f);
@@ -137,10 +135,11 @@ static Scr4 FitCodes(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
     // for all possible codebook-entries
     Vec4 dsl = LoVec4(codes) - value; dsl *= dsl;
     Vec4 dsh = HiVec4(codes) - value; dsh *= dsh;
+    Vec4 dst = Min(dsl, dsh);
     
     // get best index, binary search
     int  index = 0;
-    Scr4 least = HorizontalMin(Min(dsl, dsh));
+    Scr4 least = HorizontalMin(dst);
     int  match = 
       (CompareEqualTo(least, dsl) << 0) + 
       (CompareEqualTo(least, dsh) << 4);
@@ -161,8 +160,8 @@ static Scr4 FitCodes(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
   return Scr4(err);
 }
 
-template<>
-static Scr4 FitCodes<u8>(u8 const* rgba, int mask, Col8 const &codes, u8* indices)
+template<typename dtyp>
+static Scr4 FitCodesS(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
 {
   // fit each alpha value to the codebook
   int err = 0;
@@ -177,14 +176,10 @@ static Scr4 FitCodes<u8>(u8 const* rgba, int mask, Col8 const &codes, u8* indice
 
     // find the least error and corresponding index
     // prefer lower indices over higher ones
-    int value = rgba[4 * i + 3];
+    Col8 value = Col8(rgba[4 * i + 3]);
     
     // for all possible codebook-entries
-    Col8 val = Col8(value);
-    Col8 dst = val - codes;
-    
-    // accumulate the error
-    dst *= dst;
+    Col8 dst = codes - value; dst *= dst;
     
     // get best index, binary search
     int  index = 0;
@@ -207,11 +202,25 @@ static Scr4 FitCodes<u8>(u8 const* rgba, int mask, Col8 const &codes, u8* indice
   return Scr4(err);
 }
 
+static Scr4 FitCodes(u8  const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesS(rgba, mask, codes, indices); }
+static Scr4 FitCodes(s8  const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesS(rgba, mask, codes, indices); }
+
+static Scr4 FitCodes(u16 const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesL(rgba, mask, codes, indices); }
+static Scr4 FitCodes(s16 const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesL(rgba, mask, codes, indices); }
+static Scr4 FitCodes(f23 const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesL(rgba, mask, codes, indices); }
+
+/* -----------------------------------------------------------------------------
+ */
 template<typename dtyp>
-static void GetError(dtyp const* rgba, int mask,
-		     Col8 const &codes5, Col8 const &codes7,
-		     Scr4 &error5, Scr4 &error7,
-		     float (&aaaa)[16])
+static void GetErrorL(dtyp const* rgba, int mask,
+		      Col8 const &codes5, Col8 const &codes7,
+		      Scr4 &error5, Scr4 &error7,
+		      float (&aaaa)[16])
 {
   // initial values
   Scr4 err5 = Scr4(0.0f);
@@ -241,11 +250,11 @@ static void GetError(dtyp const* rgba, int mask,
   error7 = err7;
 }
 
-template<>
-static void GetError<u8>(u8 const* rgba, int mask,
-			 Col8 const &codes5, Col8 const &codes7,
-			 Scr4 &error5, Scr4 &error7,
-			 float (&aaaa)[16])
+template<typename dtyp>
+static void GetErrorS(dtyp const* rgba, int mask,
+		      Col8 const &codes5, Col8 const &codes7,
+		      Scr4 &error5, Scr4 &error7,
+		      float (&aaaa)[16])
 {
   // initial values
   int err5 = 0;
@@ -273,6 +282,20 @@ static void GetError<u8>(u8 const* rgba, int mask,
   error7 = Scr4(err7);
 }
 
+static void GetError(u8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+  GetErrorS(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+static void GetError(s8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+  GetErrorS(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+
+static void GetError(u16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+  GetErrorL(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+static void GetError(s16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+  GetErrorL(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+static void GetError(f23 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+  GetErrorL(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+
+/* -----------------------------------------------------------------------------
+ */
 #define FIT_THRESHOLD 1e-5f
 
 template<const int steps>
@@ -509,6 +532,8 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
   return errS;
 }
 
+/* -----------------------------------------------------------------------------
+ */
 static void WriteAlphaBlock(int alpha0, int alpha1, u8 const* indices, void* block)
 {
   u8* bytes = reinterpret_cast< u8* >(block);
@@ -579,13 +604,16 @@ static void WriteAlphaBlock7(int alpha0, int alpha1, u8 const* indices, void* bl
   WriteAlphaBlock(alpha0, alpha1, indices, block);
 }
 
-void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
+/* -----------------------------------------------------------------------------
+ */
+template<const int min, const int max, const int compress, typename dtyp>
+static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flags)
 {
   Col8 codes5, codes7;
 
   // get the range for 5-alpha and 7-alpha interpolation
-  int min5 = 255, max5 = 0;
-  int min7 = 255, max7 = 0;
+  int min5 = max, max5 = min;
+  int min7 = max, max7 = min;
 
   for (int i = 0; i < 16; ++i) {
     // check this pixel is valid
@@ -595,14 +623,16 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
 
     // incorporate into the min/max
     int value = rgba[4 * i + 3];
+    if (compress > 0)
+      value = (value + ((1 << compress) >> 1)) >> compress;
     
     if (value < min7)
       min7 = value;
     if (value > max7)
       max7 = value;
-    if ((value != 0x00) && (value < min5))
+    if ((value != min) && (value < min5))
       min5 = value;
-    if ((value != 0xFF) && (value > max5))
+    if ((value != max) && (value > max5))
       max5 = value;
   }
 
@@ -632,7 +662,7 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
       // if better, reconstruct code-book
       errM = FitError<7>(aaaa, min7, max7, err7);
       Codebook8(codes7, Col8(max7), Col8(min7));
-      
+
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
       errM = FitError<5>(aaaa, min5, max5, err5);
@@ -655,13 +685,14 @@ void CompressAlphaBtc3(u8 const* rgba, int mask, void* block, int flags)
     WriteAlphaBlock7(max7, min7, indices7, block);
 }
 
-void CompressAlphaBtc3(u16 const* rgba, int mask, void* block, int flags)
+template<const int min, const int max, const int compress, typename dtyp>
+static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flags)
 {
   Col8 codes5, codes7;
 
   // get the range for 5-alpha and 7-alpha interpolation
-  int min5 = 255, max5 = 0;
-  int min7 = 255, max7 = 0;
+  int min5 = max, max5 = min;
+  int min7 = max, max7 = min;
 
   for (int i = 0; i < 16; ++i) {
     // check this pixel is valid
@@ -670,15 +701,17 @@ void CompressAlphaBtc3(u16 const* rgba, int mask, void* block, int flags)
       continue;
 
     // incorporate into the min/max
-    int value = rgba[4 * i + 3] >> 8;
+    int value = (int)((rgba[4 * i + 3] * max) + 0.5f);
+    if (compress > 0)
+      value = (value + ((1 << compress) >> 1)) >> compress;
     
     if (value < min7)
       min7 = value;
     if (value > max7)
       max7 = value;
-    if ((value != 0x00) && (value < min5))
+    if ((value != min) && (value < min5))
       min5 = value;
-    if ((value != 0xFF) && (value > max5))
+    if ((value != max) && (value > max5))
       max5 = value;
   }
 
@@ -731,99 +764,39 @@ void CompressAlphaBtc3(u16 const* rgba, int mask, void* block, int flags)
     WriteAlphaBlock7(max7, min7, indices7, block);
 }
 
-void CompressAlphaBtc3(f23 const* rgba, int mask, void* block, int flags)
-{
-  Col8 codes5, codes7;
+void CompressAlphaBtc3u(u8  const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<   0,255,0>(rgba, mask, block, flags); }
+void CompressAlphaBtc3s(s8  const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<-127,127,0>(rgba, mask, block, flags); }
 
-  // get the range for 5-alpha and 7-alpha interpolation
-  int min5 = 255, max5 = 0;
-  int min7 = 255, max7 = 0;
+void CompressAlphaBtc3u(u16 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<   0,255,8>(rgba, mask, block, flags); }
+void CompressAlphaBtc3s(s16 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<-127,127,8>(rgba, mask, block, flags); }
 
-  for (int i = 0; i < 16; ++i) {
-    // check this pixel is valid
-    int bit = 1 << i;
-    if ((mask & bit) == 0)
-      continue;
-
-    // incorporate into the min/max
-    int value = (int)((rgba[4 * i + 3] * 255.0f) + 0.5f);
-    
-    if (value < min7)
-      min7 = value;
-    if (value > max7)
-      max7 = value;
-    if ((value != 0x00) && (value < min5))
-      min5 = value;
-    if ((value != 0xFF) && (value > max5))
-      max5 = value;
-  }
-
-  // handle the case that no valid range was found
-  if (min5 > max5) min5 = max5;
-  if (min7 > max7) min7 = max7;
-  
-  // fix the range to be the minimum in each case
-//FixRange(min5, max5, 5);
-//FixRange(min7, max7, 7);
-
-  // construct code-book
-  Codebook6(codes5, Col8(min5), Col8(max5));
-  Codebook8(codes7, Col8(max7), Col8(min7));
-
-  // do the iterative tangent search
-  if (flags & kAlphaIterativeFit) {
-    Scr4 err5, err7; float aaaa[16];
-
-    GetError(rgba, mask, codes5, codes7, err5, err7, aaaa);
-
-    // binary search, tangent-fitting
-    Scr4 errM = Min(err5, err7);
-
-    // !lossless, !lossless
-    if (errM > Scr4(FIT_THRESHOLD)) {
-      // if better, reconstruct code-book
-      errM = FitError<7>(aaaa, min7, max7, err7);
-      Codebook8(codes7, Col8(max7), Col8(min7));
-
-    if (errM > Scr4(FIT_THRESHOLD)) {
-      // if better, reconstruct code-book
-      errM = FitError<5>(aaaa, min5, max5, err5);
-      Codebook6(codes5, Col8(min5), Col8(max5));
-    
-    }}
-  }
-
-  // fit the data to both code books
-  u8 indices5[16];
-  u8 indices7[16];
-
-  Scr4 err5 = FitCodes(rgba, mask, codes5, indices5);
-  Scr4 err7 = FitCodes(rgba, mask, codes7, indices7);
-
-  // save the block with least error (prefer 7)
-  if (err7 > err5)
-    WriteAlphaBlock5(min5, max5, indices5, block);
-  else
-    WriteAlphaBlock7(max7, min7, indices7, block);
-}
+void CompressAlphaBtc3u(f23 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3f<   0,255,0>(rgba, mask, block, flags); }
+void CompressAlphaBtc3s(f23 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3f<-127,127,0>(rgba, mask, block, flags); }
 
 #undef	FIT_THRESHOLD
 
 /* *****************************************************************************
  */
+template<typename dtyp>
 static void ReadAlphaBlock(
-  u8 (&codes  )[ 8],
-  u8 (&indices)[16],
+  dtyp (&codes  )[ 8],
+  u8   (&indices)[16],
   void const* block)
 {
   // get the two alpha values
-  u8 const* bytes = reinterpret_cast< u8 const* >(block);
+  dtyp const* bytes = reinterpret_cast< dtyp const* >(block);
   int alpha0 = bytes[0];
   int alpha1 = bytes[1];
 
   // compare the values to build the codebook
-  codes[0] = (u8)alpha0;
-  codes[1] = (u8)alpha1;
+  codes[0] = (dtyp)alpha0;
+  codes[1] = (dtyp)alpha1;
 
   if (alpha0 <= alpha1)
     // use 5-alpha codebook
@@ -833,7 +806,7 @@ static void ReadAlphaBlock(
     Codebook8(codes);
 
   // decode the indices
-  u8 const* src = bytes + 2;
+  u8 const* src = (u8*)bytes + 2;
   u8* dest = indices;
   for (int i = 0; i < 2; ++i) {
     // grab 3 bytes
@@ -851,38 +824,44 @@ static void ReadAlphaBlock(
   }
 }
 
-void DecompressAlphaBtc3(u8* rgba, void const* block)
+template<typename dtyp, typename ctyp, const int scale, const int correction>
+static void DecompressAlphaBtc3i(dtyp* rgba, void const* block)
 {
-  u8 codes[8], indices[16];
+  ctyp codes[8]; u8 indices[16];
 
   ReadAlphaBlock(codes, indices, block);
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i)
-    rgba[4 * i + 3] = codes[indices[i]] * (255 / 255);
+    rgba[4 * i + 3] = (codes[indices[i]] * scale) / (1 << correction);
 }
 
-void DecompressAlphaBtc3(u16* rgba, void const* block)
+template<typename dtyp, typename ctyp, const int scale>
+static void DecompressAlphaBtc3f(dtyp* rgba, void const* block)
 {
-  u8 codes[8], indices[16];
+  ctyp codes[8]; u8 indices[16];
 
   ReadAlphaBlock(codes, indices, block);
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i)
-    rgba[4 * i + 3] = codes[indices[i]] * (65535 / 255);
+    rgba[4 * i + 3] = (codes[indices[i]]) * (1.0f / scale);
 }
 
-void DecompressAlphaBtc3(f23* rgba, void const* block)
-{
-  u8 codes[8], indices[16];
+void DecompressAlphaBtc3u(u8* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<u8, u8, 255 / 255, 0>(rgba, block); }
+void DecompressAlphaBtc3s(s8* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<s8, s8, 127 / 127, 0>(rgba, block); }
 
-  ReadAlphaBlock(codes, indices, block);
+void DecompressAlphaBtc3u(u16* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<u16, u8, 65535 / 255, 0>(rgba, block); }
+void DecompressAlphaBtc3s(s16* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<s16, s8, 0x1FFFFF / 127, 6>(rgba, block); }
 
-  // write out the indexed codebook values
-  for (int i = 0; i < 16; ++i)
-    rgba[4 * i + 3] = codes[indices[i]] * (1.0f / 255.0f);
-}
+void DecompressAlphaBtc3u(f23* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3f<f23, u8, 255>(rgba, block); }
+void DecompressAlphaBtc3s(f23* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3f<f23, s8, 127>(rgba, block); }
 #endif
 
 /* *****************************************************************************
@@ -1051,7 +1030,7 @@ static void WriteAlphaBlock7(tile_barrier barrier, const int thread, lineA2 alph
 #endif
 
 /* C++ AMP version */
-void CompressAlphaBtc3(tile_barrier barrier, const int thread, pixel16 rgba, int mask, out code64 block,
+void CompressAlphaBtc3u(tile_barrier barrier, const int thread, pixel16 rgba, int mask, out code64 block,
 		       IndexBlockLUT yArr) amp_restricted
 {
   // get the range for 5-alpha and 7-alpha interpolation
@@ -1180,7 +1159,7 @@ void CompressAlphaBtc3(tile_barrier barrier, const int thread, pixel16 rgba, int
 #endif
 
 /* C++ AMP version */
-void CompressAlphaBtc2(tile_barrier barrier, const int thread, pixel16 rgba, int mask, code64 block,
+void CompressAlphaBtc2u(tile_barrier barrier, const int thread, pixel16 rgba, int mask, code64 block,
 		         IndexBlockLUT yArr) amp_restricted
 {
 #if	!defined(SQUISH_USE_COMPUTE)

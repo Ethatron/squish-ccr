@@ -183,7 +183,7 @@ void DecompressBitoneCtx1(f23* rgba, void const* block)
   }
 }
 
-void DecompressNormalsCtx1(u8* xyzd, void const* block)
+void DecompressNormalsCtx1u(u8* xyzd, void const* block)
 {
   const Vec3 scale  = Vec3( 1.0f / 127.5f);
   const Vec3 offset = Vec3(-1.0f * 127.5f);
@@ -207,7 +207,7 @@ void DecompressNormalsCtx1(u8* xyzd, void const* block)
   }
 }
 
-void DecompressNormalsCtx1(u16* xyzd, void const* block)
+void DecompressNormalsCtx1u(u16* xyzd, void const* block)
 {
   const Vec3 scale   = Vec3( 1.0f / 127.5f);
   const Vec3 offset  = Vec3(-1.0f * 127.5f);
@@ -232,7 +232,7 @@ void DecompressNormalsCtx1(u16* xyzd, void const* block)
   }
 }
 
-void DecompressNormalsCtx1(f23* xyzd, void const* block)
+void DecompressNormalsCtx1u(f23* xyzd, void const* block)
 {
   const Vec3 scale  = Vec3( 1.0f / 127.5f);
   const Vec3 offset = Vec3(-1.0f * 127.5f);

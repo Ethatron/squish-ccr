@@ -42,9 +42,9 @@ namespace squish {
   void WriteColourBlock3(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block);
   void WriteColourBlock4(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block);
   
-  void DecompressColoursBtc1(u8 * rgba, void const* block, bool isBtc1);
-  void DecompressColoursBtc1(u16* rgba, void const* block, bool isBtc1);
-  void DecompressColoursBtc1(f23* rgba, void const* block, bool isBtc1);
+  void DecompressColoursBtc1u(u8 * rgba, void const* block, bool isBtc1);
+  void DecompressColoursBtc1u(u16* rgba, void const* block, bool isBtc1);
+  void DecompressColoursBtc1u(f23* rgba, void const* block, bool isBtc1);
 #endif
 
 // -----------------------------------------------------------------------------

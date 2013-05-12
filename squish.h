@@ -62,9 +62,6 @@ enum
 	//! Use a compression
 	kBtcp = ( 15 << 0 ),
 	
-	//! Compress signed values/points
-	kSigned = ( 1 << 7 ),
-
 	//! Use a perceptual metric for colour error (the default).
 	kColourMetricPerceptual = ( 1 << 8 ),
 	//! Use a uniform metric for colour error.
@@ -78,11 +75,16 @@ enum
 	kWeightColourByAlpha = ( 1 << 10 ),
 	//! Don't code alpha, set alpha to 255 after weighting (disabled by default).
 	kExcludeAlphaFromPalette = ( 1 << 11 ),
+	
+	//! Transform input values/points from signed to unsigned (disabled by default).
+	kSignedIn = ( 1 << 12 ),	// BC4-5/6
+	//! Transform output points/values from unsigned to signed (disabled by default).
+	kSignedOut = ( 1 << 13 ),	// BC4-5/6
 
 	//! Transform input values/points from sRGB to linear RGB (disabled by default).
-	kSrgbIn = ( 1 << 12 ),
+	kSrgbIn = ( 1 << 12 ),		// BC1-3/7
 	//! Transform output points/values from linear RGB to sRGB (disabled by default).
-	kSrgbOut = ( 1 << 13 ),
+	kSrgbOut = ( 1 << 13 ),		// BC1-3/7
 
 	//! Use a fast but low quality colour compressor.
 	kColourRangeFit	= ( 1 << 14 ),
@@ -133,13 +135,15 @@ int SanitizeFlags(int flags);
 // -----------------------------------------------------------------------------
 
 #if	!defined(SQUISH_USE_PRE)
-//! Typedef a quantity that is a single unsigned byte.
+//! Typedef a quantity that is a single unsigned/signed byte.
 typedef unsigned char u8;
-//! Typedef a quantity that is a single unsigned short.
+typedef signed char s8;
+//! Typedef a quantity that is a single unsigned/signed short.
 typedef unsigned short u16;
+typedef signed short s16;
 //! Typedef a quantity that is a single half floating point.
 //typedef half f10;
-//! Typedef a quantity that is a single floating point.
+//! Typedef a quantity that is a single signed floating point.
 typedef float f23;
 
 // -----------------------------------------------------------------------------
@@ -426,7 +430,7 @@ void CompressColorBtc (tile_barrier barrier, const int thread,
 		       pixel16 rgba, ColourSet_CCRr colours, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
-void CompressColorBtc1(tile_barrier barrier, const int thread,
+void CompressColorBtc1u(tile_barrier barrier, const int thread,
 		       pixel16 rgba, int mask, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;

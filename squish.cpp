@@ -81,7 +81,7 @@ int SanitizeFlags(int flags)
   int metric = flags & (kColourMetrics);
   int extra  = flags & (kWeightColourByAlpha);
   int mode   = flags & (kVariableCodingModes);
-  int map    = flags & (kSrgbIn | kSrgbOut);
+  int map    = flags & (kSrgbIn | kSrgbOut | kSignedIn | kSignedOut);
 
   // set defaults
   if (!method || (method > kCtx1))
@@ -113,7 +113,7 @@ int SanitizeFlags(int flags)
 /* *****************************************************************************
  */
 template<typename dtyp>
-void CompressColorBtc1(dtyp const* rgba, int mask, void* block, int flags)
+void CompressColorBtc1u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // create the minimal point set
   ColourSet colours(rgba, mask, flags);
@@ -137,7 +137,7 @@ void CompressColorBtc1(dtyp const* rgba, int mask, void* block, int flags)
 }
 
 template<typename dtyp>
-void CompressNormalBtc1(dtyp const* xyzd, int mask, void* block, int flags)
+void CompressNormalBtc1u(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // create the minimal point set
   ColourSet normals(xyzd, mask, flags);
@@ -156,7 +156,7 @@ void CompressNormalBtc1(dtyp const* xyzd, int mask, void* block, int flags)
 }
 
 template<typename dtyp>
-void CompressNormalCtx1(dtyp const* xyzd, int mask, void* block, int flags)
+void CompressNormalCtx1u(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // create the minimal point set
   BitoneSet bitones(xyzd, mask, flags);
@@ -174,7 +174,7 @@ struct statistics gstat = {0};
 #endif
 
 template<typename dtyp>
-float CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
+float CompressPaletteBtc7uV1(dtyp const* rgba, int mask, void* block, int flags)
 {
 #if !defined(NDEBUG) && defined(DEBUG_SETTING)
 #define DEBUG_MODE	kVariableCodingMode1
@@ -509,7 +509,7 @@ float CompressPaletteBtc7a(dtyp const* rgba, int mask, void* block, int flags)
 }
 
 template<typename dtyp>
-float CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
+float CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
 {
   vQuantizer q7778(7, 7, 7, 8);
   vQuantizer q5556(5, 5, 5, 6);
@@ -864,7 +864,7 @@ float CompressPaletteBtc7b(dtyp const* rgba, int mask, void* block, int flags)
 }
 
 template<typename dtyp>
-void CompressDynamicBtc6(dtyp const* rgb, int mask, void* block, int flags)
+void CompressDynamicBtc6u(dtyp const* rgb, int mask, void* block, int flags)
 {
   // ...
   flags = flags;
@@ -876,155 +876,155 @@ void CompressDynamicBtc6(dtyp const* rgb, int mask, void* block, int flags)
 /* *****************************************************************************
  */
 template<typename dtyp>
-void CompressMaskedColourBtc1(dtyp const* rgba, int mask, void* block, int flags)
+void CompressMaskedColourBtc1u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // get the block locations
   void* colourBlock = block;
 
   // compress color separately if necessary
-  CompressColorBtc1(rgba, mask, colourBlock, flags);
+  CompressColorBtc1u(rgba, mask, colourBlock, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedColourBtc2(dtyp const* rgba, int mask, void* block, int flags)
+void CompressMaskedColourBtc2u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // get the block locations
   void* colourBlock = reinterpret_cast<u8*>(block) + 8;
   void*  alphaBlock = block;
 
   // compress color separately if necessary
-  CompressColorBtc1(rgba, mask, colourBlock, flags);
+  CompressColorBtc1u(rgba, mask, colourBlock, flags);
   // compress alpha separately if necessary
-  CompressAlphaBtc2(rgba, mask, alphaBlock);
+  CompressAlphaBtc2u(rgba, mask, alphaBlock);
 }
 
 template<typename dtyp>
-void CompressMaskedColourBtc3(dtyp const* rgba, int mask, void* block, int flags)
+void CompressMaskedColourBtc3u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // get the block locations
   void* colourBlock = reinterpret_cast<u8*>(block) + 8;
   void*  alphaBlock = block;
 
   // compress color separately if necessary
-  CompressColorBtc1(rgba, mask, colourBlock, flags);
+  CompressColorBtc1u(rgba, mask, colourBlock, flags);
   // compress alpha separately if necessary
-  CompressAlphaBtc3(rgba, mask, alphaBlock, flags);
+  CompressAlphaBtc3u(rgba, mask, alphaBlock, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedNormalBtc1(dtyp const* xyzd, int mask, void* block, int flags)
+void CompressMaskedNormalBtc1u(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // get the block locations
   void* normalBlock = block;
 
   // compress color separately if necessary
-  CompressNormalBtc1(xyzd, mask, normalBlock, flags);
+  CompressNormalBtc1u(xyzd, mask, normalBlock, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedNormalCtx1(dtyp const* xyzd, int mask, void* block, int flags)
+void CompressMaskedNormalCtx1u(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // get the block locations
   void* normalBlock = block;
 
   // compress color separately if necessary
-  CompressNormalCtx1(xyzd, mask, normalBlock, flags);
+  CompressNormalCtx1u(xyzd, mask, normalBlock, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedNormalBtc2(dtyp const* xyzd, int mask, void* block, int flags)
+void CompressMaskedNormalBtc2u(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // get the block locations
   void* colourBlock = reinterpret_cast<u8*>(block) + 8;
   void*  alphaBlock = block;
 
   // compress color separately if necessary
-  CompressNormalBtc1(xyzd, mask, colourBlock, flags);
+  CompressNormalBtc1u(xyzd, mask, colourBlock, flags);
   // compress alpha separately if necessary
-  CompressAlphaBtc2(xyzd, mask, alphaBlock);
+  CompressAlphaBtc2u(xyzd, mask, alphaBlock);
 }
 
 template<typename dtyp>
-void CompressMaskedNormalBtc3(dtyp const* xyzd, int mask, void* block, int flags)
+void CompressMaskedNormalBtc3u(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // get the block locations
   void* colourBlock = reinterpret_cast<u8*>(block) + 8;
   void*  alphaBlock = block;
 
   // compress color separately if necessary
-  CompressNormalBtc1(xyzd, mask, colourBlock, flags);
+  CompressNormalBtc1u(xyzd, mask, colourBlock, flags);
   // compress alpha separately if necessary
-  CompressAlphaBtc3(xyzd, mask, alphaBlock, flags);
+  CompressAlphaBtc3u(xyzd, mask, alphaBlock, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedAlphaBtc4(dtyp const* rgba, int mask, void* block, int flags)
+void CompressMaskedAlphaBtc4u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // get the block locations
   void* plane1Block = block;
 
   // compress a into plane 1
-  CompressAlphaBtc3(rgba - 3, mask, plane1Block, flags);
+  CompressAlphaBtc3u(rgba - 3, mask, plane1Block, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedAlphaBtc5(dtyp const* rgba, int mask, void* block, int flags)
+void CompressMaskedAlphaBtc5u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // get the block locations
   void* plane1Block = block;
   void* plane2Block = reinterpret_cast<u8*>(block) + 8;
 
   // compress a into plane 1
-  CompressAlphaBtc3(rgba - 3, mask, plane1Block, flags);
+  CompressAlphaBtc3u(rgba - 3, mask, plane1Block, flags);
   // compress b into plane 2
-  CompressAlphaBtc3(rgba - 2, mask, plane2Block, flags);
+  CompressAlphaBtc3u(rgba - 2, mask, plane2Block, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedNormalBtc5(dtyp const* xyzd, int mask, void* block, int flags)
+void CompressMaskedNormalBtc5u(dtyp const* xyzd, int mask, void* block, int flags)
 {
   // get the block locations
   void* plane1Block = block;
   void* plane2Block = reinterpret_cast<u8*>(block) + 8;
 
   // compress xy into plane 1/2
-  CompressNormalsBtc5(xyzd, mask, plane1Block, plane2Block, flags);
+  CompressNormalsBtc5u(xyzd, mask, plane1Block, plane2Block, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedDynamicBtc6(dtyp const* rgb, int mask, void* block, int flags)
+void CompressMaskedDynamicBtc6u(dtyp const* rgb, int mask, void* block, int flags)
 {
   // get the block locations
   void* mixedBlock = block;
 
   // compress color and alpha merged if necessary
-  CompressDynamicBtc6(rgb, mask, mixedBlock, flags);
+  CompressDynamicBtc6u(rgb, mask, mixedBlock, flags);
 }
 
 template<typename dtyp>
-void CompressMaskedPaletteBtc7(dtyp const* rgba, int mask, void* block, int flags)
+void CompressMaskedPaletteBtc7u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // get the block locations
   void* mixedBlock = block;
   
 #ifndef NDEBUG
   // compress color and alpha merged if necessary
-  fprintf(stderr, "CompressPaletteBtc7a\n");
-  float errora = CompressPaletteBtc7a(rgba, mask, mixedBlock, flags);
-  fprintf(stderr, "CompressPaletteBtc7b\n");
-  float errorb = CompressPaletteBtc7b(rgba, mask, mixedBlock, flags);
+  fprintf(stderr, "CompressPaletteBtc7uV1\n");
+  float errora = CompressPaletteBtc7uV1(rgba, mask, mixedBlock, flags);
+  fprintf(stderr, "CompressPaletteBtc7uV2\n");
+  float errorb = CompressPaletteBtc7uV2(rgba, mask, mixedBlock, flags);
 
   if (errorb > errora) {
     bool damn = true; damn = false;
 
-    fprintf(stderr, "CompressPaletteBtc7b\n");
-    errorb = CompressPaletteBtc7b(rgba, mask, mixedBlock, flags);
+    fprintf(stderr, "CompressPaletteBtc7uV2\n");
+    errorb = CompressPaletteBtc7uV2(rgba, mask, mixedBlock, flags);
   }
   else if (errorb < errora) {
     bool cool = true; cool = false;
   }
 #else
-  CompressPaletteBtc7b(rgba, mask, mixedBlock, flags);
+  CompressPaletteBtc7uV2(rgba, mask, mixedBlock, flags);
 #endif
 }
 
@@ -1032,32 +1032,32 @@ void CompressMasked(u8 const* rgba, int mask, void* block, int flags)
 {
   // DXT-type compression
   /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-    CompressMaskedNormalCtx1(rgba, mask, block, flags);
+    CompressMaskedNormalCtx1u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-    CompressMaskedNormalBtc1(rgba, mask, block, flags);
+    CompressMaskedNormalBtc1u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-    CompressMaskedNormalBtc2(rgba, mask, block, flags);
+    CompressMaskedNormalBtc2u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-    CompressMaskedNormalBtc3(rgba, mask, block, flags);
+    CompressMaskedNormalBtc3u(rgba, mask, block, flags);
   // 3Dc-type compression
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-    CompressMaskedNormalBtc5(rgba, mask, block, flags);
+    CompressMaskedNormalBtc5u(rgba, mask, block, flags);
 
   // DXT-type compression
   else if ((flags & kBtcp) == (kBtc1))
-    CompressMaskedColourBtc1(rgba, mask, block, flags);
+    CompressMaskedColourBtc1u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc2))
-    CompressMaskedColourBtc2(rgba, mask, block, flags);
+    CompressMaskedColourBtc2u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc3))
-    CompressMaskedColourBtc3(rgba, mask, block, flags);
+    CompressMaskedColourBtc3u(rgba, mask, block, flags);
   // ATI-type compression
   else if ((flags & kBtcp) == (kBtc4))
-    CompressMaskedAlphaBtc4(rgba, mask, block, flags);
+    CompressMaskedAlphaBtc4u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc5))
-    CompressMaskedAlphaBtc5(rgba, mask, block, flags);
+    CompressMaskedAlphaBtc5u(rgba, mask, block, flags);
   // BTC-type compression
   else if ((flags & kBtcp) == (kBtc7))
-    CompressMaskedPaletteBtc7(rgba, mask, block, flags);
+    CompressMaskedPaletteBtc7u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc6))
     {}// while this is possible (up-cast), should we support it?
 }
@@ -1066,68 +1066,68 @@ void CompressMasked(u16 const* rgba, int mask, void* block, int flags)
 {
   // DXT-type compression
   /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-    CompressMaskedNormalCtx1(rgba, mask, block, flags);
+    CompressMaskedNormalCtx1u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-    CompressMaskedNormalBtc1(rgba, mask, block, flags);
+    CompressMaskedNormalBtc1u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-    CompressMaskedNormalBtc2(rgba, mask, block, flags);
+    CompressMaskedNormalBtc2u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-    CompressMaskedNormalBtc3(rgba, mask, block, flags);
+    CompressMaskedNormalBtc3u(rgba, mask, block, flags);
   // 3Dc-type compression
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-    CompressMaskedNormalBtc5(rgba, mask, block, flags);
+    CompressMaskedNormalBtc5u(rgba, mask, block, flags);
 
   // DXT-type compression
   else if ((flags & kBtcp) == (kBtc1))
-    CompressMaskedColourBtc1(rgba, mask, block, flags);
+    CompressMaskedColourBtc1u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc2))
-    CompressMaskedColourBtc2(rgba, mask, block, flags);
+    CompressMaskedColourBtc2u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc3))
-    CompressMaskedColourBtc3(rgba, mask, block, flags);
+    CompressMaskedColourBtc3u(rgba, mask, block, flags);
   // ATI-type compression
   else if ((flags & kBtcp) == (kBtc4))
-    CompressMaskedAlphaBtc4(rgba, mask, block, flags);
+    CompressMaskedAlphaBtc4u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc5))
-    CompressMaskedAlphaBtc5(rgba, mask, block, flags);
+    CompressMaskedAlphaBtc5u(rgba, mask, block, flags);
   // BTC-type compression
   else if ((flags & kBtcp) == (kBtc7))
-    CompressMaskedPaletteBtc7(rgba, mask, block, flags);
+    CompressMaskedPaletteBtc7u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc6))
-    CompressMaskedDynamicBtc6(rgba, mask, block, flags);
+    CompressMaskedDynamicBtc6u(rgba, mask, block, flags);
 }
 
 void CompressMasked(f23 const* rgba, int mask, void* block, int flags)
 {
   // DXT-type compression
   /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-    CompressMaskedNormalCtx1(rgba, mask, block, flags);
+    CompressMaskedNormalCtx1u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-    CompressMaskedNormalBtc1(rgba, mask, block, flags);
+    CompressMaskedNormalBtc1u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-    CompressMaskedNormalBtc2(rgba, mask, block, flags);
+    CompressMaskedNormalBtc2u(rgba, mask, block, flags);
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-    CompressMaskedNormalBtc1(rgba, mask, block, flags);
+    CompressMaskedNormalBtc1u(rgba, mask, block, flags);
   // 3Dc-type compression
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-    CompressMaskedNormalBtc5(rgba, mask, block, flags);
+    CompressMaskedNormalBtc5u(rgba, mask, block, flags);
 
   // DXT-type compression
   else if ((flags & kBtcp) == (kBtc1))
-    CompressMaskedColourBtc1(rgba, mask, block, flags);
+    CompressMaskedColourBtc1u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc2))
-    CompressMaskedColourBtc2(rgba, mask, block, flags);
+    CompressMaskedColourBtc2u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc3))
-    CompressMaskedColourBtc3(rgba, mask, block, flags);
+    CompressMaskedColourBtc3u(rgba, mask, block, flags);
   // ATI-type compression
   else if ((flags & kBtcp) == (kBtc4))
-    CompressMaskedAlphaBtc4(rgba, mask, block, flags);
+    CompressMaskedAlphaBtc4u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc5))
-    CompressMaskedAlphaBtc5(rgba, mask, block, flags);
+    CompressMaskedAlphaBtc5u(rgba, mask, block, flags);
   // BTC-type compression
   else if ((flags & kBtcp) == (kBtc7))
-    CompressMaskedPaletteBtc7(rgba, mask, block, flags);
+    CompressMaskedPaletteBtc7u(rgba, mask, block, flags);
   else if ((flags & kBtcp) == (kBtc6))
-    CompressMaskedDynamicBtc6(rgba, mask, block, flags);
+    CompressMaskedDynamicBtc6u(rgba, mask, block, flags);
 }
 
 void Compress(u8 const* rgba, void* block, int flags)
@@ -1150,95 +1150,88 @@ void Compress(f23 const* rgba, void* block, int flags)
 
 /* *****************************************************************************
  */
-void DecompressDynamicBtc(u16* rgb, void const* block)
-{
-  // ...
-  block = block;
-  rgb = rgb;
-}
-
 template<typename dtyp>
-void DecompressColourBtc1(dtyp* rgba, void const* block, int flags)
+void DecompressColourBtc1u(dtyp* rgba, void const* block, int flags)
 {
   // get the block locations
   void const* colourBlock = block;
 
   // decompress colour
-  DecompressColoursBtc1(rgba, colourBlock, true);
+  DecompressColoursBtc1u(rgba, colourBlock, true);
 }
 
 template<typename dtyp>
-void DecompressNormalCtx1(dtyp* xyzd, void const* block, int flags)
+void DecompressNormalCtx1u(dtyp* xyzd, void const* block, int flags)
 {
   // get the block locations
   void const* normalBlock = block;
 
   // decompress normals
-  DecompressNormalsCtx1(xyzd, normalBlock);
+  DecompressNormalsCtx1u(xyzd, normalBlock);
 }
 
 template<typename dtyp>
-void DecompressColourBtc2(dtyp* rgba, void const* block, int flags)
+void DecompressColourBtc2u(dtyp* rgba, void const* block, int flags)
 {
   // get the block locations
   void const* colourBlock = reinterpret_cast<u8 const* >(block) + 8;
   void const*  alphaBlock = block;
 
   // decompress colour
-  DecompressColoursBtc1(rgba, colourBlock, false);
+  DecompressColoursBtc1u(rgba, colourBlock, false);
   // decompress alpha separately if necessary
-  DecompressAlphaBtc2(rgba, alphaBlock);
+  DecompressAlphaBtc2u(rgba, alphaBlock);
 }
 
 template<typename dtyp>
-void DecompressColourBtc3(dtyp* rgba, void const* block, int flags)
+void DecompressColourBtc3u(dtyp* rgba, void const* block, int flags)
 {
   // get the block locations
   void const* colourBlock = reinterpret_cast<u8 const* >(block) + 8;
   void const*  alphaBlock = block;
 
   // decompress colour
-  DecompressColoursBtc1(rgba, colourBlock, false);
+  DecompressColoursBtc1u(rgba, colourBlock, false);
   // decompress alpha separately if necessary
-  DecompressAlphaBtc3(rgba, alphaBlock);
+  DecompressAlphaBtc3u(rgba, alphaBlock, flags);
 }
 
 template<typename dtyp>
-void DecompressAlphaBtc4(dtyp* rgba, void const* block, int flags)
+void DecompressAlphaBtc4u(dtyp* rgba, void const* block, int flags)
 {
   // get the block locations
   void const* plane1Block = block;
 
   // decompress plane 1 into a
-  DecompressAlphaBtc3(rgba - 3, plane1Block);
+  DecompressAlphaBtc3u(rgba - 3, plane1Block, flags);
 }
 
 template<typename dtyp>
-void DecompressAlphaBtc5(dtyp* rgba, void const* block, int flags)
+void DecompressAlphaBtc5u(dtyp* rgba, void const* block, int flags)
 {
   // get the block locations
   void const* plane1Block = block;
   void const* plane2Block = reinterpret_cast<u8 const* >(block) + 8;
 
   // decompress plane 1 into a
-  DecompressAlphaBtc3(rgba - 3, plane1Block);
+  DecompressAlphaBtc3u(rgba - 3, plane1Block, flags);
   // decompress plane 2 into b
-  DecompressAlphaBtc3(rgba - 2, plane2Block);
+  DecompressAlphaBtc3u(rgba - 2, plane2Block, flags);
 }
 
 template<typename dtyp>
-void DecompressNormalBtc5(dtyp* rgba, void const* block, int flags)
+void DecompressNormalBtc5u(dtyp* rgba, void const* block, int flags)
 {
   // get the block locations
   void const* plane1Block = block;
   void const* plane2Block = reinterpret_cast<u8 const* >(block) + 8;
 
   // compress xy into plane 1/2
-  DecompressNormalsBtc5(rgba, plane1Block, plane2Block);
+  DecompressNormalsBtc5u(rgba, plane1Block, plane2Block);
 }
 
 template<typename dtyp>
-void DecompressDynamicBtc6(dtyp* rgb, void const* block, int flags)
+void DecompressDynamicBtc6u(dtyp* rgb, void const* block, int flags)
 {
   // get the block locations
   void const* mixedBlock = block;
@@ -1252,45 +1245,45 @@ void DecompressDynamicBtc6(dtyp* rgb, void const* block, int flags)
 }
 
 template<typename dtyp>
-void DecompressPaletteBtc7(dtyp* rgba, void const* block, int flags)
+void DecompressPaletteBtc7u(dtyp* rgba, void const* block, int flags)
 {
   // get the block locations
   void const* mixedBlock = block;
 
   // decompress color and alpha merged if necessary
-  DecompressPalettesBtc7(rgba, mixedBlock);
+  DecompressPalettesBtc7u(rgba, mixedBlock);
 }
 
 void Decompress(u8* rgba, void const* block, int flags)
 {
   // DXT-type compression
   /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-    DecompressNormalCtx1(rgba, block, flags);
+    DecompressNormalCtx1u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-//  DecompressNormalBtc1(rgba, block, flags);
+//  DecompressNormalBtc1u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-//  DecompressNormalBtc2(rgba, block, flags);
+//  DecompressNormalBtc2u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-//  DecompressNormalBtc3(rgba, block, flags);
+//  DecompressNormalBtc3u(rgba, block, flags);
   // 3Dc-type compression
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-    DecompressNormalBtc5(rgba, block, flags);
+    DecompressNormalBtc5u(rgba, block, flags);
 
   // DXT-type compression
   else if ((flags & kBtcp) == (kBtc1))
-    DecompressColourBtc1(rgba, block, flags);
+    DecompressColourBtc1u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc2))
-    DecompressColourBtc2(rgba, block, flags);
+    DecompressColourBtc2u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc3))
-    DecompressColourBtc3(rgba, block, flags);
+    DecompressColourBtc3u(rgba, block, flags);
   // ATI-type compression
   else if ((flags & kBtcp) == (kBtc4))
-    DecompressAlphaBtc4(rgba, block, flags);
+    DecompressAlphaBtc4u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc5))
-    DecompressAlphaBtc5(rgba, block, flags);
+    DecompressAlphaBtc5u(rgba, block, flags);
   // BTC-type compression
   else if ((flags & kBtcp) == (kBtc7))
-    DecompressPaletteBtc7(rgba, block, flags);
+    DecompressPaletteBtc7u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc6))
     {}// while this is possible (down-cast), should we support it?
 }
@@ -1299,68 +1292,68 @@ void Decompress(u16* rgba, void const* block, int flags)
 {
   // DXT-type compression
   /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-    DecompressNormalCtx1(rgba, block, flags);
+    DecompressNormalCtx1u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-//  DecompressNormalBtc1(rgba, block, flags);
+//  DecompressNormalBtc1u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-//  DecompressNormalBtc2(rgba, block, flags);
+//  DecompressNormalBtc2u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-//  DecompressNormalBtc3(rgba, block, flags);
+//  DecompressNormalBtc3u(rgba, block, flags);
   // 3Dc-type compression
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-    DecompressNormalBtc5(rgba, block, flags);
+    DecompressNormalBtc5u(rgba, block, flags);
 
   // DXT-type compression
   else if ((flags & kBtcp) == (kBtc1))
-    DecompressColourBtc1(rgba, block, flags);
+    DecompressColourBtc1u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc2))
-    DecompressColourBtc2(rgba, block, flags);
+    DecompressColourBtc2u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc3))
-    DecompressColourBtc3(rgba, block, flags);
+    DecompressColourBtc3u(rgba, block, flags);
   // ATI-type compression
   else if ((flags & kBtcp) == (kBtc4))
-    DecompressAlphaBtc4(rgba, block, flags);
+    DecompressAlphaBtc4u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc5))
-    DecompressAlphaBtc5(rgba, block, flags);
+    DecompressAlphaBtc5u(rgba, block, flags);
   // BTC-type compression
   else if ((flags & kBtcp) == (kBtc7))
-    DecompressPaletteBtc7(rgba, block, flags);
+    DecompressPaletteBtc7u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc6))
-    DecompressDynamicBtc6(rgba, block, flags);
+    DecompressDynamicBtc6u(rgba, block, flags);
 }
 
 void Decompress(f23* rgba, void const* block, int flags)
 {
   // DXT-type compression
   /**/ if ((flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-    DecompressNormalCtx1(rgba, block, flags);
+    DecompressNormalCtx1u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-//  DecompressNormalBtc1(rgba, block, flags);
+//  DecompressNormalBtc1u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-//  DecompressNormalBtc2(rgba, block, flags);
+//  DecompressNormalBtc2u(rgba, block, flags);
 //else if ((flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-//  DecompressNormalBtc3(rgba, block, flags);
+//  DecompressNormalBtc3u(rgba, block, flags);
   // 3Dc-type compression
   else if ((flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-    DecompressNormalBtc5(rgba, block, flags);
+    DecompressNormalBtc5u(rgba, block, flags);
 
   // DXT-type compression
   else if ((flags & kBtcp) == (kBtc1))
-    DecompressColourBtc1(rgba, block, flags);
+    DecompressColourBtc1u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc2))
-    DecompressColourBtc2(rgba, block, flags);
+    DecompressColourBtc2u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc3))
-    DecompressColourBtc3(rgba, block, flags);
+    DecompressColourBtc3u(rgba, block, flags);
   // ATI-type compression
   else if ((flags & kBtcp) == (kBtc4))
-    DecompressAlphaBtc4(rgba, block, flags);
+    DecompressAlphaBtc4u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc5))
-    DecompressAlphaBtc5(rgba, block, flags);
+    DecompressAlphaBtc5u(rgba, block, flags);
   // BTC-type compression
   else if ((flags & kBtcp) == (kBtc7))
-    DecompressPaletteBtc7(rgba, block, flags);
+    DecompressPaletteBtc7u(rgba, block, flags);
   else if ((flags & kBtcp) == (kBtc6))
-    DecompressDynamicBtc6(rgba, block, flags);
+    DecompressDynamicBtc6u(rgba, block, flags);
 }
 
 /* *****************************************************************************
@@ -1411,133 +1404,133 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
   if (datatype == sqio::dtp::DT_U8) {
     // DXT-type compression
     /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalCtx1<u8>,
-      s.decoder = (sqio::dec)DecompressNormalCtx1<u8>;
+      s.encoder = (sqio::enc)CompressMaskedNormalCtx1u<u8>,
+      s.decoder = (sqio::dec)DecompressNormalCtx1u<u8>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc1<u8>,
-      s.decoder = (sqio::dec)DecompressColourBtc1<u8>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc1u<u8>,
+      s.decoder = (sqio::dec)DecompressColourBtc1u<u8>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc2<u8>,
-      s.decoder = (sqio::dec)DecompressColourBtc2<u8>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc2u<u8>,
+      s.decoder = (sqio::dec)DecompressColourBtc2u<u8>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc3<u8>,
-      s.decoder = (sqio::dec)DecompressColourBtc3<u8>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc3u<u8>,
+      s.decoder = (sqio::dec)DecompressColourBtc3u<u8>;
     // 3Dc-type compression
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc5<u8>,
-      s.decoder = (sqio::dec)DecompressNormalBtc5<u8>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc5u<u8>,
+      s.decoder = (sqio::dec)DecompressNormalBtc5u<u8>;
 
     // DXT-type compression
     else if ((s.flags & kBtcp) == (kBtc1))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc1<u8>,
-      s.decoder = (sqio::dec)DecompressColourBtc1<u8>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc1u<u8>,
+      s.decoder = (sqio::dec)DecompressColourBtc1u<u8>;
     else if ((s.flags & kBtcp) == (kBtc2))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc2<u8>,
-      s.decoder = (sqio::dec)DecompressColourBtc2<u8>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc2u<u8>,
+      s.decoder = (sqio::dec)DecompressColourBtc2u<u8>;
     else if ((s.flags & kBtcp) == (kBtc3))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc3<u8>,
-      s.decoder = (sqio::dec)DecompressColourBtc3<u8>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc3u<u8>,
+      s.decoder = (sqio::dec)DecompressColourBtc3u<u8>;
     // ATI-type compression
     else if ((s.flags & kBtcp) == (kBtc4))
-      s.encoder = (sqio::enc)CompressMaskedAlphaBtc4<u8>,
-      s.decoder = (sqio::dec)DecompressAlphaBtc4<u8>;
+      s.encoder = (sqio::enc)CompressMaskedAlphaBtc4u<u8>,
+      s.decoder = (sqio::dec)DecompressAlphaBtc4u<u8>;
     else if ((s.flags & kBtcp) == (kBtc5))
-      s.encoder = (sqio::enc)CompressMaskedAlphaBtc5<u8>,
-      s.decoder = (sqio::dec)DecompressAlphaBtc5<u8>;
+      s.encoder = (sqio::enc)CompressMaskedAlphaBtc5u<u8>,
+      s.decoder = (sqio::dec)DecompressAlphaBtc5u<u8>;
     // BTC-type compression
     else if ((s.flags & kBtcp) == (kBtc7))
-      s.encoder = (sqio::enc)CompressMaskedPaletteBtc7<u8>,
-      s.decoder = (sqio::dec)DecompressPaletteBtc7<u8>;
+      s.encoder = (sqio::enc)CompressMaskedPaletteBtc7u<u8>,
+      s.decoder = (sqio::dec)DecompressPaletteBtc7u<u8>;
     else if ((s.flags & kBtcp) == (kBtc6))
       {}// while this is possible (down-cast), should we support it?
   }
   else if (datatype == sqio::dtp::DT_U16) {
     // DXT-type compression
     /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalCtx1<u16>,
-      s.decoder = (sqio::dec)DecompressNormalCtx1<u16>;
+      s.encoder = (sqio::enc)CompressMaskedNormalCtx1u<u16>,
+      s.decoder = (sqio::dec)DecompressNormalCtx1u<u16>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc1<u16>,
-      s.decoder = (sqio::dec)DecompressColourBtc1<u16>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc1u<u16>,
+      s.decoder = (sqio::dec)DecompressColourBtc1u<u16>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc2<u16>,
-      s.decoder = (sqio::dec)DecompressColourBtc2<u16>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc2u<u16>,
+      s.decoder = (sqio::dec)DecompressColourBtc2u<u16>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc3<u16>,
-      s.decoder = (sqio::dec)DecompressColourBtc3<u16>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc3u<u16>,
+      s.decoder = (sqio::dec)DecompressColourBtc3u<u16>;
     // 3Dc-type compression
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc5<u16>,
-      s.decoder = (sqio::dec)DecompressNormalBtc5<u16>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc5u<u16>,
+      s.decoder = (sqio::dec)DecompressNormalBtc5u<u16>;
 
     // DXT-type compression
     else if ((s.flags & kBtcp) == (kBtc1))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc1<u16>,
-      s.decoder = (sqio::dec)DecompressColourBtc1<u16>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc1u<u16>,
+      s.decoder = (sqio::dec)DecompressColourBtc1u<u16>;
     else if ((s.flags & kBtcp) == (kBtc2))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc2<u16>,
-      s.decoder = (sqio::dec)DecompressColourBtc2<u16>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc2u<u16>,
+      s.decoder = (sqio::dec)DecompressColourBtc2u<u16>;
     else if ((s.flags & kBtcp) == (kBtc3))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc3<u16>,
-      s.decoder = (sqio::dec)DecompressColourBtc3<u16>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc3u<u16>,
+      s.decoder = (sqio::dec)DecompressColourBtc3u<u16>;
     // ATI-type compression
     else if ((s.flags & kBtcp) == (kBtc4))
-      s.encoder = (sqio::enc)CompressMaskedAlphaBtc4<u16>,
-      s.decoder = (sqio::dec)DecompressAlphaBtc4<u16>;
+      s.encoder = (sqio::enc)CompressMaskedAlphaBtc4u<u16>,
+      s.decoder = (sqio::dec)DecompressAlphaBtc4u<u16>;
     else if ((s.flags & kBtcp) == (kBtc5))
-      s.encoder = (sqio::enc)CompressMaskedAlphaBtc5<u16>,
-      s.decoder = (sqio::dec)DecompressAlphaBtc5<u16>;
+      s.encoder = (sqio::enc)CompressMaskedAlphaBtc5u<u16>,
+      s.decoder = (sqio::dec)DecompressAlphaBtc5u<u16>;
     // BTC-type compression
     else if ((s.flags & kBtcp) == (kBtc7))
-      s.encoder = (sqio::enc)CompressMaskedPaletteBtc7<u16>,
-      s.decoder = (sqio::dec)DecompressPaletteBtc7<u16>;
+      s.encoder = (sqio::enc)CompressMaskedPaletteBtc7u<u16>,
+      s.decoder = (sqio::dec)DecompressPaletteBtc7u<u16>;
     else if ((s.flags & kBtcp) == (kBtc6))
-      s.encoder = (sqio::enc)CompressMaskedDynamicBtc6<u16>,
-      s.decoder = (sqio::dec)DecompressDynamicBtc6<u16>;
+      s.encoder = (sqio::enc)CompressMaskedDynamicBtc6u<u16>,
+      s.decoder = (sqio::dec)DecompressDynamicBtc6u<u16>;
   }
   else if (datatype == sqio::dtp::DT_F23) {
     // DXT-type compression
     /**/ if ((s.flags & (kBtcp | kColourMetrics)) == (kCtx1 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalCtx1<f23>,
-      s.decoder = (sqio::dec)DecompressNormalCtx1<f23>;
+      s.encoder = (sqio::enc)CompressMaskedNormalCtx1u<f23>,
+      s.decoder = (sqio::dec)DecompressNormalCtx1u<f23>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc1 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc1<f23>,
-      s.decoder = (sqio::dec)DecompressColourBtc1<f23>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc1u<f23>,
+      s.decoder = (sqio::dec)DecompressColourBtc1u<f23>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc2 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc2<f23>,
-      s.decoder = (sqio::dec)DecompressColourBtc2<f23>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc2u<f23>,
+      s.decoder = (sqio::dec)DecompressColourBtc2u<f23>;
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc3 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc3<f23>,
-      s.decoder = (sqio::dec)DecompressColourBtc3<f23>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc3u<f23>,
+      s.decoder = (sqio::dec)DecompressColourBtc3u<f23>;
     // 3Dc-type compression
     else if ((s.flags & (kBtcp | kColourMetrics)) == (kBtc5 | kColourMetricUnit))
-      s.encoder = (sqio::enc)CompressMaskedNormalBtc5<f23>,
-      s.decoder = (sqio::dec)DecompressNormalBtc5<f23>;
+      s.encoder = (sqio::enc)CompressMaskedNormalBtc5u<f23>,
+      s.decoder = (sqio::dec)DecompressNormalBtc5u<f23>;
 
     // DXT-type compression
     else if ((s.flags & kBtcp) == (kBtc1))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc1<f23>,
-      s.decoder = (sqio::dec)DecompressColourBtc1<f23>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc1u<f23>,
+      s.decoder = (sqio::dec)DecompressColourBtc1u<f23>;
     else if ((s.flags & kBtcp) == (kBtc2))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc2<f23>,
-      s.decoder = (sqio::dec)DecompressColourBtc2<f23>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc2u<f23>,
+      s.decoder = (sqio::dec)DecompressColourBtc2u<f23>;
     else if ((s.flags & kBtcp) == (kBtc3))
-      s.encoder = (sqio::enc)CompressMaskedColourBtc3<f23>,
-      s.decoder = (sqio::dec)DecompressColourBtc3<f23>;
+      s.encoder = (sqio::enc)CompressMaskedColourBtc3u<f23>,
+      s.decoder = (sqio::dec)DecompressColourBtc3u<f23>;
     // ATI-type compression
     else if ((s.flags & kBtcp) == (kBtc4))
-      s.encoder = (sqio::enc)CompressMaskedAlphaBtc4<f23>,
-      s.decoder = (sqio::dec)DecompressAlphaBtc4<f23>;
+      s.encoder = (sqio::enc)CompressMaskedAlphaBtc4u<f23>,
+      s.decoder = (sqio::dec)DecompressAlphaBtc4u<f23>;
     else if ((s.flags & kBtcp) == (kBtc5))
-      s.encoder = (sqio::enc)CompressMaskedAlphaBtc5<f23>,
-      s.decoder = (sqio::dec)DecompressAlphaBtc5<f23>;
+      s.encoder = (sqio::enc)CompressMaskedAlphaBtc5u<f23>,
+      s.decoder = (sqio::dec)DecompressAlphaBtc5u<f23>;
     // BTC-type compression
     else if ((s.flags & kBtcp) == (kBtc7))
-      s.encoder = (sqio::enc)CompressMaskedPaletteBtc7<f23>,
-      s.decoder = (sqio::dec)DecompressPaletteBtc7<f23>;
+      s.encoder = (sqio::enc)CompressMaskedPaletteBtc7u<f23>,
+      s.decoder = (sqio::dec)DecompressPaletteBtc7u<f23>;
     else if ((s.flags & kBtcp) == (kBtc6))
-      s.encoder = (sqio::enc)CompressMaskedDynamicBtc6<f23>,
-      s.decoder = (sqio::dec)DecompressDynamicBtc6<f23>;
+      s.encoder = (sqio::enc)CompressMaskedDynamicBtc6u<f23>,
+      s.decoder = (sqio::dec)DecompressDynamicBtc6u<f23>;
   }
 
   return s;
@@ -1709,7 +1702,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
   tile_static ColourSet_CCR colours;
 #endif
 
-void CompressColorBtc1( tile_barrier barrier, const int thread,
+void CompressColorBtc1u( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
 			IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted {
