@@ -262,11 +262,11 @@ public:
 #if (PNG_LIBPNG_VER_MINOR >= 3)
   png_bytep* Get() const { return (png_bytep *)m_rows->Get( ); }
   PngRows* GetRows( ) const { return m_rows; }
-  u16 const* GetRow( int row ) const { return ( u16* )m_rows[row]; }
+  png_bytep const GetRow( int row ) const { return m_rows[row]; }
 #else
   png_bytep* Get() const { return (png_bytep *)m_rows->Get( ); }
   PngRows* GetRows( ) const { return m_rows; }
-  u16 const* GetRow( int row ) const { return ( u16* )m_rows->GetRow( row ); }
+  png_bytep const GetRow( int row ) const { return m_rows->GetRow( row ); }
 #endif
 
 private:
@@ -405,7 +405,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
       u16 sourceRgba[16 * 4];
 
       for (int py = 0, i = 0; py < 4; ++py) {
-	u16 const* row = sourceImage.GetRow(y + py) + x * stride;
+	u16 const* row = (u16*)(sourceImage.GetRow(y + py) + x * stride);
 
 	for (int px = 0; px < 4; ++px, ++i) {
 	  // get the pixel colour
@@ -744,12 +744,9 @@ static void Diff(std::string const& sourceFileName, std::string const& targetFil
   // work out the error
   double error = 0.0;
   for (int y = 0; y < height; ++y) {
-    u16 const* sourceRow = sourceImage.GetRow(y);
-    u16 const* targetRow = targetImage.GetRow(y);
-
     for (int x = 0; x < width; ++x) {
-      u16 const* sourcePixel = sourceRow + x * sourceStride;
-      u16 const* targetPixel = targetRow + x * targetStride;
+      u16 const* sourcePixel = (u16*)(sourceImage.GetRow(y) + x * sourceStride);
+      u16 const* targetPixel = (u16*)(targetImage.GetRow(y) + x * targetStride);
 
       for (int i = 0; i < stride; ++i) {
 	int diff = (int)sourcePixel[i] - (int)targetPixel[i];
@@ -849,7 +846,8 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 	u16 sourceRgba[16 * 4];
 
 	for (int py = 0, i = 0; py < 4; ++py) {
-	  u16 const* row = sourceImage.GetRow(y + py) + x * stride;
+	  u16 const* row = (u16*)(sourceImage.GetRow(y + py) + x * stride);
+
 	  for (int px = 0; px < 4; ++px, ++i) {
 	    // get the pixel colour
 	    if (colour) {
