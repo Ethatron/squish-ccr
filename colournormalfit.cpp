@@ -67,12 +67,12 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
   Vec3 end(127.5f, 127.5f, 255.0f);
 
   if (count > 0) {
+#undef	FEATURE_NORMALFIT_PROJECT_NEAREST
+#ifdef	FEATURE_NORMALFIT_PROJECT_NEAREST
     const Vec3 scale  = Vec3( 1.0f / 0.5f);
     const Vec3 offset = Vec3(-1.0f * 0.5f);
     const Vec3 scalei = Vec3( 1.0f * 0.5f);
 
-#undef	FEATURE_NORMALFIT_PROJECT_NEAREST
-#ifdef	FEATURE_NORMALFIT_PROJECT_NEAREST
     Vec3 centroidn = (scale * (offset + centroid));
     Vec3 rec = Reciprocal(principle);
     Scr3 min, max;
@@ -489,7 +489,7 @@ void ColourNormalFit::Compress4(void* block)
     Scr3 dist; MinDeviance4<true>(dist, idx, value, codes);
 
     // accumulate the error
-    error -= dist * freq[i];
+    AddDeviance(dist, error, freq[i]);
 
     // save the index
     closest[i] = (u8)idx;

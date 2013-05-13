@@ -1085,6 +1085,21 @@ static int passreg CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_res
   return (1 << bits);
 }
 
+/* -----------------------------------------------------------------------------
+ */
+static int passreg CodebookPn(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg end) ccr_restricted
+{
+  const Vec3 scale  = Vec3( 1.0f / 0.5f);
+  const Vec3 offset = Vec3(-1.0f * 0.5f);
+
+  CodebookP(codes, bits, start, end);
+  
+  const int j = (1 << bits) - 1;
+  for (int i = 0; i < j; i++)
+    codes[i] = TransferW(Normalize(scale * (offset + codes[i].GetVec3())), codes[i]);
+
+  return (1 << bits);
+}
 #endif
 
 /* *****************************************************************************
@@ -1229,6 +1244,28 @@ static doinline void MinDeviance4(Scr3 &dist, int &index, Vec3 const &value, Vec
     if (d2 == dist) { index = 2; }
     if (d1 == dist) { index = 1; }
     if (d0 == dist) { index = 0; }
+  }
+}
+
+template<const bool which, const int elements>
+static doinline void MinDeviance4(Scr3 &dist, int &index, Vec3 const &value, Vec4 const (&codes)[elements], int &offset) {
+  Scr3 d0 = Dot(value, codes[offset + 0].GetVec3());
+  Scr3 d1 = Dot(value, codes[offset + 1].GetVec3());
+  Scr3 d2 = Dot(value, codes[offset + 2].GetVec3());
+  Scr3 d3 = Dot(value, codes[offset + 3].GetVec3());
+
+  // encourage OoO
+  Scr3 da = Max(d0, d1);
+  Scr3 db = Max(d2, d3);
+  dist = Max(da, dist);
+  dist = Max(db, dist);
+
+  if (which) {
+    // will cause VS to make them all cmovs
+    if (d3 == dist) { index = offset; } offset++;
+    if (d2 == dist) { index = offset; } offset++;
+    if (d1 == dist) { index = offset; } offset++;
+    if (d0 == dist) { index = offset; } offset++;
   }
 }
 

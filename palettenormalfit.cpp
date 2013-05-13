@@ -42,6 +42,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
+  bool const trns = m_palette->IsMergedAlpha() && m_palette->IsTransparent();
   
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
@@ -49,30 +50,68 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 
   for (int s = 0; s < isets; s++) {
     // cache some values
+    bool const unweighted = m_palette->IsUnweighted(s);
     int const count = m_palette->GetCount(s);
     Vec4 const* values = m_palette->GetPoints(s);
     Scr4 const* weights = m_palette->GetWeights(s);
 
     // we don't do this for sparse sets
     if (count != 1) {
-      Sym2x2 covariance;
       Vec4 centroid;
       Vec4 principle;
 
-      // get the covariance matrix
-      if (m_palette->IsUnweighted(s))
-	ComputeWeightedCovariance2(covariance, centroid, count, values, m_metric[s]);
-      else
-	ComputeWeightedCovariance2(covariance, centroid, count, values, m_metric[s], weights);
+      // combined alpha
+      if (trns) {
+        Sym4x4 covariance;
 
-      // compute the principle component
-      GetPrincipleComponent(covariance, principle);
+        // get the covariance matrix
+        if (unweighted)
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s]);
+        else
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s], weights);
 
+	// compute the principle component
+	GetPrincipleComponent(covariance, principle);
+      }
+      // no or separate alpha
+      else {
+        Sym3x3 covariance;
+
+        // get the covariance matrix
+        if (unweighted)
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
+        else
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
+
+	// compute the principle component
+	GetPrincipleComponent(covariance, principle);
+      }
+      
       // get the min and max normal as the codebook endpoints
-      Vec4 start(0.0f);
-      Vec4 end(0.0f);
+      Vec4 start(127.5f, 127.5f, 255.0f, 0.0f);
+      Vec4 end(127.5f, 127.5f, 255.0f, 0.0f);
+      
+      // get the min and max range as the codebook endpoints
 
       if (count > 0) {
+#ifdef	FEATURE_NORMALFIT_PROJECT
+#undef	FEATURE_NORMALFIT_PROJECT_NEAREST
+#ifdef	FEATURE_NORMALFIT_PROJECT_NEAREST
+	...
+#else
+	// compute the projection
+	GetPrincipleProjection(start, end, principle, centroid, count, values);
+	
+	Vec4 mmn, mmx;
+	mmn = mmx = values[0];
+	for (int i = 1; i < count; ++i) {
+	  Scr4 val = Dot(values[i], principle);
+
+	  mmn = Min(mmn, values[i]);
+	  mmx = Max(mmx, values[i]);
+	}
+#endif
+#else
 	// compute the normal
 	start = end = values[0];
 
@@ -94,10 +133,11 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 	  mmn = Min(mmn, values[i]);
 	  mmx = Max(mmx, values[i]);
 	}
+#endif
 
 	// exclude z/alpha from PCA
-	start = TransferZW(start, mmn);
-	end   = TransferZW(end  , mmx);
+	start = TransferW(start, mmn);
+	end   = TransferW(end  , mmx);
       }
 
       // clamp the output to [0, 1]
@@ -152,8 +192,9 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
-  u8  const tmask = m_palette->IsMergedAlpha() ? 0xFF : 0x00;
-  
+  bool const trns = m_palette->IsMergedAlpha() && m_palette->IsTransparent();
+  u8  const tmask = trns ? 0xFF : 0x00;
+
   assume((isets >  0) && (isets <= 3));
   assume((asets >= 0) && (asets <= 3));
   assume(((isets    +    asets) <= 3));
@@ -174,6 +215,9 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
     Vec4 metric = m_metric[s < isets ? 0 : 1];
+    
+    Scr4 berror = Scr4(DISTANCE_BASE);
+    Scr3 nerror = Scr3(DEVIANCE_BASE);
 
     // we do single entry fit for sparse sets
     if (count == 1) {
@@ -186,9 +230,9 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
 
       // save the index (it's just a single one)
       closest[s][0] = GetIndex();
-
+      
       // accumulate the error
-      error += dist * freq[0];
+      berror += dist * freq[0];
     }
     else {
       // snap floating-point-values to the integer-lattice
@@ -196,46 +240,32 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
       Vec4 end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND);
 
       // TODO: pre-normalize codebook
-      int ccs = CodebookP(codes, kb, start, end);
-
+      int ccs = CodebookPn(codes, kb, start, end);
+      
+      const Vec3 scale  = Vec3( 1.0f / 0.5f);
+      const Vec3 offset = Vec3(-1.0f * 0.5f);
+      
       for (int i = 0; i < count; ++i) {
-	// find the closest code
-	Scr4 dist = Scr4(-1.0f);
-	Vec4 nval = Normalize(values[i]);
 	int idx = 0;
+
+	// find the closest code
+	Scr3 dist = Scr3(DEVIANCE_MAX);
+	Vec3 nval = Normalize(scale * (offset + values[i].GetVec3()));
 	
-	for (int j = 0; j < ccs; j += 0) {
-	  Scr4 a0 = Dot(nval, Normalize(codes[j + 0]));
-	  Scr4 a1 = Dot(nval, Normalize(codes[j + 1]));
-	  Scr4 a2 = Dot(nval, Normalize(codes[j + 2]));
-	  Scr4 a3 = Dot(nval, Normalize(codes[j + 3]));
-	  
-	  // measure angle-deviation (cosine)
-	  Scr4 d0 = a0 * a0;
-	  Scr4 d1 = a1 * a1;
-	  Scr4 d2 = a2 * a2;
-	  Scr4 d3 = a3 * a3;
+	// measure angle-deviation (cosine)
+	for (int j = 0; j < ccs; j += 0)
+	  MinDeviance4<true>(dist, idx, nval, codes, j);
 
-	  // encourage OoO
-	  Scr4 da = Max(d0, d1);
-	  Scr4 db = Max(d2, d3);
-	  dist = Max(da, dist);
-	  dist = Max(db, dist);
-
-	  // will cause VS to make them all cmovs
-	  if (d0 == dist) { idx = j; } j++;
-	  if (d1 == dist) { idx = j; } j++;
-	  if (d2 == dist) { idx = j; } j++;
-	  if (d3 == dist) { idx = j; } j++;
-	}
+	// accumulate the error (sine)
+	AddDeviance(dist, nerror, freq[i].GetVec3());
 
 	// save the index
 	closest[s][i] = (u8)idx;
-
-	// accumulate the error (sine)
-	error += (Scr4(1.0f) - dist) * freq[i];
       }
     }
+
+    // map normal-error to colour-error range
+    error += berror + Vec4(nerror) * Vec4((2.0f * 2.0f) / (255.0f * 255.0f));
 
     // kill early if this scheme looses
     if (!(error < m_besterror))
