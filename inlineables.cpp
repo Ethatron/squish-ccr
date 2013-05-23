@@ -789,8 +789,8 @@ static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
       
       codes[2 + i] = (u8)(i41 >> 18);
       codes[3 + i] = (u8)(i32 >> 18);
-      codes[4 + i] = (u8)(c + d - codes[2 + i]);
-      codes[5 + i] = (u8)(c + d - codes[3 + i]);
+      codes[4 + i] = (u8)(c + d - codes[3 + i]);
+      codes[5 + i] = (u8)(c + d - codes[2 + i]);
       /*
       codes[2 + i] = (u8)(((4 * c + 1 * d) * 0xCCCD) >> 18);
       codes[3 + i] = (u8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
@@ -816,8 +816,8 @@ static doinline void passreg Codebook6(s8 (&codes)[8*1]) ccr_restricted
       
       codes[2 + i] = (s8)(i41 >> 18);
       codes[3 + i] = (s8)(i32 >> 18);
-      codes[4 + i] = (s8)(c + d - codes[2 + i]);
-      codes[5 + i] = (s8)(c + d - codes[3 + i]);
+      codes[4 + i] = (s8)(c + d - codes[3 + i]);
+      codes[5 + i] = (s8)(c + d - codes[2 + i]);
       /*
       codes[2 + i] = (s8)(((4 * c + 1 * d) * 0xCCCD) >> 18);
       codes[3 + i] = (s8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
@@ -846,9 +846,9 @@ static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
       codes[2 + i] = (u8)((((i61 * 0x2493) >> 16) + i61) >> 3);
       codes[3 + i] = (u8)((((i52 * 0x2493) >> 16) + i52) >> 3);
       codes[4 + i] = (u8)((((i43 * 0x2493) >> 16) + i43) >> 3);
-      codes[5 + i] = (u8)(c + d - codes[2 + i]);
+      codes[5 + i] = (u8)(c + d - codes[4 + i]);
       codes[6 + i] = (u8)(c + d - codes[3 + i]);
-      codes[7 + i] = (u8)(c + d - codes[4 + i]);
+      codes[7 + i] = (u8)(c + d - codes[2 + i]);
       /*
       cd = (6 * c + 1 * d); codes[2 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (5 * c + 2 * d); codes[3 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
@@ -877,9 +877,9 @@ static doinline void passreg Codebook8(s8 (&codes)[8*1]) ccr_restricted
       codes[2 + i] = (s8)((((i61 * 0x2493) >> 16) + i61) >> 3);
       codes[3 + i] = (s8)((((i52 * 0x2493) >> 16) + i52) >> 3);
       codes[4 + i] = (s8)((((i43 * 0x2493) >> 16) + i43) >> 3);
-      codes[5 + i] = (s8)(c + d - codes[2 + i]);
+      codes[5 + i] = (s8)(c + d - codes[4 + i]);
       codes[6 + i] = (s8)(c + d - codes[3 + i]);
-      codes[7 + i] = (s8)(c + d - codes[4 + i]);
+      codes[7 + i] = (s8)(c + d - codes[2 + i]);
       /*
       cd = (6 * c + 1 * d); codes[2 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (5 * c + 2 * d); codes[3 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);

@@ -430,10 +430,14 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
     exy  = Vec4(ex, ey, false, false);
     errC = merr;
     
+    /*
+#if defined(TRACK_STATISTICS)
     static int counter = 0; counter++;
     static int matches[2][128] = {0};
     matches[0][(int)rx.X()]++;
     matches[1][(int)ry.X()]++;
+#endif
+     */
 
     // lossless
     if (!(errC > Scr4(FIT_THRESHOLD)))
@@ -950,12 +954,16 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
   Scr4 err75 = FitCodes<min,max>(xyz, mask, codes75x, indices75x, codes75y, indices75y);
   Scr4 err77 = FitCodes<min,max>(xyz, mask, codes77x, indices77x, codes77y, indices77y);
   Scr4 err   = Min(Min(err55, err77), Min(err57, err75));
-
+  
+  /*
+#if defined(TRACK_STATISTICS)
   static int matches[5] = {0}; matches[0]++;
-  /**/ if (err == err77) matches[1]++;
+  /  / if (err == err77) matches[1]++;
   else if (err == err75) matches[2]++;
   else if (err == err57) matches[3]++;
   else                   matches[4]++;
+#endif
+   */
 
   /* save the block with least error (prefer 77, capture min==max)
    *     | Brickwork | TerrainRk |
@@ -991,7 +999,7 @@ static void CompressNormalsBtc5i(dtyp const* xyzd, int mask, void* blockx, void*
 
   for (int i = 0; i < 16; ++i) {
     // create floating point vector
-    Col4 value; LoadUnaligned(value, &xyzd[i]);
+    Col4 value; LoadUnaligned(value, &xyzd[i * 4]);
 
     // create floating point vector
     xyz[i] = Normalize(Vec4(ISCALE) * KillW(Vec4(IOFFSET) + value));
