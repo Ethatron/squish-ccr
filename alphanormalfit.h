@@ -35,12 +35,22 @@ namespace squish {
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
   void CompressNormalsBtc5u(u8  const* xyzd, int mask, void* blockx, void* blocky, int flags);
+  void CompressNormalsBtc5s(s8  const* xyzd, int mask, void* blockx, void* blocky, int flags);
+
   void CompressNormalsBtc5u(u16 const* xyzd, int mask, void* blockx, void* blocky, int flags);
+  void CompressNormalsBtc5s(s16 const* xyzd, int mask, void* blockx, void* blocky, int flags);
+
   void CompressNormalsBtc5u(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags);
+  void CompressNormalsBtc5s(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags);
 
   void DecompressNormalsBtc5u(u8 * xyzd, void const* blockx, void const* blocky);
+  void DecompressNormalsBtc5s(s8 * xyzd, void const* blockx, void const* blocky);
+
   void DecompressNormalsBtc5u(u16* xyzd, void const* blockx, void const* blocky);
+  void DecompressNormalsBtc5s(s16* xyzd, void const* blockx, void const* blocky);
+
   void DecompressNormalsBtc5u(f23* xyzd, void const* blockx, void const* blocky);
+  void DecompressNormalsBtc5s(f23* xyzd, void const* blockx, void const* blocky);
 #endif
 
 // -----------------------------------------------------------------------------

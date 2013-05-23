@@ -37,8 +37,22 @@
 
 #include "inlineables.cpp"
 
+// convert from floats to codes, codes are only u8/s8
+#define FSCALE	( 0.5f * (max - min))
+#define FOFFSET	(-0.5f * (max - min) * (min == 0))
+// convert from codes to floats, codes are only u8/s8
+#define CSCALE	( 2.0f / (max - min))			//  127.5, 127
+#define COFFSET	(-0.5f * (max - min) * (min == 0))      // -127.5,   0
+
+// convert from input to floats
+#define ISCALE	( 2.0f / (upr - lwr))
+#define IOFFSET	(-0.5f * (upr - lwr) * (lwr == 0))
+// convert from floats to output
+#define OSCALE	( 0.5f * (upr - lwr))
+#define OOFFSET	(-0.5f * (upr - lwr) * (lwr == 0))
+
 namespace squish {
-  
+
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
@@ -50,13 +64,11 @@ namespace squish {
     min = std::max<int>(0x00, max - steps);
 }*/
 
+template<const int min, const int max>
 static Scr4 FitCodes(Vec4 const* xyz, int mask,
 		     Col8 const &codesx, u8* indicesx,
 		     Col8 const &codesy, u8* indicesy)
 {
-  const Vec4 scale  = Vec4( 1.0f / 127.5f);
-  const Vec4 offset = Vec4(-1.0f * 127.5f);
-
   // fit each coord value to the codebook
   Scr4 error = Scr4(DEVIANCE_BASE);
 
@@ -88,9 +100,9 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
     int k = 7; do { Col4 _yy = Repeat(codesy, k);
     // Col4(codesx[j - 0], codesx[j - 1], codesx[j - 2], codesx[j - 3]);
     int j = 7; do { Col4 _xx = Expand(codesx, j);
-
-      Vec4 cxx = scale * (offset + _xx);
-      Vec4 cyy = scale * (offset + _yy);
+    
+      Vec4 cxx = Vec4(CSCALE) * (Vec4(COFFSET) + _xx);
+      Vec4 cyy = Vec4(CSCALE) * (Vec4(COFFSET) + _yy);
       Vec4 czz = Complement<DISARM>(cxx, cyy);
 
       // measure absolute angle-deviation (cosine)
@@ -121,13 +133,11 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
   return error;
 }
 
+template<const int min, const int max>
 static Vec4 GetError(Vec4 const* xyz, int mask,
 		     Col8 const &codes5x, Col8 const &codes7x,
 		     Col8 const &codes5y, Col8 const &codes7y)
 {
-  const Vec4 scale  = Vec4( 1.0f / 127.5f);
-  const Vec4 offset = Vec4(-1.0f * 127.5f);
-
   // initial values
   Vec4 error = Vec4(DEVIANCE_BASE);
 
@@ -147,8 +157,8 @@ static Vec4 GetError(Vec4 const* xyz, int mask,
     // Col4(codes55x[f], codes55x[f], codes77x[f], codes77x[f]);
     int f = 7; do { Col4 _xx = Replicate (codes5x, codes7x, f, f);
 
-      Vec4 cxx = scale * (offset + _xx);
-      Vec4 cyy = scale * (offset + _yy);
+      Vec4 cxx = Vec4(CSCALE) * (Vec4(COFFSET) + _xx);
+      Vec4 cyy = Vec4(CSCALE) * (Vec4(COFFSET) + _yy);
       Vec4 czz = Complement<DISARM>(cxx, cyy);
 
       // measure absolute angle-deviation (cosine)
@@ -170,10 +180,22 @@ static Vec4 GetError(Vec4 const* xyz, int mask,
 
 #define FIT_THRESHOLD 1e-5f
 
-template<const int stepx, const int stepy>
+template<const int min, const int max, const int stepx, const int stepy>
 static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
-  const Vec4 scale  = Vec4( 1.0f / 127.5f);
-  const Vec4 offset = Vec4(-1.0f * 127.5f);
+  // for 5-step positions 1 & 6 become 0
+  const Vec4 mix1 = Vec4(0.0f / 5.0f, 0.0f / 5.0f,   6.0f / 7.0f, 6.0f / 7.0f);
+  const Vec4 mix2 = Vec4(4.0f / 5.0f, 4.0f / 5.0f,   5.0f / 7.0f, 5.0f / 7.0f);
+  const Vec4 mix3 = Vec4(3.0f / 5.0f, 3.0f / 5.0f,   4.0f / 7.0f, 4.0f / 7.0f);
+  const Vec4 mix4 = Vec4(2.0f / 5.0f, 2.0f / 5.0f,   3.0f / 7.0f, 3.0f / 7.0f);
+  const Vec4 mix5 = Vec4(1.0f / 5.0f, 1.0f / 5.0f,   2.0f / 7.0f, 2.0f / 7.0f);
+  const Vec4 mix6 = Vec4(0.0f / 5.0f, 0.0f / 5.0f,   1.0f / 7.0f, 1.0f / 7.0f);
+
+  // for 5-step positions 1&6 become -1.0 & +1.0f
+  const Vec4 scale  = Vec4(CSCALE);
+  const Vec4 offset = Vec4(COFFSET);
+  const Vec4 scmix  = Vec4( 1.0f,  1.0f, CSCALE , CSCALE );
+  const Vec4 offmxn = Vec4( 1.0f,  1.0f, COFFSET, COFFSET);
+  const Vec4 offmxp = Vec4(-1.0f, -1.0f, COFFSET, COFFSET);
 
 #if	(SQUISH_USE_SIMD > 0)
   Vec4 minxy = minXY;
@@ -193,11 +215,11 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
   while ((rx + ry) > Vec4(0.0f)) {
     // s + os, s + os, s + os - r, s + os + r
     // e - oe - r, e - oe + r, e - oe, e - oe
-    Vec4 cssmpx = sx + rx       ; cssmpx = Max(Min(cssmpx, Vec4(255.0f)), Vec4(0.0f));
-    Vec4 cmpeex = ex + rx.Swap(); cmpeex = Max(Min(cmpeex, Vec4(255.0f)), Vec4(0.0f));
+    Vec4 cssmpx = sx + rx       ; cssmpx = Max(Min(cssmpx, Vec4(max)), Vec4(min));
+    Vec4 cmpeex = ex + rx.Swap(); cmpeex = Max(Min(cmpeex, Vec4(max)), Vec4(min));
 
-    Vec4 cssmpy = sy + ry       ; cssmpy = Max(Min(cssmpy, Vec4(255.0f)), Vec4(0.0f));
-    Vec4 cmpeey = ey + ry.Swap(); cmpeey = Max(Min(cmpeey, Vec4(255.0f)), Vec4(0.0f));
+    Vec4 cssmpy = sy + ry       ; cssmpy = Max(Min(cssmpy, Vec4(max)), Vec4(min));
+    Vec4 cmpeey = ey + ry.Swap(); cmpeey = Max(Min(cmpeey, Vec4(max)), Vec4(min));
 
     Vec4 cssss_ = sxy;
     Vec4 ceeee_ = exy;
@@ -209,18 +231,6 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
 
     // for all possible codebook-entries of xy (XY==xy5, ZW==xy7)
     {
-      // for 5-step positions 1 & 6 become 0
-      const Vec4 mix1 = Vec4(0.0f / 5.0f, 0.0f / 5.0f,   6.0f / 7.0f, 6.0f / 7.0f);
-      const Vec4 mix2 = Vec4(4.0f / 5.0f, 4.0f / 5.0f,   5.0f / 7.0f, 5.0f / 7.0f);
-      const Vec4 mix3 = Vec4(3.0f / 5.0f, 3.0f / 5.0f,   4.0f / 7.0f, 4.0f / 7.0f);
-      const Vec4 mix4 = Vec4(2.0f / 5.0f, 2.0f / 5.0f,   3.0f / 7.0f, 3.0f / 7.0f);
-      const Vec4 mix5 = Vec4(1.0f / 5.0f, 1.0f / 5.0f,   2.0f / 7.0f, 2.0f / 7.0f);
-      const Vec4 mix6 = Vec4(0.0f / 5.0f, 0.0f / 5.0f,   1.0f / 7.0f, 1.0f / 7.0f);
-      // for 5-step positions 1&6 become -1.0 & +1.0f
-      const Vec4 scmix  = Vec4( 1.0f,  1.0f,    1.0f / 127.5f,  1.0f / 127.5f);
-      const Vec4 offmxn = Vec4( 1.0f,  1.0f,   -1.0f * 127.5f, -1.0f * 127.5f);
-      const Vec4 offmxp = Vec4(-1.0f, -1.0f,   -1.0f * 127.5f, -1.0f * 127.5f);
-
       _cbs[0] =  cssss_                          ; _cbs[0] = scale * (offset + Truncate(_cbs[0]));
       _cbs[1] = (cssss_ * mix1) + (ceeee_ * mix6); _cbs[1] = scmix * (offmxn + Truncate(_cbs[1]));
       _cbs[2] = (cssss_ * mix2) + (ceeee_ * mix5); _cbs[2] = scale * (offset + Truncate(_cbs[2]));
@@ -287,12 +297,12 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
       Vec4 valy = xyz[v].SplatY();
       Vec4 valz = xyz[v].SplatZ();
 
-      Vec4 dist0x  = Vec4(-1.0f);
-      Vec4 dist0y  = Vec4(-1.0f);
-      Vec4 dist1xy = Vec4(-1.0f);
-      Vec4 dist2xy = Vec4(-1.0f);
-      Vec4 dist3xy = Vec4(-1.0f);
-      Vec4 dist4xy = Vec4(-1.0f);
+      Vec4 dist0x  = Vec4(DEVIANCE_MAX);
+      Vec4 dist0y  = Vec4(DEVIANCE_MAX);
+      Vec4 dist1xy = Vec4(DEVIANCE_MAX);
+      Vec4 dist2xy = Vec4(DEVIANCE_MAX);
+      Vec4 dist3xy = Vec4(DEVIANCE_MAX);
+      Vec4 dist4xy = Vec4(DEVIANCE_MAX);
 
       int j = 7; do {
       int i = 7; do {
@@ -420,10 +430,10 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
     exy  = Vec4(ex, ey, false, false);
     errC = merr;
     
-  static int counter = 0; counter++;
-  static int matches[2][128] = {0};
-  matches[0][(int)rx.X()]++;
-  matches[1][(int)ry.X()]++;
+    static int counter = 0; counter++;
+    static int matches[2][128] = {0};
+    matches[0][(int)rx.X()]++;
+    matches[1][(int)ry.X()]++;
 
     // lossless
     if (!(errC > Scr4(FIT_THRESHOLD)))
@@ -474,19 +484,19 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
   int ry = (ey - sy) >> 1;	// max 127
 
   while ((rx != 0) || (ry != 0)) {
-    int msx = std::max(std::min(sx - rx, 0xFF), 0x00);  // os - r
-    int csx = std::max(std::min(sx     , 0xFF), 0x00);  // os
-    int psx = std::max(std::min(sx + rx, 0xFF), 0x00);  // os + r
-    int mex = std::max(std::min(ex - rx, 0xFF), 0x00);  // oe + r
-    int cex = std::max(std::min(ex     , 0xFF), 0x00);  // oe
-    int pex = std::max(std::min(ex + rx, 0xFF), 0x00);  // oe - r
+    int msx = std::max(std::min(sx - rx, max), min);  // os - r
+    int csx = std::max(std::min(sx     , max), min);  // os
+    int psx = std::max(std::min(sx + rx, max), min);  // os + r
+    int mex = std::max(std::min(ex - rx, max), min);  // oe + r
+    int cex = std::max(std::min(ex     , max), min);  // oe
+    int pex = std::max(std::min(ex + rx, max), min);  // oe - r
 
-    int msy = std::max(std::min(sy - ry, 0xFF), 0x00);  // os - r
-    int csy = std::max(std::min(sy     , 0xFF), 0x00);  // os
-    int psy = std::max(std::min(sy + ry, 0xFF), 0x00);  // os + r
-    int mey = std::max(std::min(ey - ry, 0xFF), 0x00);  // oe + r
-    int cey = std::max(std::min(ey     , 0xFF), 0x00);  // oe
-    int pey = std::max(std::min(ey + ry, 0xFF), 0x00);  // oe - r
+    int msy = std::max(std::min(sy - ry, max), min);  // os - r
+    int csy = std::max(std::min(sy     , max), min);  // os
+    int psy = std::max(std::min(sy + ry, max), min);  // os + r
+    int mey = std::max(std::min(ey - ry, max), min);  // oe + r
+    int cey = std::max(std::min(ey     , max), min);  // oe
+    int pey = std::max(std::min(ey + ry, max), min);  // oe - r
 
     // construct code-books
     Col8 cb0y, cb1y, cb2y, cb3y, cb4y;
@@ -550,7 +560,7 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
       dist1x1y = dist1x2y = dist1x3y = dist1x4y =
       dist2x1y = dist2x2y = dist2x3y = dist2x4y =
       dist3x1y = dist3x2y = dist3x3y = dist3x4y =
-      dist4x1y = dist4x2y = dist4x3y = dist4x4y = Scr4(-1.0f);
+      dist4x1y = dist4x2y = dist4x3y = dist4x4y = Scr4(DEVIANCE_MAX);
 
       // fetch floating point vector
       Vec4 value = xyz[v];
@@ -756,6 +766,8 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
   return errXY;
 }
 
+/* -----------------------------------------------------------------------------
+ */
 static void WriteNormalBlock(int coord0, int coord1, u8 const* indices, void* block)
 {
   u8* bytes = reinterpret_cast< u8* >(block);
@@ -820,20 +832,20 @@ static void WriteNormalBlock7(int coord0, int coord1, u8 const* indices, void* b
   WriteNormalBlock(coord0, coord1, indices, block);
 }
 
-void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, int flags)
-{
-  const Vec4 scale  = Vec4( 1.0f / 127.5f);
-  const Vec4 offset = Vec4(-1.0f * 127.5f);
-  const Vec4 scalei = Vec4( 1.0f * 127.5f);
+/* -----------------------------------------------------------------------------
+ */
 
+template<const int min, const int max, typename dtyp>
+static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* blocky, int flags)
+{
   Col8 codes55x, codes57x, codes75x, codes77x;
   Col8 codes55y, codes57y, codes75y, codes77y;
 
   // get the range for 5-coord and 7-coord interpolation
-  Col4 min55 = Col4(0xFF), min57;
-  Col4 max55 = Col4(0x00), max57;
-  Col4 min77 = Col4(0xFF), min75;
-  Col4 max77 = Col4(0x00), max75;
+  Col4 min55 = Col4(max), min57;
+  Col4 max55 = Col4(min), max57;
+  Col4 min77 = Col4(max), min75;
+  Col4 max77 = Col4(min), max75;
 
   for (int i = 0; i < 16; ++i) {
     // check this pixel is valid
@@ -843,7 +855,7 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
 
     // create integer vector
     Col4 value = 
-      FloatToInt<true>((scalei * xyz[i]) - offset);
+      FloatToInt<true>((Vec4(FSCALE) * xyz[i]) - Vec4(FOFFSET));
 
     Col4 mask =
       IsZero(value) |
@@ -885,7 +897,7 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
   // do the iterative tangent search
   if (flags & kNormalIterativeFit) {
     // get best error for the current min/max
-    Vec4 error = GetError(xyz, mask, codes55x, codes77x, codes55y, codes77y);
+    Vec4 error = GetError<min,max>(xyz, mask, codes55x, codes77x, codes55y, codes77y);
 
     // binary search, tangent-fitting
     Scr4 err55 = error.SplatX();
@@ -896,7 +908,7 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
 
     // !lossless
     if (errM0x0y > Scr4(FIT_THRESHOLD)) {
-      errM0x0y = FitError<7,7>(xyz, min77, max77, err77);
+      errM0x0y = FitError<min,max,7,7>(xyz, min77, max77, err77);
 
       // if better, reconstruct code-book
       Codebook8(codes77x, Col8(max77.SplatR()), Col8(min77.SplatR()));
@@ -904,7 +916,7 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
 
     // !lossless
     if (errM0x0y > Scr4(FIT_THRESHOLD)) {
-      errM0x0y = FitError<7,5>(xyz, min75, max75, err75);
+      errM0x0y = FitError<min,max,7,5>(xyz, min75, max75, err75);
 
       // if better, reconstruct code-book
       Codebook8(codes75x, Col8(max75.SplatR()), Col8(min75.SplatR()));
@@ -912,7 +924,7 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
 
     // !lossless
     if (errM0x0y > Scr4(FIT_THRESHOLD)) {
-      errM0x0y = FitError<5,7>(xyz, min57, max57, err57);
+      errM0x0y = FitError<min,max,5,7>(xyz, min57, max57, err57);
 
       // if better, reconstruct code-book
       Codebook6(codes57x, Col8(min57.SplatR()), Col8(max57.SplatR()));
@@ -920,7 +932,7 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
 
     // !lossless
     if (errM0x0y > Scr4(FIT_THRESHOLD)) {
-      errM0x0y = FitError<5,5>(xyz, min55, max55, err55);
+      errM0x0y = FitError<min,max,5,5>(xyz, min55, max55, err55);
 
       // if better, reconstruct code-book
       Codebook6(codes55x, Col8(min55.SplatR()), Col8(max55.SplatR()));
@@ -933,10 +945,10 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
   u8 indices55x[16], indices57x[16], indices75x[16], indices77x[16];
   u8 indices55y[16], indices57y[16], indices75y[16], indices77y[16];
 
-  Scr4 err55 = FitCodes(xyz, mask, codes55x, indices55x, codes55y, indices55y);
-  Scr4 err57 = FitCodes(xyz, mask, codes57x, indices57x, codes57y, indices57y);
-  Scr4 err75 = FitCodes(xyz, mask, codes75x, indices75x, codes75y, indices75y);
-  Scr4 err77 = FitCodes(xyz, mask, codes77x, indices77x, codes77y, indices77y);
+  Scr4 err55 = FitCodes<min,max>(xyz, mask, codes55x, indices55x, codes55y, indices55y);
+  Scr4 err57 = FitCodes<min,max>(xyz, mask, codes57x, indices57x, codes57y, indices57y);
+  Scr4 err75 = FitCodes<min,max>(xyz, mask, codes75x, indices75x, codes75y, indices75y);
+  Scr4 err77 = FitCodes<min,max>(xyz, mask, codes77x, indices77x, codes77y, indices77y);
   Scr4 err   = Min(Min(err55, err77), Min(err57, err75));
 
   static int matches[5] = {0}; matches[0]++;
@@ -972,41 +984,24 @@ void CompressNormalBtc5(Vec4 const* xyz, int mask, void* blockx, void* blocky, i
 
 #undef	FIT_THRESHOLD
 
-void CompressNormalsBtc5u(u8 const* xyzd, int mask, void* blockx, void* blocky, int flags)
+template<const int min, const int max, const int lwr, const int upr, typename dtyp>
+static void CompressNormalsBtc5i(dtyp const* xyzd, int mask, void* blockx, void* blocky, int flags)
 {
-  const Vec4 scale  = Vec4( 1.0f / 127.5f);
-  const Vec4 offset = Vec4(-1.0f * 127.5f);
   Vec4 xyz[16];
 
   for (int i = 0; i < 16; ++i) {
     // create floating point vector
-    Col4 value; UnpackBytes(value, ((const int *)xyzd)[i]);
-    
+    Col4 value; LoadUnaligned(value, &xyzd[i]);
+
     // create floating point vector
-    xyz[i] = Normalize(scale * KillW(offset + value));
+    xyz[i] = Normalize(Vec4(ISCALE) * KillW(Vec4(IOFFSET) + value));
   }
     
-  CompressNormalBtc5(xyz, mask, blockx, blocky, flags);
+  CompressNormalBtc5v<min,max,dtyp>(xyz, mask, blockx, blocky, flags);
 }
 
-void CompressNormalsBtc5u(u16 const* xyzd, int mask, void* blockx, void* blocky, int flags)
-{
-  const Vec4 scale  = Vec4( 1.0f / 32767.5f);
-  const Vec4 offset = Vec4(-1.0f * 32767.5f);
-  Vec4 xyz[16];
-
-  for (int i = 0; i < 16; ++i) {
-    // create floating point vector
-    Col4 value; UnpackWords(value, ((const __int64 *)xyzd)[i]);
-    
-    // create floating point vector
-    xyz[i] = Normalize(scale * KillW(offset + value));
-  }
-    
-  CompressNormalBtc5(xyz, mask, blockx, blocky, flags);
-}
-
-void CompressNormalsBtc5u(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags)
+template<const int min, const int max, typename dtyp>
+static void CompressNormalsBtc5f(dtyp const* xyzd, int mask, void* blockx, void* blocky, int flags)
 {
   Vec4 xyz[16];
 
@@ -1018,29 +1013,45 @@ void CompressNormalsBtc5u(f23 const* xyzd, int mask, void* blockx, void* blocky,
     xyz[i] = Normalize(KillW(value));
   }
     
-  CompressNormalBtc5(xyz, mask, blockx, blocky, flags);
+  CompressNormalBtc5v<min,max,dtyp>(xyz, mask, blockx, blocky, flags);
 }
+
+void CompressNormalsBtc5u(u8 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
+  CompressNormalsBtc5i<   0,255,    0,255>(xyzd, mask, blockx, blocky, flags); }
+void CompressNormalsBtc5s(s8 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
+  CompressNormalsBtc5i<-127,127, -127,127>(xyzd, mask, blockx, blocky, flags); }
+
+void CompressNormalsBtc5u(u16 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
+  CompressNormalsBtc5i<   0,255,      0,65535>(xyzd, mask, blockx, blocky, flags); }
+void CompressNormalsBtc5s(s16 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
+  CompressNormalsBtc5i<-127,127, -32767,32767>(xyzd, mask, blockx, blocky, flags); }
+
+void CompressNormalsBtc5u(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
+  CompressNormalsBtc5f<   0,255>(xyzd, mask, blockx, blocky, flags); }
+void CompressNormalsBtc5s(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
+  CompressNormalsBtc5f<-127,127>(xyzd, mask, blockx, blocky, flags); }
 
 /* *****************************************************************************
  */
+template<typename dtyp>
 static void ReadNormalBlock(
-  u8 (&codesx  )[ 8], u8 (&codesy  )[ 8],
-  u8 (&indicesx)[16], u8 (&indicesy)[16],
+  dtyp (&codesx  )[ 8], dtyp (&codesy  )[ 8],
+  u8   (&indicesx)[16], u8   (&indicesy)[16],
   void const* blockx, void const* blocky)
 {
   // get the two coord values
-  u8 const* bytesx = reinterpret_cast< u8 const* >(blockx);
-  u8 const* bytesy = reinterpret_cast< u8 const* >(blocky);
-  int coord0x = bytesx[0];
-  int coord1x = bytesx[1];
-  int coord0y = bytesy[0];
-  int coord1y = bytesy[1];
+  dtyp const* bytesx = reinterpret_cast< dtyp const* >(blockx);
+  dtyp const* bytesy = reinterpret_cast< dtyp const* >(blocky);
+  int coord0x = (dtyp)bytesx[0];
+  int coord1x = (dtyp)bytesx[1];
+  int coord0y = (dtyp)bytesy[0];
+  int coord1y = (dtyp)bytesy[1];
 
   // compare the values to build the codebook
-  codesx[0] = (u8)coord0x;
-  codesx[1] = (u8)coord1x;
-  codesy[0] = (u8)coord0y;
-  codesy[1] = (u8)coord1y;
+  codesx[0] = (dtyp)coord0x;
+  codesx[1] = (dtyp)coord1x;
+  codesy[0] = (dtyp)coord0y;
+  codesy[1] = (dtyp)coord1y;
 
   if (coord0x <= coord1x)
     // use 5-coord codebook
@@ -1057,8 +1068,8 @@ static void ReadNormalBlock(
     Codebook8(codesy);
 
   // decode the indices
-  u8 const* srcx = bytesx + 2;
-  u8 const* srcy = bytesy + 2;
+  u8 const* srcx = (u8*)bytesx + 2;
+  u8 const* srcy = (u8*)bytesy + 2;
   u8* destx = indicesx;
   u8* desty = indicesy;
   for (int i = 0; i < 2; ++i) {
@@ -1082,72 +1093,61 @@ static void ReadNormalBlock(
   }
 }
   
-void DecompressNormalsBtc5u(u8* xyzd, void const* blockx, void const* blocky)
+template<const int min, const int max, const int lwr, const int upr, typename dtyp, typename ctyp>
+static void DecompressNormalsBtc5i(dtyp* xyzd, void const* blockx, void const* blocky)
 {
-  const Vec3 scale  = Vec3( 1.0f / 127.5f);
-  const Vec3 offset = Vec3(-1.0f * 127.5f);
-  const Vec3 scalei = Vec3( 1.0f * 127.5f);
-  
-  u8 codesx[8], indicesx[16];
-  u8 codesy[8], indicesy[16];
+  ctyp codesx[8]; u8 indicesx[16];
+  ctyp codesy[8]; u8 indicesy[16];
 
   ReadNormalBlock(codesx, codesy, indicesx, indicesy, blockx, blocky);
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i) {
     Col3 _xyz0  = Col3(codesx[indicesx[i]], codesy[indicesy[i]]);
-    Vec3 cxyz0  = scale * (offset + _xyz0);
+    Vec3 cxyz0  = Vec3(CSCALE) * (Vec3(COFFSET) + _xyz0);
          cxyz0  = Complement<DISARM>(cxyz0);
-	 cxyz0  = (scalei * cxyz0) - offset;
+	 cxyz0  = (Vec3(OSCALE) * cxyz0) - Vec3(OOFFSET);
 	 _xyz0  = FloatToInt<true>(cxyz0);
 
-    PackBytes(_xyz0, *((int *)(&xyzd[4 * i])));
+    StoreUnaligned(_xyz0, &xyzd[4 * i]);
   }
 }
 
-void DecompressNormalsBtc5u(u16* xyzd, void const* blockx, void const* blocky)
+template<const int min, const int max, typename dtyp, typename ctyp>
+static void DecompressNormalsBtc5f(dtyp* xyzd, void const* blockx, void const* blocky)
 {
-  const Vec3 scale   = Vec3( 1.0f / 127.5f);
-  const Vec3 offset  = Vec3(-1.0f * 127.5f);
-  const Vec3 scalei  = Vec3( 1.0f * 32767.5f);
-  const Vec3 offseti = Vec3(-1.0f * 32767.5f);
-  
-  u8 codesx[8], indicesx[16];
-  u8 codesy[8], indicesy[16];
+  ctyp codesx[8]; u8 indicesx[16];
+  ctyp codesy[8]; u8 indicesy[16];
 
   ReadNormalBlock(codesx, codesy, indicesx, indicesy, blockx, blocky);
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i) {
     Col3 _xyz0  = Col3(codesx[indicesx[i]], codesy[indicesy[i]]);
-    Vec3 cxyz0  = scale * (offset + _xyz0);
+    Vec3 cxyz0  = Vec3(CSCALE) * (Vec3(COFFSET) + _xyz0);
          cxyz0  = Complement<DISARM>(cxyz0);
-	 cxyz0  = (scalei * cxyz0) - offseti;
-	 _xyz0  = FloatToInt<true>(cxyz0);
-
-    PackWords(_xyz0, *((__int64 *)(&xyzd[4 * i])));
-  }
-}
-
-void DecompressNormalsBtc5u(f23* xyzd, void const* blockx, void const* blocky)
-{
-  const Vec3 scale  = Vec3( 1.0f / 127.5f);
-  const Vec3 offset = Vec3(-1.0f * 127.5f);
-  
-  u8 codesx[8], indicesx[16];
-  u8 codesy[8], indicesy[16];
-
-  ReadNormalBlock(codesx, codesy, indicesx, indicesy, blockx, blocky);
-
-  // write out the indexed codebook values
-  for (int i = 0; i < 16; ++i) {
-    Col3 _xyz0  = Col3(codesx[indicesx[i]], codesy[indicesy[i]]);
-    Vec3 cxyz0  = scale * (offset + _xyz0);
-         cxyz0  = Complement<DISARM>(cxyz0);
+//	 cxyz0  = (Vec4(OSCALE) * cxyz0) - Vec4(OOFFSET);
+//	 _xyz0  = FloatToFloat<false>(cxyz0);
 
     StoreUnaligned(cxyz0, &xyzd[4 * i]);
   }
 }
+
+void DecompressNormalsBtc5u(u8* xyzd, void const* blockx, void const* blocky) {
+  DecompressNormalsBtc5i<   0,255,    0,255,u8, u8>(xyzd, blockx, blocky); }
+void DecompressNormalsBtc5s(s8* xyzd, void const* blockx, void const* blocky) {
+  DecompressNormalsBtc5i<-127,127, -127,127,s8, s8>(xyzd, blockx, blocky); }
+
+void DecompressNormalsBtc5u(u16* xyzd, void const* blockx, void const* blocky) {
+  DecompressNormalsBtc5i<   0,255,      0,65535,u16, u8>(xyzd, blockx, blocky); }
+void DecompressNormalsBtc5s(s16* xyzd, void const* blockx, void const* blocky) {
+  DecompressNormalsBtc5i<-127,127, -32767,32767,s16, s8>(xyzd, blockx, blocky); }
+
+void DecompressNormalsBtc5u(f23* xyzd, void const* blockx, void const* blocky) {
+  DecompressNormalsBtc5f<   0,255,f23, u8>(xyzd, blockx, blocky); }
+void DecompressNormalsBtc5s(f23* xyzd, void const* blockx, void const* blocky) {
+  DecompressNormalsBtc5f<-127,127,f23, s8>(xyzd, blockx, blocky); }
+
 #endif
 
 /* *****************************************************************************

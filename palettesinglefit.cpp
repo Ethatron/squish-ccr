@@ -184,10 +184,12 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
   // natural numbers / 255, no need to round
   PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
 
-  assert(m_entry[set][0] == (u8)FloatToInt(255.0f * values->X(), 255));
-  assert(m_entry[set][1] == (u8)FloatToInt(255.0f * values->Y(), 255));
-  assert(m_entry[set][2] == (u8)FloatToInt(255.0f * values->Z(), 255));
-  assert(m_entry[set][3] == (u8)FloatToInt(255.0f * values->W(), 255));
+  /*
+  assert(m_entry[set][0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
+  assert(m_entry[set][1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
+  assert(m_entry[set][2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
+  assert(m_entry[set][3] == (u8)FloatToInt<true,false>(255.0f * values->W(), 255));
+   */
 
   for (int index = 0; index < 2; ++index) {
     // check the error for this codebook index
@@ -255,10 +257,12 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
   // natural numbers / 255, no need to round
   PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
 
-  assert(m_entry[set][0] == (u8)FloatToInt(255.0f * values->X(), 255));
-  assert(m_entry[set][1] == (u8)FloatToInt(255.0f * values->Y(), 255));
-  assert(m_entry[set][2] == (u8)FloatToInt(255.0f * values->Z(), 255));
-  assert(m_entry[set][3] == (u8)FloatToInt(255.0f * values->W(), 255));
+  /*
+  assert(m_entry[set][0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
+  assert(m_entry[set][1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
+  assert(m_entry[set][2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
+  assert(m_entry[set][3] == (u8)FloatToInt<true,false>(255.0f * values->W(), 255));
+   */
 
   for (int index = 0; index < 4; ++index) {
     // check the error for this codebook index
@@ -325,10 +329,12 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
   // natural numbers / 255, no need to round
   PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
 
-  assert(m_entry[set][0] == (u8)FloatToInt(255.0f * values->X(), 255));
-  assert(m_entry[set][1] == (u8)FloatToInt(255.0f * values->Y(), 255));
-  assert(m_entry[set][2] == (u8)FloatToInt(255.0f * values->Z(), 255));
-  assert(m_entry[set][3] == (u8)FloatToInt(255.0f * values->W(), 255));
+  /*
+  assert(m_entry[set][0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
+  assert(m_entry[set][1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
+  assert(m_entry[set][2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
+  assert(m_entry[set][3] == (u8)FloatToInt<true,false>(255.0f * values->W(), 255));
+  */ 
 
   for (int index = 0; index < 8; ++index) {
     // check the error for this codebook index

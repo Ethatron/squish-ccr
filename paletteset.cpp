@@ -242,7 +242,7 @@ PaletteSet::PaletteSet(PaletteSet const &palette, int mask, int flags, int part_
 }
 
 void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
-  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
+  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbExternal) != 0);
   const float *aLUT   = ComputeGammaLUT(false);
 
   // check the compression mode for btc

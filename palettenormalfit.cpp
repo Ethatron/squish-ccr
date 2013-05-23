@@ -102,6 +102,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 	// compute the projection
 	GetPrincipleProjection(start, end, principle, centroid, count, values);
 	
+	// TODO: check min/max swap as well
 	Vec4 mmn, mmx;
 	mmn = mmx = values[0];
 	for (int i = 1; i < count; ++i) {

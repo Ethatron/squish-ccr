@@ -51,8 +51,8 @@ static void CompressAlphaBtc2u(dtyp const* rgba, int mask, void* block, float sc
     float alpha1 = (float)rgba[8 * i + 3] * scale;
     float alpha2 = (float)rgba[8 * i + 7] * scale;
 
-    int quant1 = FloatToInt(alpha1, 15);
-    int quant2 = FloatToInt(alpha2, 15);
+    int quant1 = FloatToInt<true,false>(alpha1, 15);
+    int quant2 = FloatToInt<true,false>(alpha2, 15);
 
     // set alpha to zero where masked
     int bit1 = 1 << (2 * i + 0);
@@ -104,12 +104,13 @@ void DecompressAlphaBtc2u(f23* rgba, void const* block) {
 
 /* *****************************************************************************
  */
-static void FixRange(int& min, int& max, int steps)
+template<const int min, const int max, const int steps>
+static void FixRange(int& minS, int& maxS)
 {
-  if (max - min < steps)
-    max = std::min<int>(min + steps, 0xFF);
-  if (max - min < steps)
-    min = std::max<int>(0x00, max - steps);
+  if (maxS - minS < steps)
+    maxS = std::min<int>(minS + steps, max);
+  if (maxS - minS < steps)
+    minS = std::max<int>(min, maxS - steps);
 }
 
 /* -----------------------------------------------------------------------------
@@ -298,7 +299,7 @@ static void GetError(f23 const* rgba, int mask, Col8 const &codes5, Col8 const &
  */
 #define FIT_THRESHOLD 1e-5f
 
-template<const int steps>
+template<const int min, const int max, const int steps>
 static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
 #if	(SQUISH_USE_SIMD > 0)
   int rng = (maxS - minS) >> 1;	// max 127
@@ -311,8 +312,8 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
   while (r > Vec4(0.0f)) {
     // s + os, s + os, s + os - r, s + os + r
     // e - oe - r, e - oe + r, e - oe, e - oe
-    Vec4 cssmp = s + r       ; cssmp = Max(Min(cssmp, Vec4(255.0f)), Vec4(0.0f));
-    Vec4 cmpee = e + r.Swap(); cmpee = Max(Min(cmpee, Vec4(255.0f)), Vec4(0.0f));
+    Vec4 cssmp = s + r       ; cssmp = Max(Min(cssmp, Vec4(max)), Vec4(min));
+    Vec4 cmpee = e + r.Swap(); cmpee = Max(Min(cmpee, Vec4(max)), Vec4(min));
     
     // for all possible codebook-entries
     Vec4 cb0, cb1, cb2, cb3,
@@ -434,12 +435,12 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
   int r = (e - s) >> 1;	// max 127
 
   while (r != 0) {
-    int ms = std::max(std::min(s - r, 0xFF), 0x00);  // os - r
-    int cs = std::max(std::min(s    , 0xFF), 0x00);  // os
-    int ps = std::max(std::min(s + r, 0xFF), 0x00);  // os + r
-    int me = std::max(std::min(e - r, 0xFF), 0x00);  // oe + r
-    int ce = std::max(std::min(e    , 0xFF), 0x00);  // oe
-    int pe = std::max(std::min(e + r, 0xFF), 0x00);  // oe - r
+    int ms = std::max(std::min(s - r, max), min);  // os - r
+    int cs = std::max(std::min(s    , max), min);  // os
+    int ps = std::max(std::min(s + r, max), min);  // os + r
+    int me = std::max(std::min(e - r, max), min);  // oe + r
+    int ce = std::max(std::min(e    , max), min);  // oe
+    int pe = std::max(std::min(e + r, max), min);  // oe - r
     
     // construct code-books
     Col8 cb1, cb2, cb3, cb4;
@@ -513,8 +514,8 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
 #endif
 
   // final match
-  minS = std::min(s, e;)
-  maxS = std::max(s, e;)
+  minS = std::min(s, e);
+  maxS = std::max(s, e);
   errS = error0;
 
 #if defined(TRACK_STATISTICS)
@@ -525,8 +526,8 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
 #endif
 #endif
 
-  assert((minS >= 0) && (minS <= 255));
-  assert((maxS >= 0) && (maxS <= 255));
+  assert((minS >= min) && (minS <= max));
+  assert((maxS >= min) && (maxS <= max));
   assert((minS <= maxS));
 
   return errS;
@@ -641,8 +642,8 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
   if (min7 > max7) min7 = max7;
   
   // fix the range to be the minimum in each case
-//FixRange(min5, max5, 5);
-//FixRange(min7, max7, 7);
+//FixRange<min,max,5>(min5, max5);
+//FixRange<min,max,5>(min7, max7);
 
   // construct code-book
   Codebook6(codes5, Col8(min5), Col8(max5));
@@ -660,12 +661,12 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
     // !lossless, !lossless
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<7>(aaaa, min7, max7, err7);
+      errM = FitError<min,max,7>(aaaa, min7, max7, err7);
       Codebook8(codes7, Col8(max7), Col8(min7));
 
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<5>(aaaa, min5, max5, err5);
+      errM = FitError<min,max,5>(aaaa, min5, max5, err5);
       Codebook6(codes5, Col8(min5), Col8(max5));
     
     }}
@@ -720,8 +721,8 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
   if (min7 > max7) min7 = max7;
   
   // fix the range to be the minimum in each case
-//FixRange(min5, max5, 5);
-//FixRange(min7, max7, 7);
+//FixRange<min,max,5>(min5, max5);
+//FixRange<min,max,7>(min7, max7);
 
   // construct code-book
   Codebook6(codes5, Col8(min5), Col8(max5));
@@ -739,12 +740,12 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
     // !lossless, !lossless
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<7>(aaaa, min7, max7, err7);
+      errM = FitError<min,max,7>(aaaa, min7, max7, err7);
       Codebook8(codes7, Col8(max7), Col8(min7));
 
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<5>(aaaa, min5, max5, err5);
+      errM = FitError<min,max,5>(aaaa, min5, max5, err5);
       Codebook6(codes5, Col8(min5), Col8(max5));
     
     }}
@@ -791,8 +792,8 @@ static void ReadAlphaBlock(
 {
   // get the two alpha values
   dtyp const* bytes = reinterpret_cast< dtyp const* >(block);
-  int alpha0 = bytes[0];
-  int alpha1 = bytes[1];
+  int alpha0 = (dtyp)bytes[0];
+  int alpha1 = (dtyp)bytes[1];
 
   // compare the values to build the codebook
   codes[0] = (dtyp)alpha0;

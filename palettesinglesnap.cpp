@@ -177,10 +177,12 @@ Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSin
   // natural numbers / 255, no need to round
   PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry));
 
-  assert(m_entry[0] == (u8)FloatToInt(255.0f * values->X(), 255));
-  assert(m_entry[1] == (u8)FloatToInt(255.0f * values->Y(), 255));
-  assert(m_entry[2] == (u8)FloatToInt(255.0f * values->Z(), 255));
-  assert(m_entry[3] == (u8)FloatToInt(255.0f * values->W(), 255));
+  /*
+  assert(m_entry[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
+  assert(m_entry[1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
+  assert(m_entry[2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
+  assert(m_entry[3] == (u8)FloatToInt<true,false>(255.0f * values->W(), 255));
+   */
 
   // just assign the end-points of index 1
   Col4 s = Col4(
@@ -217,10 +219,12 @@ Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSin
   // natural numbers / 255, no need to round
   PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry));
 
-  assert(m_entry[0] == (u8)FloatToInt(255.0f * values->X(), 255));
-  assert(m_entry[1] == (u8)FloatToInt(255.0f * values->Y(), 255));
-  assert(m_entry[2] == (u8)FloatToInt(255.0f * values->Z(), 255));
-  assert(m_entry[3] == (u8)FloatToInt(255.0f * values->W(), 255));
+  /*
+  assert(m_entry[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
+  assert(m_entry[1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
+  assert(m_entry[2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
+  assert(m_entry[3] == (u8)FloatToInt<true,false>(255.0f * values->W(), 255));
+   */
 
   // just assign the end-points of index 1
   Col4 s = Col4(
@@ -257,10 +261,12 @@ Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSin
   // natural numbers / 255, no need to round
   PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry));
 
-  assert(m_entry[0] == (u8)FloatToInt(255.0f * values->X(), 255));
-  assert(m_entry[1] == (u8)FloatToInt(255.0f * values->Y(), 255));
-  assert(m_entry[2] == (u8)FloatToInt(255.0f * values->Z(), 255));
-  assert(m_entry[3] == (u8)FloatToInt(255.0f * values->W(), 255));
+  /*
+  assert(m_entry[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
+  assert(m_entry[1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
+  assert(m_entry[2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
+  assert(m_entry[3] == (u8)FloatToInt<true,false>(255.0f * values->W(), 255));
+   */
 
   // just assign the end-points of index 1
   Col4 s = Col4(

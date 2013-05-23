@@ -61,7 +61,7 @@
 #define SQUISH_SSE_SWAP16( )								\
 	SQUISH_SSE_SHUF( 3, 2, 1, 0 )
 
-#define _mm_shuffle_epi16(r,s)	_mm_shufflelo_epi16( _mm_shufflehi_epi16( res, SQUISH_SSE_SWAP16() ), SQUISH_SSE_SWAP16() )
+#define _mm_shuffle_epi16(r,s)	_mm_shufflelo_epi16( _mm_shufflehi_epi16( res, s ), s )
 
 namespace squish {
 
@@ -614,7 +614,7 @@ public:
 		return Col3( _mm_cmpgt_epi32( v.m_v, _mm_setzero_si128( ) ) );
 	}
 
-	friend void PackBytes( Col3::Arg a, int &loc )
+	friend void PackBytes( Col3::Arg a, unsigned int &loc )
 	{
 		__m128i
 
@@ -624,7 +624,17 @@ public:
 		loc = _mm_cvtsi128_si32( r );
 	}
 	
-	friend void PackWords( Col3::Arg a, __int64 &loc )
+	friend void PackBytes( Col3::Arg a, int &loc )
+	{
+		__m128i
+
+		r = _mm_packs_epi32( a.m_v, a.m_v );
+		r = _mm_packs_epi16( r, r );
+
+		loc = _mm_cvtsi128_si32( r );
+	}
+	
+	friend void PackWords( Col3::Arg a, unsigned __int64 &loc )
 	{
 		__m128i
 		  
@@ -635,7 +645,17 @@ public:
 //		loc = _mm_cvtsi128_si64( r );
 		_mm_storel_epi64( (__m128i *)&loc, r );
 	}
+	
+	friend void PackWords( Col3::Arg a, __int64 &loc )
+	{
+		__m128i
+		  
+		r = _mm_packs_epi32( a.m_v, a.m_v );
 
+//		loc = _mm_cvtsi128_si64( r );
+		_mm_storel_epi64( (__m128i *)&loc, r );
+	}
+	
 	// clamp the output to [0, 1]
 	Col3 Clamp() const {
 		Col3 const one (0xFF);
@@ -681,11 +701,25 @@ public:
 	{
 		_mm_store_si128( (__m128i *)destination, _mm_unpacklo_epi64( a.m_v, b.m_v ) );
 	}
-
+	
+	friend void StoreUnaligned( Col3::Arg a, void *destination )
+	{
+		_mm_storeu_si128( (__m128i *)destination, a.m_v );
+	}
+	
 	friend void StoreUnaligned( Col3::Arg a, Col3::Arg b, void *destination )
 	{
 		_mm_storeu_si128( (__m128i *)destination, _mm_unpacklo_epi64( a.m_v, b.m_v ) );
 	}
+	
+	friend void StoreUnaligned( Col3::Arg a, u8* loc ) {
+	  PackBytes( a, (unsigned int&) (*((unsigned int *)loc)) ); }
+	friend void StoreUnaligned( Col3::Arg a, u16* loc ) {
+	  PackWords( a, (unsigned __int64&) (*((unsigned __int64 *)loc)) ); }
+	friend void StoreUnaligned( Col3::Arg a, s8* loc ) {
+	  PackBytes( a, (int&) (*((int *)loc)) ); }
+	friend void StoreUnaligned( Col3::Arg a, s16* loc ) {
+	  PackWords( a, (__int64&) (*((__int64 *)loc)) ); }
 
 private:
 	__m128i m_v;
@@ -1372,7 +1406,7 @@ public:
 		) );
 	}
 
-	friend void PackBytes( Col4::Arg a, int &loc )
+	friend void PackBytes( Col4::Arg a, unsigned int &loc )
 	{
 		__m128i
 
@@ -1382,7 +1416,17 @@ public:
 		loc = _mm_cvtsi128_si32 ( r );
 	}
 	
-	friend void PackWords( Col4::Arg a, __int64 &loc )
+	friend void PackBytes( Col4::Arg a, int &loc )
+	{
+		__m128i
+
+		r = _mm_packs_epi32( a.m_v, a.m_v );
+		r = _mm_packs_epi16( r, r );
+
+		loc = _mm_cvtsi128_si32 ( r );
+	}
+	
+	friend void PackWords( Col4::Arg a, unsigned __int64 &loc )
 	{
 		__m128i
 		  
@@ -1393,8 +1437,18 @@ public:
 //		loc = _mm_cvtsi128_si64( r );
 		_mm_storel_epi64( (__m128i *)&loc, r );
 	}
+	
+	friend void PackWords( Col4::Arg a, __int64 &loc )
+	{
+		__m128i
+		  
+		r = _mm_packs_epi32( a.m_v, a.m_v );
 
-	friend void UnpackBytes( Col4 &a, const int &loc )
+//		loc = _mm_cvtsi128_si64( r );
+		_mm_storel_epi64( (__m128i *)&loc, r );
+	}
+	
+	friend void UnpackBytes( Col4 &a, const unsigned int &loc )
 	{
 		__m128i
 
@@ -1405,7 +1459,18 @@ public:
 		a = Col4( r );
 	}
 	
-	friend void UnpackWords( Col4 &a, const __int64 &loc )
+	friend void UnpackBytes( Col4 &a, const int &loc )
+	{
+		__m128i
+
+		r = _mm_cvtsi32_si128 ( loc );
+		r = _mm_unpacklo_epi8( r, r );
+		r = _mm_unpacklo_epi16( r, r );
+
+		a = Col4( r ) >> 24;
+	}
+	
+	friend void UnpackWords( Col4 &a, const unsigned __int64 &loc )
 	{
 		__m128i
 
@@ -1414,7 +1479,17 @@ public:
 
 		a = Col4( r );
 	}
+	
+	friend void UnpackWords( Col4 &a, const __int64 &loc )
+	{
+		__m128i
 
+		r = _mm_loadl_epi64( (__m128i *)&loc );
+		r = _mm_unpacklo_epi16( r, r );
+
+		a = Col4( r ) >> 16;
+	}
+	
 	// clamp the output to [0, 1]
 	Col4 Clamp() const {
 		Col4 const one (0xFF);
@@ -1475,6 +1550,24 @@ public:
 	{
 		_mm_storeu_si128( (__m128i *)destination, _mm_unpacklo_epi64( a.m_v, b.m_v ) );
 	}
+	
+	friend void StoreUnaligned( Col4::Arg a, u8* loc ) {
+	  PackBytes( a, (unsigned int&) (*((unsigned int *)loc)) ); }
+	friend void StoreUnaligned( Col4::Arg a, u16* loc ) {
+	  PackWords( a, (unsigned __int64&) (*((unsigned __int64 *)loc)) ); }
+	friend void StoreUnaligned( Col4::Arg a, s8* loc ) {
+	  PackBytes( a, (int&) (*((int *)loc)) ); }
+	friend void StoreUnaligned( Col4::Arg a, s16* loc ) {
+	  PackWords( a, (__int64&) (*((__int64 *)loc)) ); }
+	
+	friend void LoadUnaligned( Col4 &a, const u8* loc ) {
+	  UnpackBytes( a, (const unsigned int&) (*((const unsigned int *)loc)) ); }
+	friend void LoadUnaligned( Col4 &a, const u16* loc ) {
+	  UnpackWords( a, (const unsigned __int64&) (*((const unsigned __int64 *)loc)) ); }
+	friend void LoadUnaligned( Col4 &a, const s8* loc ) {
+	  UnpackBytes( a, (const int&) (*((const int *)loc)) ); }
+	friend void LoadUnaligned( Col4 &a, const s16* loc ) {
+	  UnpackWords( a, (const __int64&) (*((const __int64 *)loc)) ); }
 
 private:
 	__m128i m_v;
@@ -2926,7 +3019,7 @@ public:
 #else
 		// use SSE2 instructions
 		if (round)
-		      return Col4( _mm_cvttps_epi32( _mm_add_ps( v.m_v, _mm_set1_ps( 0.5f ) ) ) );
+		      return Col4( _mm_cvtps_epi32( v.m_v ) );
 		else
 		      return Col4( _mm_cvttps_epi32( v.m_v ) );
 #endif

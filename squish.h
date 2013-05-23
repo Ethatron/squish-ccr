@@ -59,32 +59,38 @@ enum
 	kBtc7 = (  7 << 0 ),
 	//! Use CTX1 compression.
 	kCtx1 = (  8 << 0 ),
-	//! Use a compression
+	//! Use some compression (mask)
 	kBtcp = ( 15 << 0 ),
 	
 	//! Use a perceptual metric for colour error (the default).
-	kColourMetricPerceptual = ( 1 << 8 ),
+	kColourMetricPerceptual = ( 1 << 4 ),
 	//! Use a uniform metric for colour error.
-	kColourMetricUniform = ( 2 << 8 ),
+	kColourMetricUniform = ( 2 << 4 ),
 	//! Use a unit metric for colour error.
-	kColourMetricUnit = ( 3 << 8 ),
-	//! Use a metric
-	kColourMetrics = ( 3 << 8 ),
+	kColourMetricUnit = ( 3 << 4 ),
+	//! Use a multi-channel grayscale metric for colour error.
+	kColourMetricGray = ( 4 << 4 ),
+	//! Use some metric (mask)
+	kColourMetrics = ( 7 << 4 ),
 
 	//! Weight the colour by alpha during cluster fit (disabled by default).
 	kWeightColourByAlpha = ( 1 << 10 ),
 	//! Don't code alpha, set alpha to 255 after weighting (disabled by default).
 	kExcludeAlphaFromPalette = ( 1 << 11 ),
 	
-	//! Transform input values/points from signed to unsigned (disabled by default).
-	kSignedIn = ( 1 << 12 ),	// BC4-5/6
-	//! Transform output points/values from unsigned to signed (disabled by default).
-	kSignedOut = ( 1 << 13 ),	// BC4-5/6
+	//! Transform values/points from signed (disabled by default).
+	kSignedExternal = ( 1 << 12 ),	// BC4-6
+	//! Store/restore values/points as signed internally (disabled by default).
+	kSignedInternal = ( 2 << 12 ),	// BC4-6
+	//! Use some datatype transform (mask)
+	kSignedness = ( 3 << 12 ),
 
-	//! Transform input values/points from sRGB to linear RGB (disabled by default).
-	kSrgbIn = ( 1 << 12 ),		// BC1-3/7
-	//! Transform output points/values from linear RGB to sRGB (disabled by default).
-	kSrgbOut = ( 1 << 13 ),		// BC1-3/7
+	//! Transform values/points from sRGB (disabled by default).
+	kSrgbExternal = ( 1 << 12 ),	// BC1-3/7
+	//! Store/restore points/values as sRGB internally (disabled by default).
+	kSrgbInternal = ( 2 << 12 ),	// BC1-3/7
+	//! Use some gamma transform (mask)
+	kSrgbness = ( 3 << 12 ),
 
 	//! Use a fast but low quality colour compressor.
 	kColourRangeFit	= ( 1 << 14 ),
@@ -119,6 +125,18 @@ enum
 	kVariableCodingMode13 = ( 13 << 24 ),
 	kVariableCodingMode14 = ( 14 << 24 ),
 	kVariableCodingModes  = ( 15 << 24 ),
+
+	//! Use to code a specific multi-channel grayscale precision (not specified by default).
+	kVariableCodingBits10 = (  1 << 28 ),	// 4-1+4-1+4     = 10, BC1-3,BC7,CTX1
+	kVariableCodingBits13 = (  2 << 28 ),	// 5-1+5-1+5     = 13, BC1-3,BC7,CTX1
+	kVariableCodingBits14 = (  3 << 28 ),	// 5-1+6-1+5     = 14, BC1-3,BC7,CTX1
+	kVariableCodingBits15 = (  4 << 28 ),	// 8-1+8         = 15, BC7,CTX1
+	kVariableCodingBits16 = (  5 << 28 ),	// 6-1+6-1+6     = 16, BC7
+	kVariableCodingBits17 = (  6 << 28 ),	// 5-1+5-1+5-1+5 = 17, BC7
+	kVariableCodingBits19 = (  7 << 28 ),	// 7-1+7-1+7     = 19, BC7
+	kVariableCodingBits22 = (  8 << 28 ),	// 8-1+8-1+8     = 22, BC7
+	kVariableCodingBits25 = (  9 << 28 ),	// 7-1+7-1+7-1+7 = 25, BC7
+	kVariableCodingBits   = ( 15 << 28 ),
 };
 
 /*! @brief Validates and corrects compressor flags before use.

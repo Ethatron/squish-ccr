@@ -37,7 +37,7 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
   : m_count(0)
   , m_unweighted(true)
 {
-  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
+  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbExternal) != 0);
   
   bool const preserveThird = ((flags & kColourMetricUnit   ) != 0);
   bool const weightByAlpha = ((flags & kWeightColourByAlpha) != 0);

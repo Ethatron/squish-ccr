@@ -56,9 +56,9 @@ ColourSingleFit::ColourSingleFit(ColourSet const* colours, int flags)
   // grab the single colour
   Vec3 const* values = m_colours->GetPoints();
 
-  m_colour[0] = (u8)FloatToInt(255.0f * values->X(), 255);
-  m_colour[1] = (u8)FloatToInt(255.0f * values->Y(), 255);
-  m_colour[2] = (u8)FloatToInt(255.0f * values->Z(), 255);
+  m_colour[0] = (u8)FloatToInt<true,false>(255.0f * values->X(), 255);
+  m_colour[1] = (u8)FloatToInt<true,false>(255.0f * values->Y(), 255);
+  m_colour[2] = (u8)FloatToInt<true,false>(255.0f * values->Z(), 255);
 
   // initialize the best error
   m_besterror = INT_MAX;

@@ -67,9 +67,11 @@ ColourSingleSnap::ColourSingleSnap(ColourSet const* colours, int flags)
   // natural numbers / 255, no need to round
   PackBytes(FloatToInt<true>((*values) * Vec3(255.0f)), (int &)(m_colour));
 
-  assert(m_colour[0] == (u8)FloatToInt(255.0f * values->X(), 255));
-  assert(m_colour[1] == (u8)FloatToInt(255.0f * values->Y(), 255));
-  assert(m_colour[2] == (u8)FloatToInt(255.0f * values->Z(), 255));
+  /*
+  assert(m_colour[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
+  assert(m_colour[1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
+  assert(m_colour[2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
+   */
 }
 
 void ColourSingleSnap::Compress3(void* block)

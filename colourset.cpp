@@ -38,7 +38,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   , m_unweighted(true)
   , m_transparent(false)
 {
-  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
+  const float *rgbLUT = ComputeGammaLUT((flags & kSrgbExternal) != 0);
 
   // check the compression mode for dxt1
   bool const isBtc1        = ((flags & kBtcp                   ) == kBtc1);

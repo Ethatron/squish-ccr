@@ -44,16 +44,20 @@ extern const Col4 weights_C4[5][16];
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
+template<const bool round, const bool clamp>
 static doinline int passreg FloatToInt(float a, int limit) ccr_restricted
 {
   // use ANSI round-to-zero behaviour to get round-to-nearest
-  int i = (int)(a + 0.5f);
+  assert((a >= 0.0f) || !round);
+  int i = (int)(a + (round ? 0.5f : 0.0f));
 
   // clamp to the limit
-  if (i < 0)
-    i = 0;
-  else if (i > limit)
-    i = limit;
+  if (clamp) {
+    if (i < 0)
+      i = 0;
+    else if (i > limit)
+      i = limit;
+  }
 
   // done
   return i;
@@ -70,9 +74,9 @@ static doinline int passreg FloatTo565(Vec3::Arg colour) ccr_restricted
   int b = rgb.B();
 
   /* not necessarily true
-  assert(r == FloatToInt(31.0f * colour.X(), 31));
-  assert(g == FloatToInt(63.0f * colour.Y(), 63));
-  assert(b == FloatToInt(31.0f * colour.Z(), 31));
+  assert(r == FloatToInt<true,false>(31.0f * colour.X(), 31));
+  assert(g == FloatToInt<true,false>(63.0f * colour.Y(), 63));
+  assert(b == FloatToInt<true,false>(31.0f * colour.Z(), 31));
    */
 
   // pack into a single value
@@ -732,8 +736,14 @@ static doinline void passreg Codebook3(u8 (&codes)[4*4], bool bw) ccr_restricted
       codes[12 + i] = 0;
     }
     else {
+      int i21 = ((2 * c + 1 * d) * 0xAAAB);
+      
+      codes[ 8 + i] = (u8)(i21 >> 17);
+      codes[12 + i] = (u8)(c + d - codes[ 8 + i]);
+      /*
       codes[ 8 + i] = (u8)(((2 * c + 1 * d) * 0xAAAB) >> 17);
       codes[12 + i] = (u8)(((1 * c + 2 * d) * 0xAAAB) >> 17);
+       */
     }
   }
 
@@ -752,12 +762,12 @@ static doinline void passreg Codebook4(u8 (&codes)[4*4]) ccr_restricted
     {
       int i21 = ((2 * c + 1 * d) * 0xAAAB);
       
-      codes[ 8 + i] = (u8)(i21 >> 18);
+      codes[ 8 + i] = (u8)(i21 >> 17);
       codes[12 + i] = (u8)(c + d - codes[ 8 + i]);
       /*
       codes[ 8 + i] = (u8)(((2 * c + 1 * d) * 0xAAAB) >> 17);
       codes[12 + i] = (u8)(((1 * c + 2 * d) * 0xAAAB) >> 17);
-      */
+       */
     }
   }
 
@@ -786,7 +796,7 @@ static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
       codes[3 + i] = (u8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
       codes[4 + i] = (u8)(((2 * c + 3 * d) * 0xCCCD) >> 18);
       codes[5 + i] = (u8)(((1 * c + 4 * d) * 0xCCCD) >> 18);
-      */
+       */
       codes[6 + i] = (u8)0;
       codes[7 + i] = (u8)255;
     }
@@ -813,7 +823,7 @@ static doinline void passreg Codebook6(s8 (&codes)[8*1]) ccr_restricted
       codes[3 + i] = (s8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
       codes[4 + i] = (s8)(((2 * c + 3 * d) * 0xCCCD) >> 18);
       codes[5 + i] = (s8)(((1 * c + 4 * d) * 0xCCCD) >> 18);
-      */
+       */
       codes[6 + i] = (s8)-127;
       codes[7 + i] = (s8) 127;
     }
@@ -846,7 +856,7 @@ static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
       cd = (3 * c + 4 * d); codes[5 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (2 * c + 5 * d); codes[6 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (1 * c + 6 * d); codes[7 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
-      */
+       */
     }
   }
 }

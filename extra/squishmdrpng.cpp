@@ -365,7 +365,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
   bool alpha = sourceImage.IsAlpha();
 
   /* kill alpha-channel */
-  if (!alpha && (((flags & kBtcp) <= kBtc3) || ((flags & kBtcp) <= kBtc7)))
+  if (!alpha && (((flags & kBtcp) <= kBtc3) || ((flags & kBtcp) >= kBtc7)))
     flags = (flags | kExcludeAlphaFromPalette) & (~kWeightColourByAlpha) & (~kAlphaIterativeFit);
   if ((mapping == -1) && ((flags & kBtcp) == kBtc4))
     mapping = 0;
@@ -777,7 +777,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
   PngRows targetRows(width, height, 4);
 
   /* kill alpha-channel */
-  if (!alpha && (((flags & kBtcp) <= kBtc3) || ((flags & kBtcp) <= kBtc7)))
+  if (!alpha && (((flags & kBtcp) <= kBtc3) || ((flags & kBtcp) >= kBtc7)))
     flags = (flags | kExcludeAlphaFromPalette) & (~kWeightColourByAlpha) & (~kAlphaIterativeFit);
   if ((mapping == -1) && ((flags & kBtcp) == kBtc4))
     mapping = 0;

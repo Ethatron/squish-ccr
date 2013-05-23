@@ -262,11 +262,11 @@ public:
 #if (PNG_LIBPNG_VER_MINOR >= 3)
   png_bytep* Get() const { return (png_bytep *)m_rows->Get( ); }
   PngRows* GetRows( ) const { return m_rows; }
-  u8 const* GetRow( int row ) const { return ( u8* )m_rows[row]; }
+  u16 const* GetRow( int row ) const { return ( u16* )m_rows[row]; }
 #else
   png_bytep* Get() const { return (png_bytep *)m_rows->Get( ); }
   PngRows* GetRows( ) const { return m_rows; }
-  u8 const* GetRow( int row ) const { return ( u8* )m_rows->GetRow( row ); }
+  png_bytep const GetRow( int row ) const { return ( png_bytep )m_rows->GetRow( row ); }
 #endif
 
 private:
@@ -308,7 +308,7 @@ PngImage::PngImage( std::string const& fileName )
 
   // read the image into memory
   png_set_read_fn( m_png.GetPng(), (void *)file.Get(), PNGRead);
-  //	png_init_io( m_png.GetPng(), file.Get() );
+//png_init_io( m_png.GetPng(), file.Get() );
   png_set_sig_bytes( m_png.GetPng(), 8 );
 #if (PNG_LIBPNG_VER_MINOR >= 3)
   png_read_png( m_png.GetPng(), m_png.GetInfo(), PNG_TRANSFORM_EXPAND, 0 );
@@ -324,11 +324,11 @@ PngImage::PngImage( std::string const& fileName )
 
   png_get_IHDR( m_png.GetPng(), m_png.GetInfo(), &width, &height, &bitDepth, &colourType, 0, 0, 0 );
 
-  // check the image is 8 bit
-  if( bitDepth != 8 )
+  // check the image is 16 bit
+  if (bitDepth != 16)
   {
     std::ostringstream oss;
-    oss << "cannot process " << bitDepth << "-bit image (bit depth must be 8)";
+    oss << "cannot process " << bitDepth << "-bit image (bit depth must be 16)";
     throw Error( oss.str() );
   }
 
@@ -337,7 +337,7 @@ PngImage::PngImage( std::string const& fileName )
   m_height = height;
   m_colour = ( ( colourType & PNG_COLOR_MASK_COLOR ) != 0 );
   m_alpha = ( ( colourType & PNG_COLOR_MASK_ALPHA ) != 0 );
-  m_stride = ( ( m_colour ? 3 : 1 ) + ( m_alpha ? 1 : 0 ) ) * sizeof( u8 );
+  m_stride = ( ( m_colour ? 3 : 1 ) + ( m_alpha ? 1 : 0 ) ) * sizeof(u16);
 
   // get the image rows
 #if (PNG_LIBPNG_VER_MINOR >= 3)
@@ -386,7 +386,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
   int targetDataSize = bytesPerBlock * width * height / 16;
   Mem targetData(targetDataSize);
   
-  struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U8, flags);
+  struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_F23, flags);
 
   // loop over blocks and compress them
   clock_t start = std::clock();
@@ -402,10 +402,10 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
       unsigned char* targetBlock = _targetBlock + ((y / 4) * (width / 4) + (x / 4)) * bytesPerBlock;
 
       // get the block data
-      u8 sourceRgba[16 * 4];
+      f23 sourceRgba[16 * 4];
 
       for (int py = 0, i = 0; py < 4; ++py) {
-	u8 const* row = sourceImage.GetRow(y + py) + x * stride;
+	u16 const* row = (u16*)(sourceImage.GetRow(y + py) + x * stride);
 
 	for (int px = 0; px < 4; ++px, ++i) {
 	  // get the pixel colour
@@ -422,7 +422,13 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
 	  if (alpha)
 	    sourceRgba[4 * i + 3] = *row++;
 	  else
-	    sourceRgba[4 * i + 3] = 255;
+	    sourceRgba[4 * i + 3] = 65535;
+	  
+	  if ((flags & kColourMetrics) == kColourMetricUnit) {
+	    sourceRgba[4 * i + 0] = (sourceRgba[4 * i + 0] - 32767.5f) * 2.0f;
+	    sourceRgba[4 * i + 1] = (sourceRgba[4 * i + 1] - 32767.5f) * 2.0f;
+	    sourceRgba[4 * i + 2] = (sourceRgba[4 * i + 2] - 32767.5f) * 2.0f;
+	  }
 
 	  if ((flags & kBtcp) == kBtc5) {
 	    // duplicate alpha into g (required!)
@@ -442,13 +448,16 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
 	}
       }
 
+      for (int i = 0; i < (4 * 16); ++i)
+	sourceRgba[i] /= 65535.0f;
+
       // compress this block
       s.encoder(sourceRgba, 0xFFFF, targetBlock, flags);
 
 #if (defined(VERIFY_QUANTIZER) || defined(VERIFY_ENCODER))
       // write the data into the target rows
       for (int py = 0, i = 0; py < 4; ++py) {
-	u8 *row = (u8 *)sourceImage.Get()[y + py] + x * stride;
+	u16 *row = (u16 *)sourceImage.Get()[y + py] + x * stride;
 	for (int px = 0; px < 4; ++px, ++i) {
 	  // get the pixel colour
 	  if (colour) {
@@ -524,9 +533,9 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
     // set up the image
     png_set_IHDR(
       targetPng.GetPng(), targetPng.GetInfo(), width, height,
-      8*sizeof(u8), colour && alpha ? PNG_COLOR_TYPE_RGBA : (colour ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_GRAY_ALPHA), PNG_INTERLACE_NONE,
+      8 * sizeof(unsigned char), colour && alpha ? PNG_COLOR_TYPE_RGBA : (colour ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_GRAY_ALPHA), PNG_INTERLACE_NONE,
       PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
-      );
+    );
 
     // open the target file
     File targetFile( fopen( "verify.png", "wb" ) );
@@ -587,7 +596,7 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
   // create the target rows
   PngRows targetRows(width, height, 4);
   
-  struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U8, flags);
+  struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_F23, flags);
 
   // loop over blocks and compress them
   clock_t start = std::clock();
@@ -603,20 +612,20 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
       unsigned char const* sourceBlock = _sourceBlock + ((y / 4) * (width / 4) + (x / 4)) * bytesPerBlock;
 
       // decompress back
-      u8 targetRgba[16 * 4];
+      f23 targetRgba[16 * 4];
 
       s.decoder(targetRgba, sourceBlock, flags);
 
       // write the data into the target rows
       for (int py = 0, i = 0; py < 4; ++py) {
-	u8 *row = (u8 *)targetRows.Get()[y + py] + x * 4;
+	u16 *row = (u16 *)(targetRows.Get()[y + py] + x * 4 * sizeof(u16));
 
 	for (int px = 0; px < 4; ++px, ++i) {
 	  if ((flags & kBtcp) == kBtc5) {
 	    // duplicate alpha from g (required!)
 	    // duplicate g/b from r (for greyscale)
 	    if ((flags & kColourMetrics) == kColourMetricUnit)
-	      targetRgba[4 * i + 3] = 255;
+	      targetRgba[4 * i + 3] = 65535;
 	    else {
 	      if (mapping == 3) {
 		targetRgba[4 * i + 3] = targetRgba[4 * i + 1];
@@ -625,7 +634,7 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
 		targetRgba[4 * i + 0] = targetRgba[4 * i + 0];
 	      }
 	      else {
-		targetRgba[4 * i + 3          ] = 255;
+		targetRgba[4 * i + 3          ] = 65535;
 		targetRgba[4 * i + 0 + mapping] = targetRgba[4 * i + 1];
 		targetRgba[4 * i + 3 - mapping] = targetRgba[4 * i + 0];
 		targetRgba[4 * i + 0          ] = targetRgba[4 * i + 0];
@@ -640,15 +649,21 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
 	      targetRgba[4 * i + 0] = 0;
 	    }
 	    else {
-	      targetRgba[4 * i + 3] = 255;
+	      targetRgba[4 * i + 3] = 65535;
 	      targetRgba[4 * i + 2] = targetRgba[4 * i + 0];
 	      targetRgba[4 * i + 1] = targetRgba[4 * i + 0];
 	      targetRgba[4 * i + 0] = targetRgba[4 * i + 0];
 	    }
 	  }
+	  
+	  if ((flags & kColourMetrics) == kColourMetricUnit) {
+	    targetRgba[4 * i + 0] = (targetRgba[4 * i + 0] + 1.0f) / 2.0f;
+	    targetRgba[4 * i + 1] = (targetRgba[4 * i + 1] + 1.0f) / 2.0f;
+	    targetRgba[4 * i + 2] = (targetRgba[4 * i + 2] + 1.0f) / 2.0f;
+	  }
 
 	  for (int j = 0; j < 4; ++j)
-	    *row++ = targetRgba[4 * i + j];
+	    *row++ = (u16)floor((targetRgba[4 * i + j] * 65535.0f) + 0.5f);
 	}
       }
 
@@ -695,7 +710,7 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
   // set up the image
   png_set_IHDR(
     targetPng.GetPng(), targetPng.GetInfo(), width, height,
-    8 * sizeof(u8), PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+    8 * sizeof(u16), PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
     PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
   );
 
@@ -744,12 +759,9 @@ static void Diff(std::string const& sourceFileName, std::string const& targetFil
   // work out the error
   double error = 0.0;
   for (int y = 0; y < height; ++y) {
-    u8 const* sourceRow = sourceImage.GetRow(y);
-    u8 const* targetRow = targetImage.GetRow(y);
-
     for (int x = 0; x < width; ++x) {
-      u8 const* sourcePixel = sourceRow + x * sourceStride;
-      u8 const* targetPixel = targetRow + x * targetStride;
+      u16 const* sourcePixel = (u16*)(sourceImage.GetRow(y) + x * sourceStride);
+      u16 const* targetPixel = (u16*)(targetImage.GetRow(y) + x * targetStride);
 
       for (int i = 0; i < stride; ++i) {
 	int diff = (int)sourcePixel[i] - (int)targetPixel[i];
@@ -824,7 +836,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 
   minduration = DBL_MAX;
   for (int l = 0; l < num; l += 1) {
-    struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U8, flags);
+    struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U16, flags);
 
     unsigned char* _targetBlock = benchData.Get();
 
@@ -846,10 +858,11 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 	unsigned char* targetBlock = _targetBlock + ((y / 4) * (width / 4) + (x / 4)) * bytesPerBlock;
 
 	// get the block data
-	u8 sourceRgba[16 * 4];
+	u16 sourceRgba[16 * 4];
 
 	for (int py = 0, i = 0; py < 4; ++py) {
-	  u8 const* row = sourceImage.GetRow(y + py) + x * stride;
+	  u16 const* row = (u16*)(sourceImage.GetRow(y + py) + x * stride);
+
 	  for (int px = 0; px < 4; ++px, ++i) {
 	    // get the pixel colour
 	    if (colour) {
@@ -865,7 +878,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 	    if (alpha)
 	      sourceRgba[4 * i + 3] = *row++;
 	    else
-	      sourceRgba[4 * i + 3] = 255;
+	      sourceRgba[4 * i + 3] = 65535;
 
 	    if ((flags & kBtcp) == kBtc5) {
 	      // duplicate alpha into g (required!)
@@ -918,7 +931,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 
   minduration = DBL_MAX;
   for (int l = 0; l < num; l += 1) {
-    struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U8, flags);
+    struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U16, flags);
 
     unsigned char const* sourceBlock = benchData.Get();
 
@@ -934,13 +947,13 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
       // process a row of blocks
       for (int x = 0; x < width; x += 4) {
 	// decompress back
-	u8 targetRgba[16 * 4];
+	u16 targetRgba[16 * 4];
 
 	s.decoder(targetRgba, sourceBlock, flags);
 
 	// write the data into the target rows
 	for (int py = 0, i = 0; py < 4; ++py) {
-	  u8* row = (u8*)targetRows.Get()[y + py] + x * 4;
+	  u16* row = (u16*)targetRows.Get()[y + py] + x * 4;
 	  for (int px = 0; px < 4; ++px, ++i) {
 	    for (int j = 0; j < 4; ++j)
 	      *row++ = targetRgba[4 * i + j];
