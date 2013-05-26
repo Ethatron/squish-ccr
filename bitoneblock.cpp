@@ -61,7 +61,7 @@ static void WriteBitoneBlock(int a, int b, u8 const* indices, void* block)
 static void WriteBitoneBlock(int a, int b, Col4 const& indices, void* block)
 {
   // get the block as ints
-  int* ints = (int*)block;
+  unsigned int* ints = (unsigned int*)block;
 
   Col4 reindexed =
     (indices      ) +
@@ -75,7 +75,7 @@ static void WriteBitoneBlock(int a, int b, Col4 const& indices, void* block)
   // write the indices
   // [3-0] [7-4] [11-8] [15-12] big endian dword
   // [15-12] [11-8] [7-4] [3-0] little endian dword
-  PackBytes(reindexed & Col4(0x000000FF), ints[1]);
+  StoreUnaligned(reindexed & Col4(0x000000FF), (u8*)&ints[1]);
 }
 
 void WriteBitoneBlock4(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block)
@@ -203,7 +203,7 @@ void DecompressNormalsCtx1u(u8* xyzd, void const* block)
 	 _xyz0  = FloatToInt<true>(cxyz0);
 	 _xyz0 |= Col4(0,0,0,0xFF).GetCol3();
 
-    PackBytes(_xyz0, *((int *)(&xyzd[4 * i])));
+    StoreUnaligned(_xyz0, &xyzd[4 * i]);
   }
 }
 
@@ -228,7 +228,7 @@ void DecompressNormalsCtx1u(u16* xyzd, void const* block)
 	 _xyz0  = FloatToInt<true>(cxyz0);
 	 _xyz0 |= Col4(0,0,0,0xFF).GetCol3();
 
-    PackWords(_xyz0, *((__int64 *)(&xyzd[4 * i])));
+    StoreUnaligned(_xyz0, &xyzd[4 * i]);
   }
 }
 

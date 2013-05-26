@@ -175,7 +175,7 @@ Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSin
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry));
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (unsigned int &)(m_entry));
 
   /*
   assert(m_entry[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
@@ -217,7 +217,7 @@ Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSin
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry));
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (unsigned int &)(m_entry));
 
   /*
   assert(m_entry[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
@@ -259,7 +259,7 @@ Scr4 PaletteSingleSnap::ComputeEndPoints(int set, Vec4 const &metric, PaletteSin
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry));
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (unsigned int &)(m_entry));
 
   /*
   assert(m_entry[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));

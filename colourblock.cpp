@@ -58,7 +58,7 @@ static void WriteColourBlock(int a, int b, u8 const* indices, void* block)
 static void WriteColourBlock(int a, int b, Col4 const& indices, void* block)
 {
   // get the block as ints
-  int* ints = (int*)block;
+  unsigned int* ints = (unsigned int*)block;
 
   Col4 reindexed =
     (indices      ) +
@@ -72,7 +72,7 @@ static void WriteColourBlock(int a, int b, Col4 const& indices, void* block)
   // write the indices
   // [3-0] [7-4] [11-8] [15-12] big endian dword
   // [15-12] [11-8] [7-4] [3-0] little endian dword
-  PackBytes(reindexed & Col4(0x000000FF), ints[1]);
+  StoreUnaligned(reindexed & Col4(0x000000FF), (u8*)&ints[1]);
 }
 
 void WriteColourBlock3(Vec3::Arg start, Vec3::Arg end, u8 const* indices, void* block)

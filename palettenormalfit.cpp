@@ -102,7 +102,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 	// compute the projection
 	GetPrincipleProjection(start, end, principle, centroid, count, values);
 	
-	// TODO: check min/max swap as well
+	/* TODO: check min/max swap as well
 	Vec4 mmn, mmx;
 	mmn = mmx = values[0];
 	for (int i = 1; i < count; ++i) {
@@ -111,6 +111,11 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 	  mmn = Min(mmn, values[i]);
 	  mmx = Max(mmx, values[i]);
 	}
+
+	// exclude z/alpha from PCA
+	start = TransferW(start, mmn);
+	end   = TransferW(end  , mmx);
+	 */
 #endif
 #else
 	// compute the normal
@@ -134,11 +139,11 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 	  mmn = Min(mmn, values[i]);
 	  mmx = Max(mmx, values[i]);
 	}
-#endif
 
 	// exclude z/alpha from PCA
 	start = TransferW(start, mmn);
 	end   = TransferW(end  , mmx);
+#endif
       }
 
       // clamp the output to [0, 1]
@@ -266,7 +271,8 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
     }
 
     // map normal-error to colour-error range
-    error += berror + Vec4(nerror) * Vec4((2.0f * 2.0f) / (255.0f * 255.0f));
+    // sqrt(1*1 + 1*1 + 1*1)² vs. 2.0f²
+    error += berror + Scr4(nerror) * Scr4(3.0f / 4.0f);
 
     // kill early if this scheme looses
     if (!(error < m_besterror))

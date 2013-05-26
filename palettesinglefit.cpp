@@ -182,7 +182,7 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (unsigned int &)(m_entry[set]));
 
   /*
   assert(m_entry[set][0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
@@ -255,7 +255,7 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (unsigned int &)(m_entry[set]));
 
   /*
   assert(m_entry[set][0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));
@@ -327,7 +327,7 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (int &)(m_entry[set]));
+  PackBytes(FloatToInt<true>((*values) * Vec4(255.0f)), (unsigned int &)(m_entry[set]));
 
   /*
   assert(m_entry[set][0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));

@@ -117,7 +117,7 @@ void BitoneRangeFit::Compress4(void* block)
     Scr3 dist; MinDistance4<true>(dist, idx, value, codes);
 
     // accumulate the error
-    error += dist * freq[i];
+    AddDistance(dist, error, freq[i]);
 
     // save the index
     closest[i] = (u8)idx;

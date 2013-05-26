@@ -40,6 +40,9 @@ class PaletteSet;
 class PaletteNormalFit : public PaletteSingleMatch
 {
 public:
+  static bool IsClusterable(int flags) { return false; }
+
+public:
   PaletteNormalFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
 
   virtual void Compress(void* block, vQuantizer &q, int mode);

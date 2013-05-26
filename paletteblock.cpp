@@ -1274,7 +1274,7 @@ const u8 whichsetinpartition[64][/*3*/2][16] = {
 /* -----------------------------------------------------------------------------
  */
 template<const int sets, const int ibits, const int begin>
-void ReadPaletteBlock(int partition, int *codes, Col4 &blkl, Col4 &blkh, int *out)
+void ReadPaletteBlock(int partition, unsigned int *codes, Col4 &blkl, Col4 &blkh, int *out)
 {
   Col4 iblk;
 
@@ -1476,7 +1476,7 @@ void ReadPaletteBlock(int partition, int *codes, Col4 &blkl, Col4 &blkh, int *ou
 }
 
 template<const int sets, const int ibits, const int abits, const int begin>
-void ReadPaletteBlock(int partition, int *icodes, int *acodes, Col4 &blkl, Col4 &blkh, int *out)
+void ReadPaletteBlock(int partition, unsigned int *icodes, unsigned int *acodes, Col4 &blkl, Col4 &blkh, int *out)
 {
 #define	fbits	(ibits < abits ? ibits : abits)	// index-block of smaller number of index-bits leads (first)
 #define	sbits	(ibits > abits ? ibits : abits)	// index-block of larger number of index-bits follows (second)
@@ -1649,7 +1649,7 @@ void ReadPaletteBlock3_m1(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[3][1 << 3];
+  unsigned int codes[3][1 << 3];
   int partition;
 
   /* read in */
@@ -1730,7 +1730,7 @@ void ReadPaletteBlock3_m1(u8* rgba, void const* block) {
   CodebookP<3>(codes[0], a[0][C], b[0][C]);
 
   // 128 - 83 -> 45 index bits + 3 bit from 3 set start/end order -> 16 * 3bit
-  ReadPaletteBlock<3, 3, 83>(partition, (int *)codes, blkl, blkh, (int *)rgba);
+  ReadPaletteBlock<3, 3, 83>(partition, (unsigned int *)codes, blkl, blkh, (int *)rgba);
 }
 
 void ReadPaletteBlock3_m2(u8* rgba, void const* block) {
@@ -1740,7 +1740,7 @@ void ReadPaletteBlock3_m2(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[2][1 << 3];
+  unsigned int codes[2][1 << 3];
   int partition;
 
   /* read in */
@@ -1802,7 +1802,7 @@ void ReadPaletteBlock3_m2(u8* rgba, void const* block) {
   CodebookP<3>(codes[0], a[0][C], b[0][C]);
 
   // 128 - 82 -> 46 index bits + 2 bit from 2 set start/end order -> 16 * 3bit
-  ReadPaletteBlock<2, 3, 82>(partition, (int *)codes, blkl, blkh, (int *)rgba);
+  ReadPaletteBlock<2, 3, 82>(partition, (unsigned int *)codes, blkl, blkh, (int *)rgba);
 }
 
 void ReadPaletteBlock3_m3(u8* rgba, void const* block) {
@@ -1812,7 +1812,7 @@ void ReadPaletteBlock3_m3(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[3][1 << 2];
+  unsigned int codes[3][1 << 2];
   int partition;
 
   /* read in */
@@ -1869,7 +1869,7 @@ void ReadPaletteBlock3_m3(u8* rgba, void const* block) {
   CodebookP<2>(codes[0], a[0][C], b[0][C]);
 
   // 128 - 99 -> 29 index bits + 3 bit from 3 set start/end order -> 16 * 2bit
-  ReadPaletteBlock<3, 2, 99>(partition, (int *)codes, blkl, blkh, (int *)rgba);
+  ReadPaletteBlock<3, 2, 99>(partition, (unsigned int *)codes, blkl, blkh, (int *)rgba);
 }
 
 void ReadPaletteBlock3_m4(u8* rgba, void const* block) {
@@ -1879,7 +1879,7 @@ void ReadPaletteBlock3_m4(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[2][1 << 2];
+  unsigned int codes[2][1 << 2];
   int partition;
 
   /* read in */
@@ -1943,7 +1943,7 @@ void ReadPaletteBlock3_m4(u8* rgba, void const* block) {
   CodebookP<2>(codes[0], a[0][C], b[0][C]);
 
   // 128 - 98 -> 30 index bits + 2 bit from 2 set start/end order -> 16 * 2bit
-  ReadPaletteBlock<2, 2, 98>(partition, (int *)codes, blkl, blkh, (int *)rgba);
+  ReadPaletteBlock<2, 2, 98>(partition, (unsigned int *)codes, blkl, blkh, (int *)rgba);
 }
 
 void ReadPaletteBlock4_m5(u8* rgba, void const* block) {
@@ -1953,7 +1953,7 @@ void ReadPaletteBlock4_m5(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[2][1 << 3];
+  unsigned int codes[2][1 << 3];
   int rix;
 
   /* read in */
@@ -2084,9 +2084,9 @@ void ReadPaletteBlock4_m5(u8* rgba, void const* block) {
 
   // 128 - 50 -> 78 index bits -> 31 + 47 index bits + 2 bit from 2 set start/end order -> 16 * 2bit + 16 * 3bit
   if (!rix)
-    ReadPaletteBlock<1, 2,3, 50>(0, (int *)codes[0], (int *)codes[1], blkl, blkh, (int *)rgba);
+    ReadPaletteBlock<1, 2,3, 50>(0, (unsigned int *)codes[0], (unsigned int *)codes[1], blkl, blkh, (int *)rgba);
   else
-    ReadPaletteBlock<1, 3,2, 50>(0, (int *)codes[0], (int *)codes[1], blkl, blkh, (int *)rgba);
+    ReadPaletteBlock<1, 3,2, 50>(0, (unsigned int *)codes[0], (unsigned int *)codes[1], blkl, blkh, (int *)rgba);
 }
 
 void ReadPaletteBlock4_m6(u8* rgba, void const* block) {
@@ -2096,7 +2096,7 @@ void ReadPaletteBlock4_m6(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[2][1 << 2];
+  unsigned int codes[2][1 << 2];
   int rix;
 
   /* read in */
@@ -2225,7 +2225,7 @@ void ReadPaletteBlock4_m6(u8* rgba, void const* block) {
   CodebookP<2>(codes[1], a[1][C], b[1][C]);
 
   // 128 - 66 -> 62 index bits -> 31 + 31 index bits + 2 bit from 2 set start/end order -> 16 * 2bit + 16 * 3bit
-  ReadPaletteBlock<1, 2,2, 66>(0, (int *)codes[0], (int *)codes[1], blkl, blkh, (int *)rgba);
+  ReadPaletteBlock<1, 2,2, 66>(0, (unsigned int *)codes[0], (unsigned int *)codes[1], blkl, blkh, (int *)rgba);
 }
 
 void ReadPaletteBlock4_m7(u8* rgba, void const* block) {
@@ -2235,7 +2235,7 @@ void ReadPaletteBlock4_m7(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[1][1 << 4];
+  unsigned int codes[1][1 << 4];
   int partition;
 
   /* read in */
@@ -2279,7 +2279,7 @@ void ReadPaletteBlock4_m7(u8* rgba, void const* block) {
   CodebookP<4>(codes[0], a[0][C], b[0][C]);
 
   // 128 - 65 -> 63 index bits + 1 bit from 1 set start/end order -> 16 * 4bit
-  ReadPaletteBlock<1, 4, 65>(partition, (int *)codes, blkl, blkh, (int *)rgba);
+  ReadPaletteBlock<1, 4, 65>(partition, (unsigned int *)codes, blkl, blkh, (int *)rgba);
 }
 
 void ReadPaletteBlock4_m8(u8* rgba, void const* block) {
@@ -2289,7 +2289,7 @@ void ReadPaletteBlock4_m8(u8* rgba, void const* block) {
   Col4 blkl, blkh;
 
   // remap the indices
-  int codes[2][1 << 2];
+  unsigned int codes[2][1 << 2];
   int partition;
 
   /* read in */
@@ -2357,10 +2357,10 @@ void ReadPaletteBlock4_m8(u8* rgba, void const* block) {
   CodebookP<2>(codes[0], a[0][C], b[0][C]);
 
   // 128 - 98 -> 30 index bits + 2 bit from 2 set start/end order -> 16 * 2bit
-  ReadPaletteBlock<2, 2, 98>(partition, (int *)codes, blkl, blkh, (int *)rgba);
+  ReadPaletteBlock<2, 2, 98>(partition, (unsigned int *)codes, blkl, blkh, (int *)rgba);
 }
 
-void DecompressPalettesBtc7u(u8* rgba, void const* block)
+void DecompressColoursBtc7u(u8* rgba, void const* block)
 {
   // get the block bytes
   u8 const* bytes = reinterpret_cast< u8 const* >(block);
@@ -2386,17 +2386,17 @@ void DecompressPalettesBtc7u(u8* rgba, void const* block)
   }
 }
 
-void DecompressPalettesBtc7u(u16* rgba, void const* block)
+void DecompressColoursBtc7u(u16* rgba, void const* block)
 {
-  u8 bytes[4 * 16]; DecompressPalettesBtc7u(bytes, block);
+  u8 bytes[4 * 16]; DecompressColoursBtc7u(bytes, block);
 
   for (int v = 0; v < (4 * 16); v++)
     rgba[v] = bytes[v] * (65535 / 255);
 }
 
-void DecompressPalettesBtc7u(f23* rgba, void const* block)
+void DecompressColoursBtc7u(f23* rgba, void const* block)
 {
-  u8 bytes[4 * 16]; DecompressPalettesBtc7u(bytes, block);
+  u8 bytes[4 * 16]; DecompressColoursBtc7u(bytes, block);
 
   for (int v = 0; v < (4 * 16); v++)
     rgba[v] = bytes[v] * (1.0f / 255.0f);

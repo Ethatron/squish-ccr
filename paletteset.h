@@ -99,7 +99,7 @@ public:
 
   // map from the set to indices and back to colours
   void RemapIndices(u8 const* source, u8* target, int set) const;
-  void UnmapIndices(u8 const* source, u8* rgba, int set, int *codes, int cmask) const;
+  void UnmapIndices(u8 const* source, u8* rgba, int set, unsigned int *codes, int cmask) const;
 
 private:
   int   m_numsets;

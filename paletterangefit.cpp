@@ -264,7 +264,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 	  MinDistance4<true>(dist, idx, value, codes, j);
 
 	// accumulate the error
-	error += dist * freq[i];
+	AddDistance(dist, error, freq[i]);
 
 	// save the index
 	closest[s][i] = (u8)idx;
@@ -297,7 +297,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
 	    MinDistance4<false>(dist, i, value, codes, j);
 
 	  // accumulate the error
-	  lerror += dist * freq[i];
+	  AddDistance(dist, lerror, freq[i]);
 	}
 
 	if (gerror > lerror) {
@@ -311,26 +311,22 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
       end   = q.SnapToLattice(m_end  [s], sb, 1 << SBEND  , bestom >> 1);
       
       // resolve "metric * (value - code)" to "metric * value - metric * code"
-      int ccs = CodebookP(codes, kb, start, end);
+      int ccs = CodebookP(codes, kb, metric * start, metric * end);
 
       for (int i = 0; i < count; ++i) {
-	// find the closest code
-	Scr4 dist = Scr4(FLT_MAX);
 	int idx = 0;
 
-	for (int j = 0; j < ccs; ++j) {
-	  Scr4 d = LengthSquared(metric * (values[i] - codes[j]));
-	  if (d < dist) {
-	    dist = d;
-	    idx = j;
-	  }
-	}
+	// find the closest code
+	Vec4 value = metric * values[i];
+	Scr4 dist = Scr4(FLT_MAX);
+	for (int j = 0; j < ccs; ++j)
+	  MinDistance4<true>(dist, idx, value, codes, j);
+
+	// accumulate the error
+	AddDistance(dist, error, freq[i]);
 
 	// save the index
 	closest[s][i] = (u8)idx;
-
-	// accumulate the error
-	error += dist * freq[i];
       }
 #endif
     }

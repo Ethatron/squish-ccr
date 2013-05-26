@@ -43,13 +43,22 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   // initialize the metric
   const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
   const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
-
+  
+#ifdef FEATURE_METRIC_ROOTED
+  if (unit)
+    m_metric = Vec3(0.7071f, 0.7071f, 0.0000f);
+  else if (perceptual)	// linear RGB luminance
+    m_metric = Vec3(0.4611f, 0.8456f, 0.2687f);
+  else
+    m_metric = Vec3(0.5773f, 0.5773f, 0.5773f);
+#else
   if (unit)
     m_metric = Vec3(0.5000f, 0.5000f, 0.0000f);
   else if (perceptual)	// linear RGB luminance
     m_metric = Vec3(0.2126f, 0.7152f, 0.0722f);
   else
     m_metric = Vec3(0.3333f, 0.3333f, 0.3333f);
+#endif
 
   // initialize the best error
   m_besterror = Scr3(FLT_MAX);
@@ -172,7 +181,7 @@ void ColourRangeFit::Compress4(void* block)
     Scr3 dist; MinDistance4<true>(dist, idx, value, codes);
 
     // accumulate the error
-    error += dist * freq[i];
+    AddDistance(dist, error, freq[i]);
 
     // save the index
     closest[i] = (u8)idx;

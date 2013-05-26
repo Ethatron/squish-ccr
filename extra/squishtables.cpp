@@ -891,7 +891,7 @@ private:
 };
 #endif
 
-#if 1
+#if 0
   unsigned int ming = 0xFFFFFFFF, maxg = 0x00000000;
   unsigned int minb = 0xFFFFFFFF, maxb = 0x00000000;
   unsigned int minr = 0xFFFFFFFF, maxr = 0x00000000;
@@ -1006,6 +1006,74 @@ private:
       e);
   }
 
+  fprintf(stderr, "g [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", ming, maxg, 0x1FF);
+  fprintf(stderr, "b [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minb, maxb, 0x01F);
+  fprintf(stderr, "r [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minr, maxr, 0x000);
+#endif
+  
+#if 1
+  unsigned int ming = 0xFFFFFFFF, maxg = 0x00000000;
+  unsigned int minb = 0xFFFFFFFF, maxb = 0x00000000;
+  unsigned int minr = 0xFFFFFFFF, maxr = 0x00000000;
+
+#define NB  14
+  for (int i = 0; i < (1 << NB); i++) {
+    unsigned int ee = i, ge, be, re;
+
+    ge = qerror::code<NB,6,8>(ee);
+
+    ming = std::min(ming, ee);
+    maxg = std::max(maxg, ee);
+
+    be = qerror::code<NB-5,5,8>(ee);
+
+    minb = std::min(minb, ee);
+    maxb = std::max(maxb, ee);
+
+    re = qerror::code<NB-5-4,5,8>(ee);
+
+    minr = std::min(minr, ee);
+    maxr = std::max(maxr, ee);
+
+    ge = ((ge << 2) + (ge >> 4));
+    be = ((be << 3) + (be >> 2));
+    re = ((re << 3) + (re >> 2));
+
+#define GB	6
+#define BB	5
+#define RB	5
+    fprintf(stderr, "0x%04x => 0x%04x + 0x%04x + 0x%04x = 0x%04x/%8.4f% [%8.4f%] => 0x%04x\n",
+      i,
+      ge, be, re,
+      ((
+        (ge << (0 + RB + BB - 1)) +
+        (be << (0 + RB      - 1)) +
+        (re << (0              ))
+       ) >> (8 - RB)),
+      ((
+        (ge << (0 + RB + BB - 1)) +
+        (be << (0 + RB      - 1)) +
+        (re << (0              ))
+       ) >> (8 - RB)) / (1.0f * ((1 << NB) - 1)),
+       
+       /*
+      (ge / 255.0f) * ((float)0xFF / (1 << (8 +               0))) +
+      (be / 255.0f) * ((float)0xFF / (1 << (8 + GB          - 1))) +
+      (re / 255.0f) * ((float)0xFF / (1 << (8 + GB - 1 + BB - 1))),
+        */
+
+      (ge / 255.0f) * ((float)((0xFF << (RB + BB - 1)) >> (8 - RB)) / ((1 << NB) - 1)) +
+      (be / 255.0f) * ((float)((0xFF << (RB      - 1)) >> (8 - RB)) / ((1 << NB) - 1)) +
+      (re / 255.0f) * ((float)((0xFF << (0          )) >> (8 - RB)) / ((1 << NB) - 1)),
+
+       /*
+        ((ge / 255.0f) * ((255.0f * 255.0f) / (256.0f * ((1 << ((8 - RB) + NB - (0 + RB + BB - 1))) - 1)))) +
+        ((be / 255.0f) * ((255.0f * 255.0f) / (256.0f * ((1 << ((8 - RB) + NB - (0 + RB      - 1))) - 1)))) +
+        ((re / 255.0f) * ((255.0f * 255.0f) / (256.0f * ((1 << ((8 - RB) + NB - (0              ))) - 1)))),
+	*/
+      ee);
+  }
+  
   fprintf(stderr, "g [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", ming, maxg, 0x1FF);
   fprintf(stderr, "b [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minb, maxb, 0x01F);
   fprintf(stderr, "r [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minr, maxr, 0x000);

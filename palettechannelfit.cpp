@@ -156,7 +156,7 @@ Scr4 PaletteChannelFit::ComputeCodebook(int set, Vec4 const &metric, vQuantizer 
 	  MinDistance4<false>(dist, i, value, codes, j);
 
 	// accumulate the error
-	error += dist * freq[i];
+	AddDistance(dist, error, freq[i]);
       }
 
       if (besterror > error) {

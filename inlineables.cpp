@@ -1077,7 +1077,7 @@ static int passreg CodebookP(Col4 *codes, int bits, Col4::Arg start, Col4::Arg e
 }
 
 template<const int bits>
-static int passreg CodebookP(int *codes, Col4::Arg start, Col4::Arg end) ccr_restricted
+static int passreg CodebookP(unsigned int *codes, Col4::Arg start, Col4::Arg end) ccr_restricted
 {
   const int j = (1 << bits) - 1;
 
@@ -1116,6 +1116,16 @@ static int passreg CodebookPn(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg 
  */
 #define	DISTANCE_BASE	0.0f
 
+template<typename dtyp>
+static doinline void AddDistance(dtyp const &dist, dtyp &error) {
+  error += dist;
+}
+
+template<typename dtyp>
+static doinline void AddDistance(dtyp const &dist, dtyp &error, dtyp const &freq) {
+  error += dist * freq;
+}
+
 template<const bool which, const int elements>
 static doinline void MinDistance3(Scr3 &dist, int &index, Vec3 &value, Vec3 (&codes)[elements]) {
   Scr3 d0 = LengthSquared(value - codes[0]);
@@ -1145,7 +1155,7 @@ static doinline void MinDistance4(Scr3 &dist, int &index, Vec3 &value, Vec3 (&co
   // encourage OoO
   Scr3 da = Min(d0, d1);
   Scr3 db = Min(d2, d3);
-  dist = Min(da, db);
+  dist    = Min(da, db);
 
   if (which) {
     // will cause VS to make them all cmovs
@@ -1166,8 +1176,8 @@ static doinline void MinDistance4(Scr4 &dist, int &index, Vec4 &value, Vec4 (&co
   // encourage OoO
   Scr4 da = Min(d0, d1);
   Scr4 db = Min(d2, d3);
-  dist = Min(da, dist);
-  dist = Min(db, dist);
+  dist    = Min(da, dist);
+  dist    = Min(db, dist);
 
   if (which) {
     // will cause VS to make them all cmovs

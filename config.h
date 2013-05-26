@@ -113,6 +113,11 @@
 #undef	FEATURE_METRIC_COVARIANCE	// SSIM: 0.0013466 off, 0.0013596 on
 #undef	FEATURE_METRIC_SQUARED		// SSIM: 0.0012824 off, 0.0013466 on
 
+/* use linear ( r²*rmetric  +  g²*gmetric  +  b²*bmetric  +  a²*ametric)
+ * instead of ((r*rmetric)² + (g*gmetric)² + (b*bmetric)² + (a*ametric)²)
+ */
+#define	FEATURE_METRIC_ROOTED		// SSIM: 0.??????? off, 0.??????? on
+
 /* push start/end values away from the midpoint if the codebook contains
  * less unique entries than possible indices
  * to fill four indices at least one axis need to have an interval of 4/255th

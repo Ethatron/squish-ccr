@@ -42,6 +42,9 @@ class PaletteSet;
 class PaletteRangeFit : public PaletteSingleMatch, public PaletteIndexFit
 {
 public:
+  static bool IsClusterable(int flags) { return ((flags & kColourRangeFit) != 0); }
+
+public:
   PaletteRangeFit(PaletteSet const* palette, int flags, int swap = -1, int shared = -1);
   
   virtual void Compress(void* block, vQuantizer &q, int mode);

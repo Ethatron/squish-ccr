@@ -65,7 +65,7 @@ ColourSingleSnap::ColourSingleSnap(ColourSet const* colours, int flags)
 
   // values are directly out of the codebook and
   // natural numbers / 255, no need to round
-  PackBytes(FloatToInt<true>((*values) * Vec3(255.0f)), (int &)(m_colour));
+  PackBytes(FloatToInt<true>((*values) * Vec3(255.0f)), (unsigned int &)(m_colour));
 
   /*
   assert(m_colour[0] == (u8)FloatToInt<true,false>(255.0f * values->X(), 255));

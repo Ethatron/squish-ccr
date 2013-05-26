@@ -399,7 +399,7 @@ public:
   doinline Vec3 SnapToLattice(Vec3 const &val) {
     Col3 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
 #ifndef NDEBUG
-    int lu; PackBytes(p, lu);
+    unsigned int lu; PackBytes(p, lu);
 #endif
     int r = p.R(), g = p.G(), b = p.B();
     assert((r >= 0) && (r <= rm) &&
@@ -419,7 +419,7 @@ public:
   doinline Vec3 SnapToLatticeClamped(Vec3 const &val) {
     Col3 p = FloatToInt<false>((grid * val) + gridgap);
 #ifndef NDEBUG
-    int lu; PackBytes(p, lu);
+    unsigned int lu; PackBytes(p, lu);
 #endif
     int r = p.R(), g = p.G(), b = p.B();
     assert((r >= 0) && (r <= rm) &&
@@ -536,7 +536,7 @@ public:
   doinline Vec4 SnapToLattice(Vec4 const &val) {
     Col4 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
 #ifndef NDEBUG
-    int lu; PackBytes(p, lu);
+    unsigned int lu; PackBytes(p, lu);
 #endif
     int r = p.R(), g = p.G(), b = p.B();
     assert((r >= 0) && (r <= rm) &&
@@ -556,7 +556,7 @@ public:
   doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
     Col4 p = FloatToInt<false>((grid * val) + gridgap);
 #ifndef NDEBUG
-    int lu; PackBytes(p, lu);
+    unsigned int lu; PackBytes(p, lu);
 #endif
     int r = p.R(), g = p.G(), b = p.B();
     assert((r >= 0) && (r <= rm) &&

@@ -1253,7 +1253,7 @@ void PaletteSet::RemapIndices(u8 const* source, u8* target, int set) const
   }
 }
 
-void PaletteSet::UnmapIndices(u8 const* source, u8* destination, int set, int *codes, int cmask) const
+void PaletteSet::UnmapIndices(u8 const* source, u8* destination, int set, unsigned int *codes, int cmask) const
 {
   const int s = set; {
     // selection mask

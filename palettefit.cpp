@@ -210,6 +210,12 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
     m_metric[1] =
     m_metric[0];
 
+#ifdef FEATURE_METRIC_ROOTED
+  m_metric[2] = Sqrt(m_metric[2]);
+  m_metric[1] = Sqrt(m_metric[1]);
+  m_metric[0] = Sqrt(m_metric[0]);
+#endif
+
   // initialize the best error
   m_besterror = Scr4(FLT_MAX);
   m_best = false;
@@ -349,7 +355,7 @@ void PaletteFit::Decompress(u8 *rgba, vQuantizer &q, int mode)
   assume(((isets    +    asets) <= 3));
 
   // create a codebook
-  int codes[1 << 4];
+  unsigned int codes[1 << 4];
 
   // loop over all sets
   for (int s = 0, sb = zb; s < (isets + asets); s++, sb >>= 1) {
