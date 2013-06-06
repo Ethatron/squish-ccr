@@ -58,6 +58,10 @@ public:
   }
 
 private:
+  void SumError3(u8 (&closest)[16], Vec4 &beststart, Vec4 &bestend, Scr4 &besterror);
+  void SumError4(u8 (&closest)[16], Vec4 &beststart, Vec4 &bestend, Scr4 &besterror);
+
+  void ComputeEndPoints();
   bool ConstructOrdering(Vec3 const& axis, int iteration);
 
   void ClusterFit3Constant(void* block);
@@ -66,6 +70,7 @@ private:
   void ClusterFit3(void* block);
   void ClusterFit4(void* block);
 
+  virtual void Compress3b(void* block);
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
 

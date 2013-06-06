@@ -39,11 +39,17 @@ ColourFit::ColourFit( ColourSet const* colours, int flags )
 
 void ColourFit::Compress( void* block )
 {
-  bool isBtc1 = ((m_flags & kBtcp) == kBtc1);
-  if (isBtc1) {
+  const bool isBtc1f = ((m_flags & kBtcp) == kBtc1);
+  const bool isBtc1b = ((m_flags & kExcludeAlphaFromPalette) != 0);
+
+  if (isBtc1f) {
     Compress3(block);
-    if (!m_colours->IsTransparent())
+    if (!m_colours->IsTransparent()) {
       Compress4(block);
+      if (isBtc1b) {
+	Compress3b(block);
+      }
+    }
   }
   else
     Compress4(block);

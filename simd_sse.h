@@ -1369,6 +1369,11 @@ public:
 	{
 		return Col4( _mm_cmplt_epi8( left.m_v, right.m_v ) );
 	}
+	
+	friend Col4 CompareAllEqualTo_M8( Col4::Arg left, Col4::Arg right )
+	{
+		return Col4( _mm_cmpeq_epi8( left.m_v, right.m_v ) );
+	}
 
 	friend Col4 IsNotZero( Col4::Arg v )
 	{

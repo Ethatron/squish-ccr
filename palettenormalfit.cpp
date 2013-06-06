@@ -66,9 +66,9 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 
         // get the covariance matrix
         if (unweighted)
-	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s]);
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, Vec3(1.0f));
         else
-	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s], weights);
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, Vec3(1.0f), weights);
 
 	// compute the principle component
 	GetPrincipleComponent(covariance, principle);
@@ -79,9 +79,9 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 
         // get the covariance matrix
         if (unweighted)
-	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, Vec3(1.0f));
         else
-	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, Vec3(1.0f), weights);
 
 	// compute the principle component
 	GetPrincipleComponent(covariance, principle);

@@ -105,18 +105,19 @@
 #define	FEATURE_INDEXFIT_INLINED
 #define	FEATURE_INDEXFIT_THOROUGH	true
 
-/* - use the weights building the covariance-matrix, affects all
- * - sqr() the metric for least-squares, affects only cluster-fit
- * - sqrt() the weights in the colourset, affects only cluster-fit
+/* - sqrt() the weights in the colourset, affects all fits
  */
 #undef	FEATURE_WEIGHTS_ROOTED		// SSIM: 0.0012824 off, 0.0013257 on - RMSE: 1.9235 off, 1.9540 on
-#undef	FEATURE_METRIC_COVARIANCE	// SSIM: 0.0013466 off, 0.0013596 on
-#undef	FEATURE_METRIC_SQUARED		// SSIM: 0.0012824 off, 0.0013466 on
 
-/* use linear ( r²*rmetric  +  g²*gmetric  +  b²*bmetric  +  a²*ametric)
- * instead of ((r*rmetric)² + (g*gmetric)² + (b*bmetric)² + (a*ametric)²)
+/* - use the metric building the covariance-matrix, affects all fits
+ * - sqrt() the metric in the colourset, affects all fits
+ *   use linear ( r²*rmetric  +  g²*gmetric  +  b²*bmetric  +  a²*ametric)
+ *   instead of ((r*rmetric)² + (g*gmetric)² + (b*bmetric)² + (a*ametric)²)
+ * - sqr() the metric for least-squares, affects only cluster-fit
  */
-#define	FEATURE_METRIC_ROOTED		// SSIM: 0.??????? off, 0.??????? on
+#undef	FEATURE_METRIC_COVARIANCE	// SSIM: 0.0013466 off, 0.0013596 on
+#define	FEATURE_METRIC_ROOTED		// SSIM: 0.0006231 off, 0.0006097 on
+#define	FEATURE_METRIC_SQUARED		// SSIM: 0.0006231 off, 0.0006102 on
 
 /* push start/end values away from the midpoint if the codebook contains
  * less unique entries than possible indices

@@ -42,6 +42,9 @@ public:
   ColourRangeFit(ColourSet const* colours, int flags);
 
 private:
+  void ComputeEndPoints();
+
+  virtual void Compress3b(void* block);
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
 

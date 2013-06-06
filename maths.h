@@ -409,9 +409,9 @@ public:
     // exact nearest least-error quantization values
     Vec3 rgb = LookUpLattice(r, g, b);
 
-    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+    assert(((unsigned int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((unsigned int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((unsigned int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
 
     return rgb;
   }
@@ -429,9 +429,9 @@ public:
     // exact nearest least-error quantization values
     Vec3 rgb = LookUpLattice(r, g, b);
 
-    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+    assert(((unsigned int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((unsigned int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((unsigned int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
 
     return rgb;
   }
@@ -546,9 +546,9 @@ public:
     // exact nearest least-error quantization values
     Vec4 rgb = LookUpLattice(r, g, b);
 
-    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+    assert(((unsigned int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((unsigned int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((unsigned int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
 
     return rgb;
   }
@@ -566,9 +566,9 @@ public:
     // exact nearest least-error quantization values
     Vec4 rgb = LookUpLattice(r, g, b);
 
-    assert(((int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
-    assert(((int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
-    assert(((int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
+    assert(((unsigned int)(rgb.X() * 255.0f) >> (8 - rb)) == ((lu >>  0) & rm));
+    assert(((unsigned int)(rgb.Y() * 255.0f) >> (8 - gb)) == ((lu >>  8) & gm));
+    assert(((unsigned int)(rgb.Z() * 255.0f) >> (8 - bb)) == ((lu >> 16) & bm));
 
     return rgb;
   }

@@ -46,7 +46,8 @@ private:
   
   void Permute3();
   void Permute4();
-
+  
+  virtual void Compress3b(void* block) {}
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
   

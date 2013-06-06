@@ -647,6 +647,9 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
 	    }
 	  }
 
+	  if (flags & kExcludeAlphaFromPalette)
+	    targetRgba[4 * i + 3] = 255;
+
 	  for (int j = 0; j < 4; ++j)
 	    *row++ = targetRgba[4 * i + j];
 	}
@@ -1107,7 +1110,7 @@ int main(int argc, char* argv[]) {
 	break;
 
       case kDecompress:
-	Decompress(sourceFileName, targetFileName, paint, mapping, method + metric);
+	Decompress(sourceFileName, targetFileName, paint, mapping, method + metric /*+ extra*/);
 	break;
 
       case kDiff:

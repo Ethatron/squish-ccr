@@ -70,10 +70,10 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
   StoreAligned(m3, &rgbx[3 * 16]);
   
   // threshold alpha (signed char)
-  amask  =   CompareLessThan(al, Col4(0)) | (clra);
+  amask  =   CompareAllLessThan_M8(al, Col4(0)).GetM8() | (clra);
 #ifdef FEATURE_IGNORE_ALPHA0
   // threshold color
-  amask &= (~CompareEqualTo(al, Col4(0))) | (wgta);
+  amask &= (~CompareAllEqualTo_M8(al, Col4(0)).GetM8()) | (wgta);
 #endif
   // combined mask
   amask &= mask;
@@ -405,6 +405,59 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
 
   // clear if we're suppose to throw alway alpha
   m_transparent = m_transparent & !clearAlpha;
+}
+
+bool ColourSet::RemoveBlack(const Vec3 &metric, Scr3 &error)
+{
+  cQuantizer4<5,6,5,0> q = cQuantizer4<5,6,5,0>();
+  bool reduced = false;
+  
+  while (m_count > 1) {
+    Scr3 lowest = LengthSquared(metric * Vec3(32.0f / 255.0f));
+    int index = -1;
+
+    for (int i = 0; i < 16; ++i) {
+      if (m_remap[i] == -1)
+	continue;
+
+      // maps to black
+      Vec3 colour = m_points[m_remap[i]];
+      /*Vec3 result = q.SnapToLattice(colour);*/
+      if (true /*CompareAllEqualTo(result, Vec3(0.0f))*/) {
+	Scr3 len = LengthSquared(metric * colour);
+	if (len < lowest) {
+	  lowest = len;
+	  index = m_remap[i];
+	}
+      }
+    }
+
+    if (index >= 0) {
+      m_count--;
+      m_unweighted = false;
+
+      for (int i = 0; i < 16; ++i) {
+	if (m_remap[i] == index)
+	  m_remap[i] = -1;
+	else if (m_remap[i] > index)
+	  m_remap[i] = -1 + m_remap[i];
+      }
+
+      error += LengthSquared(metric * m_points[index]) * m_weights[index];
+      
+      if (m_count > index) {
+	memcpy(&m_points [index + 0], &m_points [index + 1], sizeof(m_points [0]) * (m_count - index));
+	memcpy(&m_weights[index + 0], &m_weights[index + 1], sizeof(m_weights[0]) * (m_count - index));
+      }
+
+      reduced = true;
+      return reduced;
+    }
+    else
+      break;
+  }
+
+  return reduced;
 }
 
 void ColourSet::RemapIndices(u8 const* source, u8* target) const

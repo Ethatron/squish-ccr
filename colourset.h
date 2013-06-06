@@ -50,6 +50,7 @@ public:
   Vec3 const* GetPoints() const { return m_points; }
   Scr3 const* GetWeights() const { return m_weights; }
 
+  bool RemoveBlack(const Vec3 &metric, Scr3 &error);
   void RemapIndices(u8 const* source, u8* target) const;
 
 private:

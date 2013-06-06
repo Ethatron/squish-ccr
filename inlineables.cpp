@@ -736,14 +736,8 @@ static doinline void passreg Codebook3(u8 (&codes)[4*4], bool bw) ccr_restricted
       codes[12 + i] = 0;
     }
     else {
-      int i21 = ((2 * c + 1 * d) * 0xAAAB);
-      
-      codes[ 8 + i] = (u8)(i21 >> 17);
-      codes[12 + i] = (u8)(c + d - codes[ 8 + i]);
-      /*
       codes[ 8 + i] = (u8)(((2 * c + 1 * d) * 0xAAAB) >> 17);
       codes[12 + i] = (u8)(((1 * c + 2 * d) * 0xAAAB) >> 17);
-       */
     }
   }
 
@@ -760,14 +754,8 @@ static doinline void passreg Codebook4(u8 (&codes)[4*4]) ccr_restricted
     const int d = codes[4 + i];
 
     {
-      int i21 = ((2 * c + 1 * d) * 0xAAAB);
-      
-      codes[ 8 + i] = (u8)(i21 >> 17);
-      codes[12 + i] = (u8)(c + d - codes[ 8 + i]);
-      /*
       codes[ 8 + i] = (u8)(((2 * c + 1 * d) * 0xAAAB) >> 17);
       codes[12 + i] = (u8)(((1 * c + 2 * d) * 0xAAAB) >> 17);
-       */
     }
   }
 
@@ -784,19 +772,11 @@ static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
     const int d = codes[1 + i];
 
     {
-      int i41 = ((4 * c + 1 * d) * 0xCCCD);
-      int i32 = ((3 * c + 2 * d) * 0xCCCD);
-      
-      codes[2 + i] = (u8)(i41 >> 18);
-      codes[3 + i] = (u8)(i32 >> 18);
-      codes[4 + i] = (u8)(c + d - codes[3 + i]);
-      codes[5 + i] = (u8)(c + d - codes[2 + i]);
-      /*
       codes[2 + i] = (u8)(((4 * c + 1 * d) * 0xCCCD) >> 18);
       codes[3 + i] = (u8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
       codes[4 + i] = (u8)(((2 * c + 3 * d) * 0xCCCD) >> 18);
       codes[5 + i] = (u8)(((1 * c + 4 * d) * 0xCCCD) >> 18);
-       */
+
       codes[6 + i] = (u8)0;
       codes[7 + i] = (u8)255;
     }
@@ -811,19 +791,11 @@ static doinline void passreg Codebook6(s8 (&codes)[8*1]) ccr_restricted
     const int d = codes[1 + i];
 
     {
-      int i41 = ((4 * c + 1 * d) * 0xCCCD);
-      int i32 = ((3 * c + 2 * d) * 0xCCCD);
-      
-      codes[2 + i] = (s8)(i41 >> 18);
-      codes[3 + i] = (s8)(i32 >> 18);
-      codes[4 + i] = (s8)(c + d - codes[3 + i]);
-      codes[5 + i] = (s8)(c + d - codes[2 + i]);
-      /*
       codes[2 + i] = (s8)(((4 * c + 1 * d) * 0xCCCD) >> 18);
       codes[3 + i] = (s8)(((3 * c + 2 * d) * 0xCCCD) >> 18);
       codes[4 + i] = (s8)(((2 * c + 3 * d) * 0xCCCD) >> 18);
       codes[5 + i] = (s8)(((1 * c + 4 * d) * 0xCCCD) >> 18);
-       */
+
       codes[6 + i] = (s8)-127;
       codes[7 + i] = (s8) 127;
     }
@@ -836,27 +808,15 @@ static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
   for (int i = 0; i < 1; ++i) {
     const int c = codes[0 + i];
     const int d = codes[1 + i];
-//    int cd;
+    int cd;
 
     {
-      int i61 = ((6 * c + 1 * d));
-      int i52 = ((5 * c + 2 * d));
-      int i43 = ((4 * c + 3 * d));
-      
-      codes[2 + i] = (u8)((((i61 * 0x2493) >> 16) + i61) >> 3);
-      codes[3 + i] = (u8)((((i52 * 0x2493) >> 16) + i52) >> 3);
-      codes[4 + i] = (u8)((((i43 * 0x2493) >> 16) + i43) >> 3);
-      codes[5 + i] = (u8)(c + d - codes[4 + i]);
-      codes[6 + i] = (u8)(c + d - codes[3 + i]);
-      codes[7 + i] = (u8)(c + d - codes[2 + i]);
-      /*
       cd = (6 * c + 1 * d); codes[2 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (5 * c + 2 * d); codes[3 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (4 * c + 3 * d); codes[4 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (3 * c + 4 * d); codes[5 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (2 * c + 5 * d); codes[6 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (1 * c + 6 * d); codes[7 + i] = (u8)((((cd * 0x2493) >> 16) + cd) >> 3);
-       */
     }
   }
 }
@@ -867,27 +827,15 @@ static doinline void passreg Codebook8(s8 (&codes)[8*1]) ccr_restricted
   for (int i = 0; i < 1; ++i) {
     const int c = codes[0 + i];
     const int d = codes[1 + i];
-//    int cd;
+    int cd;
 
     {
-      int i61 = ((6 * c + 1 * d));
-      int i52 = ((5 * c + 2 * d));
-      int i43 = ((4 * c + 3 * d));
-      
-      codes[2 + i] = (s8)((((i61 * 0x2493) >> 16) + i61) >> 3);
-      codes[3 + i] = (s8)((((i52 * 0x2493) >> 16) + i52) >> 3);
-      codes[4 + i] = (s8)((((i43 * 0x2493) >> 16) + i43) >> 3);
-      codes[5 + i] = (s8)(c + d - codes[4 + i]);
-      codes[6 + i] = (s8)(c + d - codes[3 + i]);
-      codes[7 + i] = (s8)(c + d - codes[2 + i]);
-      /*
       cd = (6 * c + 1 * d); codes[2 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (5 * c + 2 * d); codes[3 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (4 * c + 3 * d); codes[4 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (3 * c + 4 * d); codes[5 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (2 * c + 5 * d); codes[6 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (1 * c + 6 * d); codes[7 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
-      */
     }
   }
 }

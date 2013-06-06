@@ -38,8 +38,6 @@ namespace squish {
 ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   : ColourFit(colours, flags)
 {
-  cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
-
   // initialize the metric
   const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
   const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
@@ -62,6 +60,14 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
 
   // initialize the best error
   m_besterror = Scr3(FLT_MAX);
+  
+  // initialize endpoints
+  ComputeEndPoints();
+}
+
+void ColourRangeFit::ComputeEndPoints()
+{
+  cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
 
   // cache some values
   int const count = m_colours->GetCount();
@@ -114,6 +120,22 @@ ColourRangeFit::ColourRangeFit(ColourSet const* colours, int flags)
   // snap floating-point-values to the integer-lattice and save
   m_start = q.SnapToLattice(start);
   m_end   = q.SnapToLattice(end  );
+}
+
+void ColourRangeFit::Compress3b(void* block)
+{
+  ColourSet copy = *m_colours;
+  m_colours = &copy;
+	
+  Scr3 m_destroyed = Scr3(0.0f);
+  while (copy.RemoveBlack(m_metric, m_destroyed) && !(m_besterror < m_destroyed)) {
+    m_besterror -= m_destroyed;
+
+    ComputeEndPoints();
+    Compress3(block);
+
+    m_besterror += m_destroyed;
+  }
 }
 
 void ColourRangeFit::Compress3(void* block)

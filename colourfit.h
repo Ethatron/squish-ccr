@@ -43,8 +43,9 @@ public:
   void Compress( void* block );
 
 protected:
-  virtual void Compress3( void* block ) = 0;
-  virtual void Compress4( void* block ) = 0;
+  virtual void Compress3b(void* block) = 0;
+  virtual void Compress3(void* block) = 0;
+  virtual void Compress4(void* block) = 0;
 
   ColourSet const* m_colours;
   int m_flags;
