@@ -129,7 +129,7 @@ void ReadBitoneBlock(
   }
 }
 
-void DecompressBitoneCtx1(u8* rgba, void const* block)
+void DecompressBitonesCtx1u(u8* rgba, void const* block)
 {
   u8 codes[16];
   u8 indices[16];
@@ -147,7 +147,7 @@ void DecompressBitoneCtx1(u8* rgba, void const* block)
   }
 }
 
-void DecompressBitoneCtx1(u16* rgba, void const* block)
+void DecompressBitonesCtx1u(u16* rgba, void const* block)
 {
   u8 codes[16];
   u8 indices[16];
@@ -165,7 +165,7 @@ void DecompressBitoneCtx1(u16* rgba, void const* block)
   }
 }
 
-void DecompressBitoneCtx1(f23* rgba, void const* block)
+void DecompressBitonesCtx1u(f23* rgba, void const* block)
 {
   u8 codes[16];
   u8 indices[16];

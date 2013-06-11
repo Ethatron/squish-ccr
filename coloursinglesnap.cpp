@@ -59,7 +59,7 @@ ColourSingleSnap::ColourSingleSnap(ColourSet const* colours, int flags)
   // that index 1 always contains the best match
   //
   // this holds even if a metric is used, the metric does
-  // linear a rescale of the RGB-cube: scaling preserves
+  // a linear rescale of the RGB-cube: scaling preserves
   // relative lengths, in either cube the error-vector with
   // smallest length is the same
 

@@ -127,7 +127,7 @@ void TestOneColour( int flags )
 			    }
 
 			    // compress ...
-			    squish::CompressColorBtc1u(elm.barrier, lxy, pxl, 0xFFFF, blk[1], SQUISH_METRIC_PERCEPTUAL, false, 0, yArr, lArr);
+			    squish::CompressColourBtc1u(elm.barrier, lxy, pxl, 0xFFFF, blk[1], SQUISH_METRIC_PERCEPTUAL, false, 0, yArr, lArr);
 
 			    dArr(posy, posx + 0) = blk[1][0];
 			    dArr(posy, posx + 1) = blk[1][1];

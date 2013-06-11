@@ -366,7 +366,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
 
   /* kill alpha-channel */
   if (!alpha && (((flags & kBtcp) <= kBtc3) || ((flags & kBtcp) >= kBtc7)))
-    flags = (flags | kExcludeAlphaFromPalette) & (~kWeightColourByAlpha) & (~kAlphaIterativeFit);
+    flags = (flags | ((flags & kBtcp) > kBtc1 ? kExcludeAlphaFromPalette : 0)) & (~kWeightColourByAlpha) & (~kAlphaIterativeFit);
   if ((mapping == -1) && ((flags & kBtcp) == kBtc4))
     mapping = 0;
   if ((mapping == -1) && ((flags & kBtcp) == kBtc5))

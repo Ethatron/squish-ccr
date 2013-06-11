@@ -110,7 +110,39 @@ int SanitizeFlags(int flags)
 /* *****************************************************************************
  */
 template<typename dtyp>
-void CompressColorBtc1u(dtyp const* rgba, int mask, void* block, int flags)
+void CompressBitoneCtx1u(dtyp const* rgba, int mask, void* block, int flags)
+{
+  // create the minimal point set
+  BitoneSet colours(rgba, mask, flags);
+
+  if (((flags & kColourRangeFit) != 0) || (colours.GetCount() == 0)) {
+    // do a range fit
+    BitoneRangeFit fit(&colours, flags);
+    fit.Compress(block);
+  }
+  else {
+    // default to a cluster fit (could be iterative or not)
+    BitoneClusterFit fit(&colours, flags);
+    fit.Compress(block);
+  }
+}
+
+template<typename dtyp>
+void CompressNormalCtx1u(dtyp const* xyzd, int mask, void* block, int flags)
+{
+  // create the minimal point set
+  BitoneSet bitones(xyzd, mask, flags);
+
+  // check the compression type and compress normals
+  {
+    // do a normal fit
+    BitoneNormalFit fit(&bitones, flags);
+    fit.Compress(block);
+  }
+}
+
+template<typename dtyp>
+void CompressColourBtc1u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // create the minimal point set
   ColourSet colours(rgba, mask, flags);
@@ -148,20 +180,6 @@ void CompressNormalBtc1u(dtyp const* xyzd, int mask, void* block, int flags)
   else {
     // do a range fit
     ColourNormalFit fit(&normals, flags);
-    fit.Compress(block);
-  }
-}
-
-template<typename dtyp>
-void CompressNormalCtx1u(dtyp const* xyzd, int mask, void* block, int flags)
-{
-  // create the minimal point set
-  BitoneSet bitones(xyzd, mask, flags);
-
-  // check the compression type and compress normals
-  {
-    // do a normal fit
-    BitoneNormalFit fit(&bitones, flags);
     fit.Compress(block);
   }
 }
@@ -877,13 +895,23 @@ void CompressColourBtc6u(dtyp const* rgb, int mask, void* block, int flags)
 /* *****************************************************************************
  */
 template<typename dtyp>
+void CompressMaskedBitoneCtx1u(dtyp const* rgba, int mask, void* block, int flags)
+{
+  // get the block locations
+  void* colourBlock = block;
+
+  // compress color separately if necessary
+  CompressBitoneCtx1u(rgba, mask, colourBlock, flags);
+}
+
+template<typename dtyp>
 void CompressMaskedColourBtc1u(dtyp const* rgba, int mask, void* block, int flags)
 {
   // get the block locations
   void* colourBlock = block;
 
   // compress color separately if necessary
-  CompressColorBtc1u(rgba, mask, colourBlock, flags);
+  CompressColourBtc1u(rgba, mask, colourBlock, flags);
 }
 
 template<typename dtyp>
@@ -894,7 +922,7 @@ void CompressMaskedColourBtc2u(dtyp const* rgba, int mask, void* block, int flag
   void*  alphaBlock = block;
 
   // compress color separately if necessary
-  CompressColorBtc1u(rgba, mask, colourBlock, flags);
+  CompressColourBtc1u(rgba, mask, colourBlock, flags);
   // compress alpha separately if necessary
   CompressAlphaBtc2u(rgba, mask, alphaBlock);
 }
@@ -907,19 +935,9 @@ void CompressMaskedColourBtc3u(dtyp const* rgba, int mask, void* block, int flag
   void*  alphaBlock = block;
 
   // compress color separately if necessary
-  CompressColorBtc1u(rgba, mask, colourBlock, flags);
+  CompressColourBtc1u(rgba, mask, colourBlock, flags);
   // compress alpha separately if necessary
   CompressAlphaBtc3u(rgba, mask, alphaBlock, flags);
-}
-
-template<typename dtyp>
-void CompressMaskedNormalBtc1u(dtyp const* xyzd, int mask, void* block, int flags)
-{
-  // get the block locations
-  void* normalBlock = block;
-
-  // compress color separately if necessary
-  CompressNormalBtc1u(xyzd, mask, normalBlock, flags);
 }
 
 template<typename dtyp>
@@ -930,6 +948,16 @@ void CompressMaskedNormalCtx1u(dtyp const* xyzd, int mask, void* block, int flag
 
   // compress color separately if necessary
   CompressNormalCtx1u(xyzd, mask, normalBlock, flags);
+}
+
+template<typename dtyp>
+void CompressMaskedNormalBtc1u(dtyp const* xyzd, int mask, void* block, int flags)
+{
+  // get the block locations
+  void* normalBlock = block;
+
+  // compress color separately if necessary
+  CompressNormalBtc1u(xyzd, mask, normalBlock, flags);
 }
 
 template<typename dtyp>
@@ -1204,16 +1232,6 @@ void Compress(f23 const* rgba, void* block, int flags)
 /* *****************************************************************************
  */
 template<typename dtyp>
-void DecompressColourBtc1u(dtyp* rgba, void const* block, int flags)
-{
-  // get the block locations
-  void const* colourBlock = block;
-
-  // decompress colour
-  DecompressColoursBtc1u(rgba, colourBlock, true);
-}
-
-template<typename dtyp>
 void DecompressNormalCtx1u(dtyp* xyzd, void const* block, int flags)
 {
   // get the block locations
@@ -1221,6 +1239,26 @@ void DecompressNormalCtx1u(dtyp* xyzd, void const* block, int flags)
 
   // decompress normals
   DecompressNormalsCtx1u(xyzd, normalBlock);
+}
+
+template<typename dtyp>
+void DecompressBitoneCtx1u(dtyp* rgba, void const* block, int flags)
+{
+  // get the block locations
+  void const* colourBlock = block;
+
+  // decompress colour
+  DecompressBitonesCtx1u(rgba, colourBlock);
+}
+
+template<typename dtyp>
+void DecompressColourBtc1u(dtyp* rgba, void const* block, int flags)
+{
+  // get the block locations
+  void const* colourBlock = block;
+
+  // decompress colour
+  DecompressColoursBtc1u(rgba, colourBlock, true);
 }
 
 template<typename dtyp>
@@ -1543,6 +1581,9 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
       s.decoder = (sqio::dec)DecompressColourBtc7u<u8>;
     
     // DXT-type compression
+    else if ((s.flags & kBtcp) == (kCtx1))
+      s.encoder = (sqio::enc)CompressMaskedBitoneCtx1u<u8>,
+      s.decoder = (sqio::dec)DecompressBitoneCtx1u<u8>;
     else if ((s.flags & kBtcp) == (kBtc1))
       s.encoder = (sqio::enc)CompressMaskedColourBtc1u<u8>,
       s.decoder = (sqio::dec)DecompressColourBtc1u<u8>;
@@ -1602,6 +1643,9 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
       s.decoder = (sqio::dec)DecompressColourBtc7u<u16>;
 
     // DXT-type compression
+    else if ((s.flags & kBtcp) == (kCtx1))
+      s.encoder = (sqio::enc)CompressMaskedBitoneCtx1u<u16>,
+      s.decoder = (sqio::dec)DecompressBitoneCtx1u<u16>;
     else if ((s.flags & kBtcp) == (kBtc1))
       s.encoder = (sqio::enc)CompressMaskedColourBtc1u<u16>,
       s.decoder = (sqio::dec)DecompressColourBtc1u<u16>;
@@ -1662,6 +1706,9 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
       s.decoder = (sqio::dec)DecompressColourBtc7u<f23>;
 
     // DXT-type compression
+    else if ((s.flags & kBtcp) == (kCtx1))
+      s.encoder = (sqio::enc)CompressMaskedBitoneCtx1u<f23>,
+      s.decoder = (sqio::dec)DecompressBitoneCtx1u<f23>;
     else if ((s.flags & kBtcp) == (kBtc1))
       s.encoder = (sqio::enc)CompressMaskedColourBtc1u<f23>,
       s.decoder = (sqio::dec)DecompressColourBtc1u<f23>;
@@ -1856,7 +1903,7 @@ void CompressColorBtc ( tile_barrier barrier, const int thread,
   tile_static ColourSet_CCR colours;
 #endif
 
-void CompressColorBtc1u( tile_barrier barrier, const int thread,
+void CompressColourBtc1u( tile_barrier barrier, const int thread,
 			pixel16 rgba, int mask, out code64 block,
 			int metric, bool trans, int fit,
 			IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted {

@@ -176,7 +176,8 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
 
   // sum is 2.0f
   if (unit)
-    m_metric[0] = Vec4(0.5000f, 0.5000f, 0.0000f, 1.0000f);
+//  m_metric[0] = Vec4(0.5000f, 0.5000f, 0.0000f, 1.0000f);
+    m_metric[0] = Vec4(0.3333f, 0.3333f, 0.3333f, 1.0000f);
   else if (perceptual)	// linear RGB luminance
     m_metric[0] = Vec4(0.2126f, 0.7152f, 0.0722f, 1.0000f);
   else

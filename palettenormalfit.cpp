@@ -66,9 +66,9 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 
         // get the covariance matrix
         if (unweighted)
-	  ComputeWeightedCovariance4(covariance, centroid, count, values, Vec3(1.0f));
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s]);
         else
-	  ComputeWeightedCovariance4(covariance, centroid, count, values, Vec3(1.0f), weights);
+	  ComputeWeightedCovariance4(covariance, centroid, count, values, m_metric[s], weights);
 
 	// compute the principle component
 	GetPrincipleComponent(covariance, principle);
@@ -79,17 +79,17 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
 
         // get the covariance matrix
         if (unweighted)
-	  ComputeWeightedCovariance3(covariance, centroid, count, values, Vec3(1.0f));
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s]);
         else
-	  ComputeWeightedCovariance3(covariance, centroid, count, values, Vec3(1.0f), weights);
+	  ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric[s], weights);
 
 	// compute the principle component
 	GetPrincipleComponent(covariance, principle);
       }
       
       // get the min and max normal as the codebook endpoints
-      Vec4 start(127.5f, 127.5f, 255.0f, 0.0f);
-      Vec4 end(127.5f, 127.5f, 255.0f, 0.0f);
+      Vec4 start(127.5f, 127.5f, 255.0f, 1.0f);
+      Vec4 end(127.5f, 127.5f, 255.0f, 1.0f);
       
       // get the min and max range as the codebook endpoints
 
@@ -195,6 +195,9 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
   Scr4 error = Scr4(0.0f);
   a16 u8 closest[4][16];
 
+  if (m_palette->GetRotation())
+    return;
+
   // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
   int const isets = m_palette->GetSets();
   int const asets = m_palette->IsSeperateAlpha() ? isets : 0;
@@ -220,10 +223,10 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
     Scr4 const* freq = m_palette->GetWeights(s);
 
     // in case of separate alpha the colors of the alpha-set have all been set to alpha
-    Vec4 metric = m_metric[s < isets ? 0 : 1];
+    Vec4 metric = Vec4(1.0f);//m_metric[s < isets ? 0 : 1];
     
     Scr4 berror = Scr4(DISTANCE_BASE);
-    Scr3 nerror = Scr3(DEVIANCE_BASE);
+    Scr4 nerror = Scr4(DEVIANCE_BASE);
 
     // we do single entry fit for sparse sets
     if (count == 1) {
@@ -248,22 +251,22 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
       // TODO: pre-normalize codebook
       int ccs = CodebookPn(codes, kb, start, end);
       
-      const Vec3 scale  = Vec3( 1.0f / 0.5f);
-      const Vec3 offset = Vec3(-1.0f * 0.5f);
+      const Vec4 scale  = Vec4( 1.0f / 0.5f);
+      const Vec4 offset = Vec4(-1.0f * 0.5f);
       
       for (int i = 0; i < count; ++i) {
 	int idx = 0;
 
 	// find the closest code
-	Scr3 dist = Scr3(DEVIANCE_MAX);
-	Vec3 nval = Normalize(scale * (offset + values[i].GetVec3()));
+	Scr4 dist = Scr4(DEVIANCE_MAX);
+	Vec4 nval = Normalize(KillW(scale * (offset + values[i])));
 	
 	// measure angle-deviation (cosine)
 	for (int j = 0; j < ccs; j += 0)
 	  MinDeviance4<true>(dist, idx, nval, codes, j);
 
 	// accumulate the error (sine)
-	AddDeviance(dist, nerror, freq[i].GetVec3());
+	AddDeviance(dist, nerror, freq[i]);
 
 	// save the index
 	closest[s][i] = (u8)idx;
@@ -272,7 +275,7 @@ void PaletteNormalFit::Compress(void* block, vQuantizer &q, int mode)
 
     // map normal-error to colour-error range
     // sqrt(1*1 + 1*1 + 1*1)² vs. 2.0f²
-    error += berror + Scr4(nerror) * Scr4(3.0f / 4.0f);
+    error += berror + nerror * (3.0f / 4.0f);
 
     // kill early if this scheme looses
     if (!(error < m_besterror))

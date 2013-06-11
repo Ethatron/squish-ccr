@@ -448,7 +448,7 @@ void CompressColorBtc (tile_barrier barrier, const int thread,
 		       pixel16 rgba, ColourSet_CCRr colours, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;
-void CompressColorBtc1u(tile_barrier barrier, const int thread,
+void CompressColourBtc1u(tile_barrier barrier, const int thread,
 		       pixel16 rgba, int mask, out code64 block,
 		       int metric, bool trans, int fit,
 		       IndexBlockLUT yArr, ColourSingleLUT lArr) amp_restricted;

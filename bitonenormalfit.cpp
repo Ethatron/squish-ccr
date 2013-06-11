@@ -396,7 +396,7 @@ void BitoneNormalFit::Compress4(void* block)
 
     // find the closest code
     Vec3 value = Normalize(scale * (offset + values[i]));
-    Scr3 dist; MinDeviance4c<true>(dist, i, value, codes);
+    Scr3 dist; MinDeviance4c<true>(dist, idx, value, codes);
 
     // accumulate the error
     AddDeviance(dist, error, freq[i]);
