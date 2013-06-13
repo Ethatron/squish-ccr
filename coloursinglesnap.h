@@ -46,15 +46,22 @@ class ColourSingleSnap : public ColourFit
 {
 public:
   ColourSingleSnap(ColourSet const* colours, int flags);
+  
+  // error management
+  void SetError(Scr4 &error) { m_besterror = error; }
+  void SetError(Scr3 &error) { m_besterror = error; }
+  Scr3 GetError() { return m_besterror; }
 
 private:
-  virtual void Compress3b(void* block) {}
+  virtual void Compress3b(void* block);
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
 
   u8   m_colour[4];
+  Vec3 m_metric;
   Vec3 m_start;
   Vec3 m_end;
+  Scr3 m_besterror;
 };
 #endif
 

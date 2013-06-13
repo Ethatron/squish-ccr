@@ -438,7 +438,7 @@ bool ColourSet::RemoveBlack(const Vec3 &metric, Scr3 &error)
 
       for (int i = 0; i < 16; ++i) {
 	if (m_remap[i] == index)
-	  m_remap[i] = -1;
+	  m_remap[i] = -1, m_transparent = true;
 	else if (m_remap[i] > index)
 	  m_remap[i] = -1 + m_remap[i];
       }

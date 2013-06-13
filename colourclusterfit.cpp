@@ -31,6 +31,9 @@
 #include "colourset.h"
 #include "colourblock.h"
 
+#include "coloursinglefit.h"
+#include "coloursinglesnap.h"
+
 #include "inlineables.cpp"
 
 namespace squish {
@@ -992,9 +995,20 @@ void ColourClusterFit::Compress3b(void* block)
   Scr3 m_destroyed = Scr3(0.0f);
   while (copy.RemoveBlack(m_metric, m_destroyed) && !(m_besterror.GetVec3() < m_destroyed)) {
     m_besterror -= m_destroyed;
+    
+    if (copy.GetCount() == 1) {
+      // always do a single colour fit
+      ColourSingleMatch fit(m_colours, m_flags);
 
-    ComputeEndPoints();
-    Compress3(block);
+      fit.SetError(m_besterror);
+      fit.Compress(block);
+
+      m_besterror = fit.GetError();
+    }
+    else {
+      ComputeEndPoints();
+      Compress3(block);
+    }
 
     m_besterror += m_destroyed;
   }

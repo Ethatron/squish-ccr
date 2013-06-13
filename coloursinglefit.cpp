@@ -61,7 +61,7 @@ ColourSingleFit::ColourSingleFit(ColourSet const* colours, int flags)
   m_colour[2] = (u8)FloatToInt<true,false>(255.0f * values->Z(), 255);
 
   // initialize the best error
-  m_besterror = INT_MAX;
+  m_besterror = Scr3(FLT_MAX);
 }
 
 void ColourSingleFit::Compress3(void* block)
@@ -75,7 +75,7 @@ void ColourSingleFit::Compress3(void* block)
   };
 
   // find the best end-points and index
-  int error = ComputeEndPoints(lookups);
+  Scr3 error = Scr3(1.0f / (255.0f * 255.0f)) * ComputeEndPoints(lookups);
 
   // build the block if we win
   if (error < m_besterror) {
@@ -101,7 +101,7 @@ void ColourSingleFit::Compress4(void* block)
   };
 
   // find the best end-points and index
-  int error = ComputeEndPoints(lookups);
+  Scr3 error = Scr3(1.0f / (255.0f * 255.0f)) * ComputeEndPoints(lookups);
 
   // build the block if we win
   if (error < m_besterror) {

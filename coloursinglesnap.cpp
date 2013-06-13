@@ -72,10 +72,48 @@ ColourSingleSnap::ColourSingleSnap(ColourSet const* colours, int flags)
   assert(m_colour[1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
   assert(m_colour[2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
    */
+
+  // initialize the metric
+  const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
+  const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
+  
+#ifdef FEATURE_METRIC_ROOTED
+  if (unit)
+    m_metric = Vec3(0.7071f, 0.7071f, 0.0000f);
+  else if (perceptual)	// linear RGB luminance
+    m_metric = Vec3(0.4611f, 0.8456f, 0.2687f);
+  else
+    m_metric = Vec3(0.5773f, 0.5773f, 0.5773f);
+#else
+  if (unit)
+    m_metric = Vec3(0.5000f, 0.5000f, 0.0000f);
+  else if (perceptual)	// linear RGB luminance
+    m_metric = Vec3(0.2126f, 0.7152f, 0.0722f);
+  else
+    m_metric = Vec3(0.3333f, 0.3333f, 0.3333f);
+#endif
+
+  // initialize the best error
+  m_besterror = Scr3(FLT_MAX);
+}
+
+void ColourSingleSnap::Compress3b(void* block)
+{
+  // grab the single colour
+  Vec3 const* values = m_colours->GetPoints();
+  
+  // if it's black, make it index 3
+  if (values[0] == Vec3(0.0f)) {
+    *((unsigned __int64 *)block) = 0xFFFFFFFF00000000;
+  }
 }
 
 void ColourSingleSnap::Compress3(void* block)
 {
+  // grab the single colour
+  Vec3 const* values = m_colours->GetPoints();
+  Scr3 const* freq = m_colours->GetWeights();
+
   // just assign the end-points of index 2 (interpolant 1)
   Col3 s = Col3(
     sc_lookup_5_3[m_colour[0]].start,
@@ -88,17 +126,31 @@ void ColourSingleSnap::Compress3(void* block)
 
   m_start = Vec3(s) * (1.0f / 255.0f);
   m_end   = Vec3(e) * (1.0f / 255.0f);
+  
+  // created interpolated value and error
+  Vec3 code = (m_start + m_end) * 0.5f;
+  Scr3 error = LengthSquared(m_metric * (values[0] - code)) * freq[0];
 
-  // build the block
-  u8 idx = 2, indices[16];
-  m_colours->RemapIndices(&idx, indices);
+  // build the block if we win
+  if (error < m_besterror) {
+    // save the error
+    m_besterror = error;
 
-  // save the block
-  WriteColourBlock3(m_start, m_end, indices, block);
+    // build the block
+    u8 idx = 2, indices[16];
+    m_colours->RemapIndices(&idx, indices);
+
+    // save the block
+    WriteColourBlock3(m_start, m_end, indices, block);
+  }
 }
 
 void ColourSingleSnap::Compress4(void* block)
 {
+  // grab the single colour
+  Vec3 const* values = m_colours->GetPoints();
+  Scr3 const* freq = m_colours->GetWeights();
+
   // just assign the end-points of index 2 (interpolant 1)
   Col3 s = Col3(
     sc_lookup_5_4[m_colour[0]].start,
@@ -111,13 +163,23 @@ void ColourSingleSnap::Compress4(void* block)
 
   m_start = Vec3(s) * (1.0f / 255.0f);
   m_end   = Vec3(e) * (1.0f / 255.0f);
+  
+  // created interpolated value and error
+  Vec3 code = (2.0f * m_start + m_end) * (1.0f / 3.0f);
+  Scr3 error = LengthSquared(m_metric * (values[0] - code)) * freq[0];
 
-  // build the block
-  u8 idx = 2, indices[16];
-  m_colours->RemapIndices(&idx, indices);
+  // build the block if we win
+  if (error < m_besterror) {
+    // save the error
+    m_besterror = error;
 
-  // save the block
-  WriteColourBlock4(m_start, m_end, indices, block);
+    // build the block
+    u8 idx = 2, indices[16];
+    m_colours->RemapIndices(&idx, indices);
+
+    // save the block
+    WriteColourBlock4(m_start, m_end, indices, block);
+  }
 }
 #endif
 

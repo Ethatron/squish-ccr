@@ -58,7 +58,7 @@ private:
   Vec3 m_start;
   Vec3 m_end;
   u8   m_index;
-  int  m_besterror;
+  Scr3 m_besterror;
 };
 #endif
 
