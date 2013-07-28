@@ -2616,13 +2616,19 @@ public:
 		m_v = _mm_mul_ps( m_v, v.m_v );
 		return *this;
 	}
+	
+	Vec4& operator*=( float v )
+	{
+		m_v = _mm_mul_ps( m_v, Vec4( v ).m_v );
+		return *this;
+	}
 
 	Vec4& operator/=( Vec4 v )
 	{
 		*this *= Reciprocal( v );
 		return *this;
 	}
-
+	
 	Vec4& operator/=( float v )
 	{
 		*this *= Reciprocal( Vec4( v ) );

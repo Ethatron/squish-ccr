@@ -993,7 +993,7 @@ void CompressMaskedAlphaBtc4u(dtyp const* rgba, int mask, void* block, int flags
   void* plane1Block = block;
 
   // compress a into plane 1
-  CompressAlphaBtc3u(rgba - 3, mask, plane1Block, flags);
+  CompressDepthBtc4u(rgba - 3, mask, plane1Block, flags);
 }
 
 template<typename dtyp>
@@ -1003,7 +1003,7 @@ void CompressMaskedAlphaBtc4s(dtyp const* rgba, int mask, void* block, int flags
   void* plane1Block = block;
 
   // compress a into plane 1
-  CompressAlphaBtc3s(rgba - 3, mask, plane1Block, flags);
+  CompressDepthBtc4s(rgba - 3, mask, plane1Block, flags);
 }
 
 template<typename dtyp>
@@ -1014,9 +1014,9 @@ void CompressMaskedAlphaBtc5u(dtyp const* rgba, int mask, void* block, int flags
   void* plane2Block = block;
 
   // compress a into plane 1
-  CompressAlphaBtc3u(rgba - 3, mask, plane1Block, flags);
+  CompressDepthBtc4u(rgba - 3, mask, plane1Block, flags);
   // compress b into plane 2
-  CompressAlphaBtc3u(rgba - 2, mask, plane2Block, flags);
+  CompressDepthBtc4u(rgba - 2, mask, plane2Block, flags);
 }
 
 template<typename dtyp>
@@ -1027,9 +1027,9 @@ void CompressMaskedAlphaBtc5s(dtyp const* rgba, int mask, void* block, int flags
   void* plane2Block = block;
 
   // compress a into plane 1
-  CompressAlphaBtc3s(rgba - 3, mask, plane1Block, flags);
+  CompressDepthBtc4s(rgba - 3, mask, plane1Block, flags);
   // compress b into plane 2
-  CompressAlphaBtc3s(rgba - 2, mask, plane2Block, flags);
+  CompressDepthBtc4s(rgba - 2, mask, plane2Block, flags);
 }
 
 template<typename dtyp>
@@ -1294,7 +1294,7 @@ void DecompressAlphaBtc4u(dtyp* rgba, void const* block, int flags)
   void const* plane1Block = block;
 
   // decompress plane 1 into a
-  DecompressAlphaBtc3u(rgba - 3, plane1Block, flags);
+  DecompressDepthBtc4u(rgba - 3, plane1Block, flags);
 }
 
 template<typename dtyp>
@@ -1304,7 +1304,7 @@ void DecompressAlphaBtc4s(dtyp* rgba, void const* block, int flags)
   void const* plane1Block = block;
 
   // decompress plane 1 into a
-  DecompressAlphaBtc3s(rgba - 3, plane1Block, flags);
+  DecompressDepthBtc4s(rgba - 3, plane1Block, flags);
 }
 
 template<typename dtyp>
@@ -1315,9 +1315,9 @@ void DecompressAlphaBtc5u(dtyp* rgba, void const* block, int flags)
   void const* plane2Block = block;
 
   // decompress plane 1 into a
-  DecompressAlphaBtc3u(rgba - 3, plane1Block, flags);
+  DecompressDepthBtc4u(rgba - 3, plane1Block, flags);
   // decompress plane 2 into b
-  DecompressAlphaBtc3u(rgba - 2, plane2Block, flags);
+  DecompressDepthBtc4u(rgba - 2, plane2Block, flags);
 }
 
 template<typename dtyp>
@@ -1328,9 +1328,9 @@ void DecompressAlphaBtc5s(dtyp* rgba, void const* block, int flags)
   void const* plane2Block = block;
 
   // decompress plane 1 into a
-  DecompressAlphaBtc3s(rgba - 3, plane1Block, flags);
+  DecompressDepthBtc4s(rgba - 3, plane1Block, flags);
   // decompress plane 2 into b
-  DecompressAlphaBtc3s(rgba - 2, plane2Block, flags);
+  DecompressDepthBtc4s(rgba - 2, plane2Block, flags);
 }
 
 template<typename dtyp>

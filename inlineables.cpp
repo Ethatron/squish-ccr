@@ -764,6 +764,7 @@ static doinline void passreg Codebook4(u8 (&codes)[4*4]) ccr_restricted
   codes[12 + 3] = 255;
 }
 
+template<const int prc>
 static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
@@ -783,6 +784,7 @@ static doinline void passreg Codebook6(u8 (&codes)[8*1]) ccr_restricted
   }
 }
 
+template<const int prc>
 static doinline void passreg Codebook6(s8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
@@ -802,6 +804,7 @@ static doinline void passreg Codebook6(s8 (&codes)[8*1]) ccr_restricted
   }
 }
 
+template<const int prc>
 static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
@@ -821,6 +824,7 @@ static doinline void passreg Codebook8(u8 (&codes)[8*1]) ccr_restricted
   }
 }
 
+template<const int prc>
 static doinline void passreg Codebook8(s8 (&codes)[8*1]) ccr_restricted
 {
   // generate the midpoints
@@ -836,6 +840,86 @@ static doinline void passreg Codebook8(s8 (&codes)[8*1]) ccr_restricted
       cd = (3 * c + 4 * d); codes[5 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (2 * c + 5 * d); codes[6 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
       cd = (1 * c + 6 * d); codes[7 + i] = (s8)((((cd * 0x2493) >> 16) + cd) >> 3);
+    }
+  }
+}
+
+template<const int prc>
+static doinline void passreg Codebook6(u16 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
+
+    {
+      codes[2 + i] = (u16)(((4 * c + 1 * d) * 0xCCCD) >> 18);
+      codes[3 + i] = (u16)(((3 * c + 2 * d) * 0xCCCD) >> 18);
+      codes[4 + i] = (u16)(((2 * c + 3 * d) * 0xCCCD) >> 18);
+      codes[5 + i] = (u16)(((1 * c + 4 * d) * 0xCCCD) >> 18);
+
+      codes[6 + i] = (u16)  0 << prc;
+      codes[7 + i] = (u16)255 << prc;
+    }
+  }
+}
+
+template<const int prc>
+static doinline void passreg Codebook6(s16 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
+
+    {
+      codes[2 + i] = (s16)(((4 * c + 1 * d) * 0xCCCD) >> 18);
+      codes[3 + i] = (s16)(((3 * c + 2 * d) * 0xCCCD) >> 18);
+      codes[4 + i] = (s16)(((2 * c + 3 * d) * 0xCCCD) >> 18);
+      codes[5 + i] = (s16)(((1 * c + 4 * d) * 0xCCCD) >> 18);
+
+      codes[6 + i] = (s16)-127 << prc;
+      codes[7 + i] = (s16) 127 << prc;
+    }
+  }
+}
+
+template<const int prc>
+static doinline void passreg Codebook8(u16 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
+    int cd;
+
+    {
+      cd = (6 * c + 1 * d); codes[2 + i] = (u16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (5 * c + 2 * d); codes[3 + i] = (u16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (4 * c + 3 * d); codes[4 + i] = (u16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (3 * c + 4 * d); codes[5 + i] = (u16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (2 * c + 5 * d); codes[6 + i] = (u16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (1 * c + 6 * d); codes[7 + i] = (u16)((((cd * 0x2493) >> 16) + cd) >> 3);
+    }
+  }
+}
+
+template<const int prc>
+static doinline void passreg Codebook8(s16 (&codes)[8*1]) ccr_restricted
+{
+  // generate the midpoints
+  for (int i = 0; i < 1; ++i) {
+    const int c = codes[0 + i];
+    const int d = codes[1 + i];
+    int cd;
+
+    {
+      cd = (6 * c + 1 * d); codes[2 + i] = (s16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (5 * c + 2 * d); codes[3 + i] = (s16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (4 * c + 3 * d); codes[4 + i] = (s16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (3 * c + 4 * d); codes[5 + i] = (s16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (2 * c + 5 * d); codes[6 + i] = (s16)((((cd * 0x2493) >> 16) + cd) >> 3);
+      cd = (1 * c + 6 * d); codes[7 + i] = (s16)((((cd * 0x2493) >> 16) + cd) >> 3);
     }
   }
 }
@@ -963,11 +1047,17 @@ static doinline void passreg Codebook4nc(Vec3 (&codes)[4], Vec3::Arg start, Vec3
 
 /* -----------------------------------------------------------------------------
  */
+#define CODEBOOKLQ_PRECISIONBITS	(0)
+#define CODEBOOKHQ_PRECISIONBITS	(5)
+#define CODEBOOKLQ_MULTIPLIER		(1 << CODEBOOKLQ_PRECISIONBITS)
+#define CODEBOOKHQ_MULTIPLIER		(1 << CODEBOOKHQ_PRECISIONBITS)
+
+template<const int pb>
 static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg end) ccr_restricted
 {
-  const Col8 smul = Col8(0x05, 0x00, 0x04, 0x03, 0x02, 0x01, 0x00, 0x00);
-  const Col8 emul = Col8(0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00);
-  const Col8 mask = Col8(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF);
+  const Col8 smul = Col8(0x05 << pb, 0x00 << pb, 0x04 << pb, 0x03 << pb, 0x02 << pb, 0x01 << pb, 0x00 << pb, 0x00 << pb);
+  const Col8 emul = Col8(0x00 << pb, 0x05 << pb, 0x01 << pb, 0x02 << pb, 0x03 << pb, 0x04 << pb, 0x00 << pb, 0x00 << pb);
+  const Col8 mask = Col8(0x00 << pb, 0x00 << pb, 0x00 << pb, 0x00 << pb, 0x00 << pb, 0x00 << pb, 0x00 << pb, 0xFF << pb);
 
   // range [0,2*5*255]
   Col8 ipol = (smul * start) + (emul * end);
@@ -975,10 +1065,11 @@ static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg e
   codes = ((ipol * 0xCCCD) >> 2) + mask;
 }
 
+template<const int pb>
 static doinline void passreg Codebook8(Col8 &codes, Col8::Arg start, Col8::Arg end) ccr_restricted
 {
-  const Col8 smul = Col8(0x07, 0x00, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01);
-  const Col8 emul = Col8(0x00, 0x07, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
+  const Col8 smul = Col8(0x07 << pb, 0x00 << pb, 0x06 << pb, 0x05 << pb, 0x04 << pb, 0x03 << pb, 0x02 << pb, 0x01 << pb);
+  const Col8 emul = Col8(0x00 << pb, 0x07 << pb, 0x01 << pb, 0x02 << pb, 0x03 << pb, 0x04 << pb, 0x05 << pb, 0x06 << pb);
 
   // range [0,2*7*255]
   Col8 ipol = (smul * start) + (emul * end);

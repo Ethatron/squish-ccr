@@ -35,6 +35,10 @@
 
 #include "inlineables.cpp"
 
+// Codebook precision bits, up to 5 (+8)
+#define CBLB	0	// low precision
+#define CBHB	5	// high precision
+
 namespace squish {
 
 /* *****************************************************************************
@@ -115,53 +119,7 @@ static void FixRange(int& minS, int& maxS)
 
 /* -----------------------------------------------------------------------------
  */
-template<typename dtyp>
-static Scr4 FitCodesL(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
-{
-  // fit each alpha value to the codebook
-  Scr4 err = Scr4(0.0f);
-  for (int i = 0; i < 16; ++i) {
-    // check this pixel is valid
-    int bit = 1 << i;
-    if ((mask & bit) == 0) {
-      // use the first code
-      indices[i] = 0;
-      continue;
-    }
-
-    // find the least error and corresponding index
-    // prefer lower indices over higher ones
-    Vec4 value = Vec4(&rgba[4 * i + 3]);
-
-    // for all possible codebook-entries
-    Vec4 dsl = LoVec4(codes) - value; dsl *= dsl;
-    Vec4 dsh = HiVec4(codes) - value; dsh *= dsh;
-    Vec4 dst = Min(dsl, dsh);
-    
-    // get best index, binary search
-    int  index = 0;
-    Scr4 least = HorizontalMin(dst);
-    int  match = 
-      (CompareEqualTo(least, dsl) << 0) + 
-      (CompareEqualTo(least, dsh) << 4);
-
-    if (!(match & 0xF))
-      index += 4, match >>= 4;
-    if (!(match & 0x3))
-      index += 2, match >>= 2;
-    if (!(match & 0x1))
-      index += 1, match >>= 1;
-
-    // save this index and accumulate the error
-    indices[i] = (u8)index;
-    err += least;
-  }
-
-  // return the total error
-  return Scr4(err);
-}
-
-template<typename dtyp>
+template<const int mul, const int div, typename dtyp>
 static Scr4 FitCodesS(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
 {
   // fit each alpha value to the codebook
@@ -203,55 +161,80 @@ static Scr4 FitCodesS(dtyp const* rgba, int mask, Col8 const &codes, u8* indices
   return Scr4(err);
 }
 
-static Scr4 FitCodes(u8  const* rgba, int mask, Col8 const &codes, u8* indices) {
-  return FitCodesS(rgba, mask, codes, indices); }
-static Scr4 FitCodes(s8  const* rgba, int mask, Col8 const &codes, u8* indices) {
-  return FitCodesS(rgba, mask, codes, indices); }
-
-static Scr4 FitCodes(u16 const* rgba, int mask, Col8 const &codes, u8* indices) {
-  return FitCodesL(rgba, mask, codes, indices); }
-static Scr4 FitCodes(s16 const* rgba, int mask, Col8 const &codes, u8* indices) {
-  return FitCodesL(rgba, mask, codes, indices); }
-static Scr4 FitCodes(f23 const* rgba, int mask, Col8 const &codes, u8* indices) {
-  return FitCodesL(rgba, mask, codes, indices); }
-
-/* -----------------------------------------------------------------------------
- */
-template<typename dtyp>
-static void GetErrorL(dtyp const* rgba, int mask,
-		      Col8 const &codes5, Col8 const &codes7,
-		      Scr4 &error5, Scr4 &error7,
-		      float (&aaaa)[16])
+template<const int mul, const int div, typename dtyp>
+static Scr4 FitCodesL(dtyp const* rgba, int mask, Col8 const &codes, u8* indices)
 {
-  // initial values
-  Scr4 err5 = Scr4(0.0f);
-  Scr4 err7 = Scr4(0.0f);
-  for (int v = 0; v < 16; v++) {
-    f23 value = rgba[4 * v + 3];
+  const Vec4 codesl = LoVec4(codes);
+  const Vec4 codesh = HiVec4(codes);
+  const f23 rerange = f23(mul) / f23(div);
+
+  // fit each alpha value to the codebook
+  Scr4 err = Scr4(0.0f);
+  for (int i = 0; i < 16; ++i) {
+    // check this pixel is valid
+    int bit = 1 << i;
+    if ((mask & bit) == 0) {
+      // use the first code
+      indices[i] = 0;
+      continue;
+    }
+
+    // find the least error and corresponding index
+    // prefer lower indices over higher ones
+    f23 value = rgba[4 * i + 3] * rerange;
 
     // find the closest code
     Vec4 val = Vec4(value);
-      
-    // create floating point vector
-    aaaa[v] = float(value);
 
     // for all possible codebook-entries
-    Vec4 d5l = LoVec4(codes5) - val; d5l *= d5l;
-    Vec4 d5h = HiVec4(codes5) - val; d5h *= d5h;
-    Vec4 d7l = LoVec4(codes7) - val; d7l *= d7l;
-    Vec4 d7h = HiVec4(codes7) - val; d7h *= d7h;
-      
-    // accumulate the error
-    err5 += HorizontalMin(Min(d5l, d5h));
-    err7 += HorizontalMin(Min(d7l, d7h));
+    Vec4 dsl = codesl - val; dsl *= dsl;
+    Vec4 dsh = codesh - val; dsh *= dsh;
+    Vec4 dst = Min(dsl, dsh);
+    
+    // get best index, binary search
+    int  index = 0;
+    Scr4 least = HorizontalMin(dst);
+    int  match = 
+      (CompareEqualTo(least, dsl) << 0) + 
+      (CompareEqualTo(least, dsh) << 4);
+
+    if (!(match & 0xF))
+      index += 4, match >>= 4;
+    if (!(match & 0x3))
+      index += 2, match >>= 2;
+    if (!(match & 0x1))
+      index += 1, match >>= 1;
+
+    // save this index and accumulate the error
+    indices[i] = (u8)index;
+    err += least;
   }
-  
+
   // return the total error
-  error5 = err5;
-  error7 = err7;
+  return Scr4(err);
 }
 
-template<typename dtyp>
+template<const int prc>
+static Scr4 FitCodes(u8  const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesS<1 << prc,1>(rgba, mask, codes, indices); }
+template<const int prc>
+static Scr4 FitCodes(s8  const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesS<1 << prc,1>(rgba, mask, codes, indices); }
+
+template<const int prc>
+static Scr4 FitCodes(u16 const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesL<1 << prc,257>(rgba, mask, codes, indices); }
+template<const int prc>
+static Scr4 FitCodes(s16 const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesL<1 << prc,258>(rgba, mask, codes, indices); }
+
+template<const int prc, const int mul>
+static Scr4 FitCodes(f23 const* rgba, int mask, Col8 const &codes, u8* indices) {
+  return FitCodesL<mul << prc,1>(rgba, mask, codes, indices); }
+
+/* -----------------------------------------------------------------------------
+ */
+template<const int mul, const int div, typename dtyp>
 static void GetErrorS(dtyp const* rgba, int mask,
 		      Col8 const &codes5, Col8 const &codes7,
 		      Scr4 &error5, Scr4 &error7,
@@ -283,24 +266,86 @@ static void GetErrorS(dtyp const* rgba, int mask,
   error7 = Scr4(err7);
 }
 
-static void GetError(u8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
-  GetErrorS(rgba, mask, codes5, codes7, error5, error7, aaaa); }
-static void GetError(s8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
-  GetErrorS(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+template<const int mul, const int div, typename dtyp>
+static void GetErrorL(dtyp const* rgba, int mask,
+		      Col8 const &codes5, Col8 const &codes7,
+		      Scr4 &error5, Scr4 &error7,
+		      float (&aaaa)[16])
+{
+  const Vec4 codes5l = LoVec4(codes5);
+  const Vec4 codes5h = HiVec4(codes5);
+  const Vec4 codes7l = LoVec4(codes7);
+  const Vec4 codes7h = HiVec4(codes7);
+  const f23 rerange = f23(mul) / f23(div);
 
+  // initial values
+  Scr4 err5 = Scr4(0.0f);
+  Scr4 err7 = Scr4(0.0f);
+  for (int v = 0; v < 16; v++) {
+    f23 value = rgba[4 * v + 3] * rerange;
+
+    // find the closest code
+    Vec4 val = Vec4(value);
+      
+    // create floating point vector
+    aaaa[v] = float(value);
+
+    // for all possible codebook-entries
+    Vec4 d5l = codes5l - val; d5l *= d5l;
+    Vec4 d5h = codes5h - val; d5h *= d5h;
+    Vec4 d7l = codes7l - val; d7l *= d7l;
+    Vec4 d7h = codes7h - val; d7h *= d7h;
+      
+    // accumulate the error
+    err5 += HorizontalMin(Min(d5l, d5h));
+    err7 += HorizontalMin(Min(d7l, d7h));
+  }
+  
+  // return the total error
+  error5 = err5;
+  error7 = err7;
+}
+
+template<const int prc>
+static void GetError(u8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+  GetErrorS<1 << prc,1>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+template<const int prc>
+static void GetError(s8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+  GetErrorS<1 << prc,1>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+
+template<const int prc>
 static void GetError(u16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
-  GetErrorL(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+  GetErrorL<1 << prc,257>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+template<const int prc>
 static void GetError(s16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
-  GetErrorL(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+  GetErrorL<1 << prc,258>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+
+template<const int prc, const int mul>
 static void GetError(f23 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
-  GetErrorL(rgba, mask, codes5, codes7, error5, error7, aaaa); }
+  GetErrorL<mul << prc,1>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
 
 /* -----------------------------------------------------------------------------
  */
 #define FIT_THRESHOLD 1e-5f
 
-template<const int min, const int max, const int steps>
+template<const int min, const int max, const int prc, const int steps>
 static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
+  const Vec4 mprc = Vec4(1.0f * (1 << prc));
+
+  // for 5-step
+  const Vec4 fouf = Vec4(4.0f * (1 << prc) / 5.0f);
+  const Vec4 thrf = Vec4(3.0f * (1 << prc) / 5.0f);
+  const Vec4 twof = Vec4(2.0f * (1 << prc) / 5.0f);
+  const Vec4 onef = Vec4(1.0f * (1 << prc) / 5.0f);
+  
+  // for 7-step
+  const Vec4 sixs = Vec4(6.0f * (1 << prc) / 7.0f);
+  const Vec4 fivs = Vec4(5.0f * (1 << prc) / 7.0f);
+  const Vec4 fous = Vec4(4.0f * (1 << prc) / 7.0f);
+  const Vec4 thrs = Vec4(3.0f * (1 << prc) / 7.0f);
+  const Vec4 twos = Vec4(2.0f * (1 << prc) / 7.0f);
+  const Vec4 ones = Vec4(1.0f * (1 << prc) / 7.0f);
+
 #if	(SQUISH_USE_SIMD > 0)
   int rng = (maxS - minS) >> 1;	// max 127
 
@@ -320,24 +365,24 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
 	 cb4, cb5, cb6, cb7;
 
     if (steps == 5) {
-      cb0 =  cssmp                                                   ; //0 = Truncate(cb0);
-      cb1 = (cssmp * Vec4(4.0f / 5.0f)) + (cmpee * Vec4(1.0f / 5.0f)); cb1 = Truncate(cb1);
-      cb2 = (cssmp * Vec4(3.0f / 5.0f)) + (cmpee * Vec4(2.0f / 5.0f)); cb2 = Truncate(cb2);
-      cb3 = (cssmp * Vec4(2.0f / 5.0f)) + (cmpee * Vec4(3.0f / 5.0f)); cb3 = Truncate(cb3);
-      cb4 = (cssmp * Vec4(1.0f / 5.0f)) + (cmpee * Vec4(4.0f / 5.0f)); cb4 = Truncate(cb4);
-      cb5 =                                cmpee                     ; //5 = Truncate(cb5);
-      cb6 = Vec4(0.0f);
-      cb7 = Vec4(255.0f);
+      cb0 = (cssmp * mprc)                 ; //0 = Truncate(cb0);
+      cb1 = (cssmp * fouf) + (cmpee * onef); cb1 = Truncate(cb1);
+      cb2 = (cssmp * thrf) + (cmpee * twof); cb2 = Truncate(cb2);
+      cb3 = (cssmp * twof) + (cmpee * thrf); cb3 = Truncate(cb3);
+      cb4 = (cssmp * onef) + (cmpee * fouf); cb4 = Truncate(cb4);
+      cb5 =                  (cmpee * mprc); //5 = Truncate(cb5);
+      cb6 = Vec4(  0.0f * (1 << prc));
+      cb7 = Vec4(255.0f * (1 << prc));
     }
     else if (steps == 7) {
-      cb0 =  cssmp                                                   ; //0 = Truncate(cb0);
-      cb1 = (cssmp * Vec4(6.0f / 7.0f)) + (cmpee * Vec4(1.0f / 7.0f)); cb1 = Truncate(cb1);
-      cb2 = (cssmp * Vec4(5.0f / 7.0f)) + (cmpee * Vec4(2.0f / 7.0f)); cb2 = Truncate(cb2);
-      cb3 = (cssmp * Vec4(4.0f / 7.0f)) + (cmpee * Vec4(3.0f / 7.0f)); cb3 = Truncate(cb3);
-      cb4 = (cssmp * Vec4(3.0f / 7.0f)) + (cmpee * Vec4(4.0f / 7.0f)); cb4 = Truncate(cb4);
-      cb5 = (cssmp * Vec4(2.0f / 7.0f)) + (cmpee * Vec4(5.0f / 7.0f)); cb5 = Truncate(cb5);
-      cb6 = (cssmp * Vec4(1.0f / 7.0f)) + (cmpee * Vec4(6.0f / 7.0f)); cb6 = Truncate(cb6);
-      cb7 =                                cmpee                     ; //7 = Truncate(cb7);
+      cb0 = (cssmp * mprc)                 ; //0 = Truncate(cb0);
+      cb1 = (cssmp * sixs) + (cmpee * ones); cb1 = Truncate(cb1);
+      cb2 = (cssmp * fivs) + (cmpee * twos); cb2 = Truncate(cb2);
+      cb3 = (cssmp * fous) + (cmpee * thrs); cb3 = Truncate(cb3);
+      cb4 = (cssmp * thrs) + (cmpee * fous); cb4 = Truncate(cb4);
+      cb5 = (cssmp * twos) + (cmpee * fivs); cb5 = Truncate(cb5);
+      cb6 = (cssmp * ones) + (cmpee * sixs); cb6 = Truncate(cb6);
+      cb7 =                  (cmpee * mprc); //7 = Truncate(cb7);
     }
 
     Vec4 errors = Vec4(0.0f);
@@ -446,16 +491,16 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
     Col8 cb1, cb2, cb3, cb4;
     
     if (steps == 5) {
-      Codebook6(codes5, Col8(cs), Col8(me));
-      Codebook6(codes5, Col8(cs), Col8(pe));
-      Codebook6(codes5, Col8(ms), Col8(ce));
-      Codebook6(codes5, Col8(ps), Col8(ce));
+      Codebook6<prc>(codes5, Col8(cs), Col8(me));
+      Codebook6<prc>(codes5, Col8(cs), Col8(pe));
+      Codebook6<prc>(codes5, Col8(ms), Col8(ce));
+      Codebook6<prc>(codes5, Col8(ps), Col8(ce));
     }
     else if (steps == 7) {
-      Codebook8(codes5, Col8(cs), Col8(me));
-      Codebook8(codes5, Col8(cs), Col8(pe));
-      Codebook8(codes5, Col8(ms), Col8(ce));
-      Codebook8(codes5, Col8(ps), Col8(ce));
+      Codebook8<prc>(codes5, Col8(cs), Col8(me));
+      Codebook8<prc>(codes5, Col8(cs), Col8(pe));
+      Codebook8<prc>(codes5, Col8(ms), Col8(ce));
+      Codebook8<prc>(codes5, Col8(ps), Col8(ce));
     }
 
     int error1 = 0;
@@ -607,7 +652,7 @@ static void WriteAlphaBlock7(int alpha0, int alpha1, u8 const* indices, void* bl
 
 /* -----------------------------------------------------------------------------
  */
-template<const int min, const int max, const int compress, typename dtyp>
+template<const int min, const int max, const int compress, const int prc, typename dtyp>
 static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flags)
 {
   Col8 codes5, codes7;
@@ -646,14 +691,14 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
 //FixRange<min,max,5>(min7, max7);
 
   // construct code-book
-  Codebook6(codes5, Col8(min5), Col8(max5));
-  Codebook8(codes7, Col8(max7), Col8(min7));
+  Codebook6<prc>(codes5, Col8(min5), Col8(max5));
+  Codebook8<prc>(codes7, Col8(max7), Col8(min7));
 
   // do the iterative tangent search
   if (flags & kAlphaIterativeFit) {
     Scr4 err5, err7; float aaaa[16];
 
-    GetError(rgba, mask, codes5, codes7, err5, err7, aaaa);
+    GetError<prc>(rgba, mask, codes5, codes7, err5, err7, aaaa);
 
     // binary search, tangent-fitting
     Scr4 errM = Min(err5, err7);
@@ -661,13 +706,13 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
     // !lossless, !lossless
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<min,max,7>(aaaa, min7, max7, err7);
-      Codebook8(codes7, Col8(max7), Col8(min7));
+      errM = FitError<min,max,prc,7>(aaaa, min7, max7, err7);
+      Codebook8<prc>(codes7, Col8(max7), Col8(min7));
 
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<min,max,5>(aaaa, min5, max5, err5);
-      Codebook6(codes5, Col8(min5), Col8(max5));
+      errM = FitError<min,max,prc,5>(aaaa, min5, max5, err5);
+      Codebook6<prc>(codes5, Col8(min5), Col8(max5));
     
     }}
   }
@@ -676,8 +721,8 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
   u8 indices5[16];
   u8 indices7[16];
 
-  Scr4 err5 = FitCodes(rgba, mask, codes5, indices5);
-  Scr4 err7 = FitCodes(rgba, mask, codes7, indices7);
+  Scr4 err5 = FitCodes<prc>(rgba, mask, codes5, indices5);
+  Scr4 err7 = FitCodes<prc>(rgba, mask, codes7, indices7);
 
   // save the block with least error (prefer 7)
   if (err7 > err5)
@@ -686,7 +731,7 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
     WriteAlphaBlock7(max7, min7, indices7, block);
 }
 
-template<const int min, const int max, const int compress, typename dtyp>
+template<const int min, const int max, const int prc, const int compress, typename dtyp>
 static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flags)
 {
   Col8 codes5, codes7;
@@ -702,7 +747,7 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
       continue;
 
     // incorporate into the min/max
-    int value = (int)((rgba[4 * i + 3] * max) + 0.5f);
+    int value = int((rgba[4 * i + 3] * max) + 0.5f);
     if (compress > 0)
       value = (value + ((1 << compress) >> 1)) >> compress;
     
@@ -725,14 +770,14 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
 //FixRange<min,max,7>(min7, max7);
 
   // construct code-book
-  Codebook6(codes5, Col8(min5), Col8(max5));
-  Codebook8(codes7, Col8(max7), Col8(min7));
+  Codebook6<prc>(codes5, Col8(min5), Col8(max5));
+  Codebook8<prc>(codes7, Col8(max7), Col8(min7));
 
   // do the iterative tangent search
   if (flags & kAlphaIterativeFit) {
     Scr4 err5, err7; float aaaa[16];
 
-    GetError(rgba, mask, codes5, codes7, err5, err7, aaaa);
+    GetError<prc,max>(rgba, mask, codes5, codes7, err5, err7, aaaa);
 
     // binary search, tangent-fitting
     Scr4 errM = Min(err5, err7);
@@ -740,13 +785,13 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
     // !lossless, !lossless
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<min,max,7>(aaaa, min7, max7, err7);
-      Codebook8(codes7, Col8(max7), Col8(min7));
+      errM = FitError<min,max,prc,7>(aaaa, min7, max7, err7);
+      Codebook8<prc>(codes7, Col8(max7), Col8(min7));
 
     if (errM > Scr4(FIT_THRESHOLD)) {
       // if better, reconstruct code-book
-      errM = FitError<min,max,5>(aaaa, min5, max5, err5);
-      Codebook6(codes5, Col8(min5), Col8(max5));
+      errM = FitError<min,max,prc,5>(aaaa, min5, max5, err5);
+      Codebook6<prc>(codes5, Col8(min5), Col8(max5));
     
     }}
   }
@@ -755,8 +800,8 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
   u8 indices5[16];
   u8 indices7[16];
 
-  Scr4 err5 = FitCodes(rgba, mask, codes5, indices5);
-  Scr4 err7 = FitCodes(rgba, mask, codes7, indices7);
+  Scr4 err5 = FitCodes<prc,max>(rgba, mask, codes5, indices5);
+  Scr4 err7 = FitCodes<prc,max>(rgba, mask, codes7, indices7);
 
   // save the block with least error (prefer 7)
   if (err7 > err5)
@@ -766,45 +811,60 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
 }
 
 void CompressAlphaBtc3u(u8  const* rgba, int mask, void* block, int flags) {
-  CompressAlphaBtc3i<   0,255,0>(rgba, mask, block, flags); }
+  CompressAlphaBtc3i<   0,255, CBLB, 0>(rgba, mask, block, flags); }
 void CompressAlphaBtc3s(s8  const* rgba, int mask, void* block, int flags) {
-  CompressAlphaBtc3i<-127,127,0>(rgba, mask, block, flags); }
+  CompressAlphaBtc3i<-127,127, CBLB, 0>(rgba, mask, block, flags); }
 
 void CompressAlphaBtc3u(u16 const* rgba, int mask, void* block, int flags) {
-  CompressAlphaBtc3i<   0,255,8>(rgba, mask, block, flags); }
+  CompressAlphaBtc3i<   0,255, CBLB, 8>(rgba, mask, block, flags); }
 void CompressAlphaBtc3s(s16 const* rgba, int mask, void* block, int flags) {
-  CompressAlphaBtc3i<-127,127,8>(rgba, mask, block, flags); }
+  CompressAlphaBtc3i<-127,127, CBLB, 8>(rgba, mask, block, flags); }
 
 void CompressAlphaBtc3u(f23 const* rgba, int mask, void* block, int flags) {
-  CompressAlphaBtc3f<   0,255,0>(rgba, mask, block, flags); }
+  CompressAlphaBtc3f<   0,255, CBLB, 0>(rgba, mask, block, flags); }
 void CompressAlphaBtc3s(f23 const* rgba, int mask, void* block, int flags) {
-  CompressAlphaBtc3f<-127,127,0>(rgba, mask, block, flags); }
+  CompressAlphaBtc3f<-127,127, CBLB, 0>(rgba, mask, block, flags); }
+
+void CompressDepthBtc4u(u8  const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<   0,255, CBLB, 0>(rgba, mask, block, flags); }
+void CompressDepthBtc4s(s8  const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<-127,127, CBLB, 0>(rgba, mask, block, flags); }
+
+void CompressDepthBtc4u(u16 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<   0,255, CBHB, 8>(rgba, mask, block, flags); }
+void CompressDepthBtc4s(s16 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3i<-127,127, CBHB, 8>(rgba, mask, block, flags); }
+
+void CompressDepthBtc4u(f23 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3f<   0,255, CBHB, 0>(rgba, mask, block, flags); }
+void CompressDepthBtc4s(f23 const* rgba, int mask, void* block, int flags) {
+  CompressAlphaBtc3f<-127,127, CBHB, 0>(rgba, mask, block, flags); }
 
 #undef	FIT_THRESHOLD
 
 /* *****************************************************************************
  */
-template<typename dtyp>
+template<const int prc, typename ctyp, typename etyp>
 static void ReadAlphaBlock(
-  dtyp (&codes  )[ 8],
+  ctyp (&codes  )[ 8],
   u8   (&indices)[16],
   void const* block)
 {
   // get the two alpha values
-  dtyp const* bytes = reinterpret_cast< dtyp const* >(block);
-  int alpha0 = (dtyp)bytes[0];
-  int alpha1 = (dtyp)bytes[1];
+  etyp const* bytes = reinterpret_cast< etyp const* >(block);
+  etyp alpha0 = bytes[0];
+  etyp alpha1 = bytes[1];
 
   // compare the values to build the codebook
-  codes[0] = (dtyp)alpha0;
-  codes[1] = (dtyp)alpha1;
+  codes[0] = (ctyp)alpha0;
+  codes[1] = (ctyp)alpha1;
 
   if (alpha0 <= alpha1)
     // use 5-alpha codebook
-    Codebook6(codes);
+    Codebook6<prc>(codes);
   else
     // use 7-alpha codebook
-    Codebook8(codes);
+    Codebook8<prc>(codes);
 
   // decode the indices
   u8 const* src = (u8*)bytes + 2;
@@ -825,44 +885,59 @@ static void ReadAlphaBlock(
   }
 }
 
-template<typename dtyp, typename ctyp, const int scale, const int correction>
+template<const int prc, typename dtyp, typename ctyp, typename etyp, const int scale, const int correction>
 static void DecompressAlphaBtc3i(dtyp* rgba, void const* block)
 {
   ctyp codes[8]; u8 indices[16];
 
-  ReadAlphaBlock(codes, indices, block);
+  ReadAlphaBlock<prc,ctyp,etyp>(codes, indices, block);
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i)
-    rgba[4 * i + 3] = (codes[indices[i]] * scale) / (1 << correction);
+    rgba[4 * i + 3] = dtyp((codes[indices[i]] * (scale)) / (1 << (correction)));
 }
 
-template<typename dtyp, typename ctyp, const int scale>
+template<const int prc, typename dtyp, typename ctyp, typename etyp, const int scale>
 static void DecompressAlphaBtc3f(dtyp* rgba, void const* block)
 {
   ctyp codes[8]; u8 indices[16];
 
-  ReadAlphaBlock(codes, indices, block);
+  ReadAlphaBlock<prc,ctyp,etyp>(codes, indices, block);
 
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i)
-    rgba[4 * i + 3] = (codes[indices[i]]) * (1.0f / scale);
+    rgba[4 * i + 3] = dtyp((codes[indices[i]]) * (1.0f / (scale)));
 }
 
 void DecompressAlphaBtc3u(u8* rgba, void const* block, int flags) {
-  DecompressAlphaBtc3i<u8, u8, 255 / 255, 0>(rgba, block); }
+  DecompressAlphaBtc3i<CBLB, u8 , u8 ,u8, 255 / 255, 0>(rgba, block); }
 void DecompressAlphaBtc3s(s8* rgba, void const* block, int flags) {
-  DecompressAlphaBtc3i<s8, s8, 127 / 127, 0>(rgba, block); }
+  DecompressAlphaBtc3i<CBLB, s8 , s8 ,s8, 127 / 127, 0>(rgba, block); }
 
 void DecompressAlphaBtc3u(u16* rgba, void const* block, int flags) {
-  DecompressAlphaBtc3i<u16, u8, 65535 / 255, 0>(rgba, block); }
+  DecompressAlphaBtc3i<CBLB, u16, u8 ,u8, 65535 / 255, 0>(rgba, block); }
 void DecompressAlphaBtc3s(s16* rgba, void const* block, int flags) {
-  DecompressAlphaBtc3i<s16, s8, 0x1FFFFF / 127, 6>(rgba, block); }
+  DecompressAlphaBtc3i<CBLB, s16, s8 ,s8, 0x1FFFFF / 127, 6>(rgba, block); }
 
 void DecompressAlphaBtc3u(f23* rgba, void const* block, int flags) {
-  DecompressAlphaBtc3f<f23, u8, 255>(rgba, block); }
+  DecompressAlphaBtc3f<CBLB, f23, u8 ,u8, 255>(rgba, block); }
 void DecompressAlphaBtc3s(f23* rgba, void const* block, int flags) {
-  DecompressAlphaBtc3f<f23, s8, 127>(rgba, block); }
+  DecompressAlphaBtc3f<CBLB, f23, s8 ,s8, 127>(rgba, block); }
+
+void DecompressDepthBtc4u(u8* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<CBLB, u8 , u16,u8, 255 / 255, 0>(rgba, block); }
+void DecompressDepthBtc4s(s8* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<CBLB, s8 , s16,s8, 127 / 127, 0>(rgba, block); }
+
+void DecompressDepthBtc4u(u16* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<CBHB, u16, u16,u8, 65535 / 255, CBHB>(rgba, block); }
+void DecompressDepthBtc4s(s16* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3i<CBHB, s16, s16,s8, 0x1FFFFF / 127, CBHB + 6>(rgba, block); }
+
+void DecompressDepthBtc4u(f23* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3f<CBHB, f23, u16,u8, 255 * (1 << CBHB)>(rgba, block); }
+void DecompressDepthBtc4s(f23* rgba, void const* block, int flags) {
+  DecompressAlphaBtc3f<CBHB, f23, s16,s8, 127 * (1 << CBHB)>(rgba, block); }
 #endif
 
 /* *****************************************************************************

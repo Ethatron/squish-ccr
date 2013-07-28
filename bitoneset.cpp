@@ -70,7 +70,7 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
   amask  = mask;
 #ifdef FEATURE_IGNORE_ALPHA0
   // threshold color
-  amask &= (~CompareEqualTo(al, Col4(0))) | (wgta);
+  amask &= (~CompareAllEqualTo_M8(al, Col4(0)).GetM8()) | (wgta);
 #endif
 
   // create the minimal set, O(16*count/2)

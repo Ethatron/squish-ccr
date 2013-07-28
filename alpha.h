@@ -37,26 +37,38 @@ namespace squish {
   void CompressAlphaBtc2u(u8  const* rgba, int mask, void* block);
   void CompressAlphaBtc3u(u8  const* rgba, int mask, void* block, int flags);
   void CompressAlphaBtc3s(s8  const* rgba, int mask, void* block, int flags);
+  void CompressDepthBtc4u(u8  const* rgba, int mask, void* block, int flags);
+  void CompressDepthBtc4s(s8  const* rgba, int mask, void* block, int flags);
   
   void CompressAlphaBtc2u(u16 const* rgba, int mask, void* block);
   void CompressAlphaBtc3u(u16 const* rgba, int mask, void* block, int flags);
   void CompressAlphaBtc3s(s16 const* rgba, int mask, void* block, int flags);
+  void CompressDepthBtc4u(u16 const* rgba, int mask, void* block, int flags);
+  void CompressDepthBtc4s(s16 const* rgba, int mask, void* block, int flags);
 
   void CompressAlphaBtc2u(f23 const* rgba, int mask, void* block);
   void CompressAlphaBtc3u(f23 const* rgba, int mask, void* block, int flags);
   void CompressAlphaBtc3s(f23 const* rgba, int mask, void* block, int flags);
+  void CompressDepthBtc4u(f23 const* rgba, int mask, void* block, int flags);
+  void CompressDepthBtc4s(f23 const* rgba, int mask, void* block, int flags);
 
   void DecompressAlphaBtc2u(u8 * rgba, void const* block);
   void DecompressAlphaBtc3u(u8 * rgba, void const* block, int flags);
   void DecompressAlphaBtc3s(s8 * rgba, void const* block, int flags);
+  void DecompressDepthBtc4u(u8 * rgba, void const* block, int flags);
+  void DecompressDepthBtc4s(s8 * rgba, void const* block, int flags);
   
   void DecompressAlphaBtc2u(u16* rgba, void const* block);
   void DecompressAlphaBtc3u(u16* rgba, void const* block, int flags);
   void DecompressAlphaBtc3s(s16* rgba, void const* block, int flags);
+  void DecompressDepthBtc4u(u16* rgba, void const* block, int flags);
+  void DecompressDepthBtc4s(s16* rgba, void const* block, int flags);
 
   void DecompressAlphaBtc2u(f23* rgba, void const* block);
   void DecompressAlphaBtc3u(f23* rgba, void const* block, int flags);
   void DecompressAlphaBtc3s(f23* rgba, void const* block, int flags);
+  void DecompressDepthBtc4u(f23* rgba, void const* block, int flags);
+  void DecompressDepthBtc4s(f23* rgba, void const* block, int flags);
 #endif
 
 // -----------------------------------------------------------------------------
