@@ -215,21 +215,21 @@ static Scr4 FitCodesL(dtyp const* rgba, int mask, Col8 const &codes, u8* indices
 }
 
 template<const int prc>
-static Scr4 FitCodes(u8  const* rgba, int mask, Col8 const &codes, u8* indices) {
+static doinline Scr4 FitCodes(u8  const* rgba, int mask, Col8 const &codes, u8* indices) {
   return FitCodesS<1 << prc,1>(rgba, mask, codes, indices); }
 template<const int prc>
-static Scr4 FitCodes(s8  const* rgba, int mask, Col8 const &codes, u8* indices) {
+static doinline Scr4 FitCodes(s8  const* rgba, int mask, Col8 const &codes, u8* indices) {
   return FitCodesS<1 << prc,1>(rgba, mask, codes, indices); }
 
 template<const int prc>
-static Scr4 FitCodes(u16 const* rgba, int mask, Col8 const &codes, u8* indices) {
+static doinline Scr4 FitCodes(u16 const* rgba, int mask, Col8 const &codes, u8* indices) {
   return FitCodesL<1 << prc,257>(rgba, mask, codes, indices); }
 template<const int prc>
-static Scr4 FitCodes(s16 const* rgba, int mask, Col8 const &codes, u8* indices) {
+static doinline Scr4 FitCodes(s16 const* rgba, int mask, Col8 const &codes, u8* indices) {
   return FitCodesL<1 << prc,258>(rgba, mask, codes, indices); }
 
 template<const int prc, const int mul>
-static Scr4 FitCodes(f23 const* rgba, int mask, Col8 const &codes, u8* indices) {
+static doinline Scr4 FitCodes(f23 const* rgba, int mask, Col8 const &codes, u8* indices) {
   return FitCodesL<mul << prc,1>(rgba, mask, codes, indices); }
 
 /* -----------------------------------------------------------------------------
@@ -307,21 +307,21 @@ static void GetErrorL(dtyp const* rgba, int mask,
 }
 
 template<const int prc>
-static void GetError(u8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+static doinline void GetError(u8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
   GetErrorS<1 << prc,1>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
 template<const int prc>
-static void GetError(s8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+static doinline void GetError(s8  const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
   GetErrorS<1 << prc,1>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
 
 template<const int prc>
-static void GetError(u16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+static doinline void GetError(u16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
   GetErrorL<1 << prc,257>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
 template<const int prc>
-static void GetError(s16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+static doinline void GetError(s16 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
   GetErrorL<1 << prc,258>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
 
 template<const int prc, const int mul>
-static void GetError(f23 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
+static doinline void GetError(f23 const* rgba, int mask, Col8 const &codes5, Col8 const &codes7, Scr4 &error5, Scr4 &error7, float (&aaaa)[16]) {
   GetErrorL<mul << prc,1>(rgba, mask, codes5, codes7, error5, error7, aaaa); }
 
 /* -----------------------------------------------------------------------------
@@ -610,7 +610,7 @@ static void WriteAlphaBlock(int alpha0, int alpha1, u8 const* indices, void* blo
   }
 }
 
-static void WriteAlphaBlock5(int alpha0, int alpha1, u8 const* indices, void* block)
+static doinline void WriteAlphaBlock5(int alpha0, int alpha1, u8 const* indices, void* block)
 {
   // check the relative values of the endpoints
   assert(alpha0 <= alpha1);
@@ -630,7 +630,7 @@ static void WriteAlphaBlock5(int alpha0, int alpha1, u8 const* indices, void* bl
   WriteAlphaBlock(alpha0, alpha1, indices, block);
 }
 
-static void WriteAlphaBlock7(int alpha0, int alpha1, u8 const* indices, void* block)
+static doinline void WriteAlphaBlock7(int alpha0, int alpha1, u8 const* indices, void* block)
 {
   // check the relative values of the endpoints
   assert(alpha0 >= alpha1);
@@ -652,7 +652,7 @@ static void WriteAlphaBlock7(int alpha0, int alpha1, u8 const* indices, void* bl
 
 /* -----------------------------------------------------------------------------
  */
-template<const int min, const int max, const int compress, const int prc, typename dtyp>
+template<const int min, const int max, const int prc, const int compress, typename dtyp>
 static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flags)
 {
   Col8 codes5, codes7;

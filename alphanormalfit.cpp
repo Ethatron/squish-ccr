@@ -822,7 +822,7 @@ static void WriteNormalBlock(int coord0, int coord1, u8 const* indices, void* bl
   }
 }
 
-static void WriteNormalBlock5(int coord0, int coord1, u8 const* indices, void* block)
+static doinline void WriteNormalBlock5(int coord0, int coord1, u8 const* indices, void* block)
 {
   if (coord0 == coord1) {
     assert((indices[ 0] % 6) < 2); assert((indices[ 1] % 6) < 2);
@@ -839,7 +839,7 @@ static void WriteNormalBlock5(int coord0, int coord1, u8 const* indices, void* b
   WriteNormalBlock(coord0, coord1, indices, block);
 }
 
-static void WriteNormalBlock7(int coord0, int coord1, u8 const* indices, void* block)
+static doinline void WriteNormalBlock7(int coord0, int coord1, u8 const* indices, void* block)
 {
   if (coord0 == coord1) {
     assert(indices[ 0] < 2); assert(indices[ 1] < 2);
