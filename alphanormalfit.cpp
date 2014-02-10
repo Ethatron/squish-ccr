@@ -68,7 +68,7 @@ namespace squish {
     min = std::max<int>(0x00, max - steps);
 }*/
 
-template<const int min, const int max, const int prc>
+template<const int min, const int max, const int prc, typename otyp>
 static Scr4 FitCodes(Vec4 const* xyz, int mask,
 		     Col8 const &codesx, u8* indicesx,
 		     Col8 const &codesy, u8* indicesy)
@@ -76,10 +76,9 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
   // fit each coord value to the codebook
   Scr4 error = Scr4(DEVIANCE_BASE);
 
-  for (int i = 0; i < 16; ++i) {
+  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
     // check this pixel is valid
-    int bit = 1 << i;
-    if ((mask & bit) == 0) {
+    if ((imask & 1) == 0) {
       // use the first code
       indicesx[i] = 0;
       indicesy[i] = 0;
@@ -99,14 +98,14 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
 
     // find the least error and corresponding index
     // prefer lower indices over higher ones
-
-    // Col4(codesy[k    ], codesy[k    ], codesy[k    ], codesy[k    ]);
-    int k = 7; do { Col4 _yy = Repeat(codesy, k);
-    // Col4(codesx[j - 0], codesx[j - 1], codesx[j - 2], codesx[j - 3]);
-    int j = 7; do { Col4 _xx = Expand(codesx, j);
     
-      Vec4 cxx = Vec4(CSCALE) * (Vec4(COFFSET) + _xx);
-      Vec4 cyy = Vec4(CSCALE) * (Vec4(COFFSET) + _yy);
+    // Col4(codesy[k    ], codesy[k    ], codesy[k    ], codesy[k    ]);
+    int k = 7; Col8 _cy = codesy; do { Col4 _yy = RepeatUpper(_cy, otyp(0)); _cy = ShiftUp<1>(_cy);
+    // Col4(codesx[j - 0], codesx[j - 1], codesx[j - 2], codesx[j - 3]);
+    int j = 7; Col8 _cx = codesx; do { Col4 _xx = ExpandUpper(_cx, otyp(0)); _cx = ShiftUp<4>(_cx);
+    
+      Vec4 cxx = (_xx + Vec4(COFFSET)) * Vec4(CSCALE);
+      Vec4 cyy = (_yy + Vec4(COFFSET)) * Vec4(CSCALE);
       Vec4 czz = Complement<DISARM>(cxx, cyy);
 
       // measure absolute angle-deviation (cosine)
@@ -118,10 +117,10 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
 
       // will cause VS to make them all cmovs
       if (match & 0xF) { idxy = k; }
-      if (match & 0x1) { idxx = j; } j--;
-      if (match & 0x2) { idxx = j; } j--;
-      if (match & 0x4) { idxx = j; } j--;
       if (match & 0x8) { idxx = j; } j--;
+      if (match & 0x4) { idxx = j; } j--;
+      if (match & 0x2) { idxx = j; } j--;
+      if (match & 0x1) { idxx = j; } j--;
     } while (  j >= 0);
     } while (--k >= 0);
 
@@ -137,7 +136,7 @@ static Scr4 FitCodes(Vec4 const* xyz, int mask,
   return error;
 }
 
-template<const int min, const int max, const int prc>
+template<const int min, const int max, const int prc, typename otyp>
 static Vec4 GetError(Vec4 const* xyz, int mask,
 		     Col8 const &codes5x, Col8 const &codes7x,
 		     Col8 const &codes5y, Col8 const &codes7y)
@@ -155,14 +154,14 @@ static Vec4 GetError(Vec4 const* xyz, int mask,
     Vec4 valz = xyz[v].SplatZ();
 
     // for all possible codebook-entries
-
+    
     // Col4(codes55y[g], codes77y[g], codes55y[g], codes77y[g]);
-    int g = 7; do { Col4 _yy = Interleave(codes5y, codes7y, g, g);
+    int g = 7; Col8 _cy5 = codes5y, _cy7 = codes7y; do { Col4 _yy = InterleaveUpper(_cy5, _cy7, otyp(0)); _cy5 = ShiftUp<1>(_cy5); _cy7 = ShiftUp<1>(_cy7);
     // Col4(codes55x[f], codes55x[f], codes77x[f], codes77x[f]);
-    int f = 7; do { Col4 _xx = Replicate (codes5x, codes7x, f, f);
+    int f = 7; Col8 _cx5 = codes5x, _cx7 = codes7x; do { Col4 _xx = ReplicateUpper (_cx5, _cx7, otyp(0)); _cx5 = ShiftUp<1>(_cx5); _cx7 = ShiftUp<1>(_cx7);
 
-      Vec4 cxx = Vec4(CSCALE) * (Vec4(COFFSET) + _xx);
-      Vec4 cyy = Vec4(CSCALE) * (Vec4(COFFSET) + _yy);
+      Vec4 cxx = (_xx + Vec4(COFFSET)) * Vec4(CSCALE);
+      Vec4 cyy = (_yy + Vec4(COFFSET)) * Vec4(CSCALE);
       Vec4 czz = Complement<DISARM>(cxx, cyy);
 
       // measure absolute angle-deviation (cosine)
@@ -251,58 +250,58 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
 
     // for all possible codebook-entries of xy (XY==xy5, ZW==xy7)
     {
-      _cbs[0] = (cssss_ * mprc)                  ; _cbs[0] = scale * (offset + Truncate(_cbs[0]));
-      _cbs[1] = (cssss_ * mix1) + (ceeee_ * mix6); _cbs[1] = scmix * (offmxn + Truncate(_cbs[1]));
-      _cbs[2] = (cssss_ * mix2) + (ceeee_ * mix5); _cbs[2] = scale * (offset + Truncate(_cbs[2]));
-      _cbs[3] = (cssss_ * mix3) + (ceeee_ * mix4); _cbs[3] = scale * (offset + Truncate(_cbs[3]));
-      _cbs[4] = (cssss_ * mix4) + (ceeee_ * mix3); _cbs[4] = scale * (offset + Truncate(_cbs[4]));
-      _cbs[5] = (cssss_ * mix5) + (ceeee_ * mix2); _cbs[5] = scale * (offset + Truncate(_cbs[5]));
-      _cbs[6] = (cssss_ * mix6) + (ceeee_ * mix1); _cbs[6] = scmix * (offmxp + Truncate(_cbs[6]));
-      _cbs[7] =                   (ceeee_ * mprc); _cbs[7] = scale * (offset + Truncate(_cbs[7]));
+      _cbs[0] = (cssss_ * mprc)                  ; _cbs[0] = (Truncate(_cbs[0]) + offset) * scale;
+      _cbs[1] = (cssss_ * mix1) + (ceeee_ * mix6); _cbs[1] = (Truncate(_cbs[1]) + offmxn) * scmix;
+      _cbs[2] = (cssss_ * mix2) + (ceeee_ * mix5); _cbs[2] = (Truncate(_cbs[2]) + offset) * scale;
+      _cbs[3] = (cssss_ * mix3) + (ceeee_ * mix4); _cbs[3] = (Truncate(_cbs[3]) + offset) * scale;
+      _cbs[4] = (cssss_ * mix4) + (ceeee_ * mix3); _cbs[4] = (Truncate(_cbs[4]) + offset) * scale;
+      _cbs[5] = (cssss_ * mix5) + (ceeee_ * mix2); _cbs[5] = (Truncate(_cbs[5]) + offset) * scale;
+      _cbs[6] = (cssss_ * mix6) + (ceeee_ * mix1); _cbs[6] = (Truncate(_cbs[6]) + offmxp) * scmix;
+      _cbs[7] =                   (ceeee_ * mprc); _cbs[7] = (Truncate(_cbs[7]) + offset) * scale;
     }
 
     // for all possible codebook-entries of x
     if (stepx == 5) {
-      _cbx[0] = (cssmpx * mprc)                  ; _cbx[0] = scale * (offset + Truncate(_cbx[0]));
-      _cbx[1] = (cssmpx * fouf) + (cmpeex * onef); _cbx[1] = scale * (offset + Truncate(_cbx[1]));
-      _cbx[2] = (cssmpx * thrf) + (cmpeex * twof); _cbx[2] = scale * (offset + Truncate(_cbx[2]));
-      _cbx[3] = (cssmpx * twof) + (cmpeex * thrf); _cbx[3] = scale * (offset + Truncate(_cbx[3]));
-      _cbx[4] = (cssmpx * onef) + (cmpeex * fouf); _cbx[4] = scale * (offset + Truncate(_cbx[4]));
-      _cbx[5] =                   (cmpeex * mprc); _cbx[5] = scale * (offset + Truncate(_cbx[5]));
+      _cbx[0] = (cssmpx * mprc)                  ; _cbx[0] = (Truncate(_cbx[0]) + offset) * scale;
+      _cbx[1] = (cssmpx * fouf) + (cmpeex * onef); _cbx[1] = (Truncate(_cbx[1]) + offset) * scale;
+      _cbx[2] = (cssmpx * thrf) + (cmpeex * twof); _cbx[2] = (Truncate(_cbx[2]) + offset) * scale;
+      _cbx[3] = (cssmpx * twof) + (cmpeex * thrf); _cbx[3] = (Truncate(_cbx[3]) + offset) * scale;
+      _cbx[4] = (cssmpx * onef) + (cmpeex * fouf); _cbx[4] = (Truncate(_cbx[4]) + offset) * scale;
+      _cbx[5] =                   (cmpeex * mprc); _cbx[5] = (Truncate(_cbx[5]) + offset) * scale;
       _cbx[6] = Vec4(-1.0f);
       _cbx[7] = Vec4( 1.0f);
     }
     else if (stepx == 7) {
-      _cbx[0] = (cssmpx * mprc)                  ; _cbx[0] = scale * (offset + Truncate(_cbx[0]));
-      _cbx[1] = (cssmpx * sixs) + (cmpeex * ones); _cbx[1] = scale * (offset + Truncate(_cbx[1]));
-      _cbx[2] = (cssmpx * fivs) + (cmpeex * twos); _cbx[2] = scale * (offset + Truncate(_cbx[2]));
-      _cbx[3] = (cssmpx * fous) + (cmpeex * thrs); _cbx[3] = scale * (offset + Truncate(_cbx[3]));
-      _cbx[4] = (cssmpx * thrs) + (cmpeex * fous); _cbx[4] = scale * (offset + Truncate(_cbx[4]));
-      _cbx[5] = (cssmpx * twos) + (cmpeex * fivs); _cbx[5] = scale * (offset + Truncate(_cbx[5]));
-      _cbx[6] = (cssmpx * ones) + (cmpeex * sixs); _cbx[6] = scale * (offset + Truncate(_cbx[6]));
-      _cbx[7] =                   (cmpeex * mprc); _cbx[7] = scale * (offset + Truncate(_cbx[7]));
+      _cbx[0] = (cssmpx * mprc)                  ; _cbx[0] = (Truncate(_cbx[0]) + offset) * scale;
+      _cbx[1] = (cssmpx * sixs) + (cmpeex * ones); _cbx[1] = (Truncate(_cbx[1]) + offset) * scale;
+      _cbx[2] = (cssmpx * fivs) + (cmpeex * twos); _cbx[2] = (Truncate(_cbx[2]) + offset) * scale;
+      _cbx[3] = (cssmpx * fous) + (cmpeex * thrs); _cbx[3] = (Truncate(_cbx[3]) + offset) * scale;
+      _cbx[4] = (cssmpx * thrs) + (cmpeex * fous); _cbx[4] = (Truncate(_cbx[4]) + offset) * scale;
+      _cbx[5] = (cssmpx * twos) + (cmpeex * fivs); _cbx[5] = (Truncate(_cbx[5]) + offset) * scale;
+      _cbx[6] = (cssmpx * ones) + (cmpeex * sixs); _cbx[6] = (Truncate(_cbx[6]) + offset) * scale;
+      _cbx[7] =                   (cmpeex * mprc); _cbx[7] = (Truncate(_cbx[7]) + offset) * scale;
     }
 
     // for all possible codebook-entries of y
     if (stepy == 5) {
-      _cby[0] = (cssmpy * mprc)                  ; _cby[0] = scale * (offset + Truncate(_cby[0]));
-      _cby[1] = (cssmpy * fouf) + (cmpeey * onef); _cby[1] = scale * (offset + Truncate(_cby[1]));
-      _cby[2] = (cssmpy * thrf) + (cmpeey * twof); _cby[2] = scale * (offset + Truncate(_cby[2]));
-      _cby[3] = (cssmpy * twof) + (cmpeey * thrf); _cby[3] = scale * (offset + Truncate(_cby[3]));
-      _cby[4] = (cssmpy * onef) + (cmpeey * fouf); _cby[4] = scale * (offset + Truncate(_cby[4]));
-      _cby[5] =                   (cmpeey * mprc); _cby[5] = scale * (offset + Truncate(_cby[5]));
+      _cby[0] = (cssmpy * mprc)                  ; _cby[0] = (Truncate(_cby[0]) + offset) * scale;
+      _cby[1] = (cssmpy * fouf) + (cmpeey * onef); _cby[1] = (Truncate(_cby[1]) + offset) * scale;
+      _cby[2] = (cssmpy * thrf) + (cmpeey * twof); _cby[2] = (Truncate(_cby[2]) + offset) * scale;
+      _cby[3] = (cssmpy * twof) + (cmpeey * thrf); _cby[3] = (Truncate(_cby[3]) + offset) * scale;
+      _cby[4] = (cssmpy * onef) + (cmpeey * fouf); _cby[4] = (Truncate(_cby[4]) + offset) * scale;
+      _cby[5] =                   (cmpeey * mprc); _cby[5] = (Truncate(_cby[5]) + offset) * scale;
       _cby[6] = Vec4(-1.0f);
       _cby[7] = Vec4( 1.0f);
     }
     else if (stepy == 7) {
-      _cby[0] = (cssmpy * mprc)                  ; _cby[0] = scale * (offset + Truncate(_cby[0]));
-      _cby[1] = (cssmpy * sixs) + (cmpeey * ones); _cby[1] = scale * (offset + Truncate(_cby[1]));
-      _cby[2] = (cssmpy * fivs) + (cmpeey * twos); _cby[2] = scale * (offset + Truncate(_cby[2]));
-      _cby[3] = (cssmpy * fous) + (cmpeey * thrs); _cby[3] = scale * (offset + Truncate(_cby[3]));
-      _cby[4] = (cssmpy * thrs) + (cmpeey * fous); _cby[4] = scale * (offset + Truncate(_cby[4]));
-      _cby[5] = (cssmpy * twos) + (cmpeey * fivs); _cby[5] = scale * (offset + Truncate(_cby[5]));
-      _cby[6] = (cssmpy * ones) + (cmpeey * sixs); _cby[6] = scale * (offset + Truncate(_cby[6]));
-      _cby[7] =                   (cmpeey * mprc); _cby[7] = scale * (offset + Truncate(_cby[7]));
+      _cby[0] = (cssmpy * mprc)                  ; _cby[0] = (Truncate(_cby[0]) + offset) * scale;
+      _cby[1] = (cssmpy * sixs) + (cmpeey * ones); _cby[1] = (Truncate(_cby[1]) + offset) * scale;
+      _cby[2] = (cssmpy * fivs) + (cmpeey * twos); _cby[2] = (Truncate(_cby[2]) + offset) * scale;
+      _cby[3] = (cssmpy * fous) + (cmpeey * thrs); _cby[3] = (Truncate(_cby[3]) + offset) * scale;
+      _cby[4] = (cssmpy * thrs) + (cmpeey * fous); _cby[4] = (Truncate(_cby[4]) + offset) * scale;
+      _cby[5] = (cssmpy * twos) + (cmpeey * fivs); _cby[5] = (Truncate(_cby[5]) + offset) * scale;
+      _cby[6] = (cssmpy * ones) + (cmpeey * sixs); _cby[6] = (Truncate(_cby[6]) + offset) * scale;
+      _cby[7] =                   (cmpeey * mprc); _cby[7] = (Truncate(_cby[7]) + offset) * scale;
     }
 
     Vec4 error0x  = Vec4(DEVIANCE_BASE);
@@ -527,33 +526,33 @@ static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
     Col8 cb0x, cb1x, cb2x, cb3x, cb4x;
 
     if (stepy == 5) {
-      Codebook6<prc>(cb0y, Col8(csy), Col8(cey));
-      Codebook6<prc>(cb1y, Col8(csy), Col8(mey));
-      Codebook6<prc>(cb2y, Col8(csy), Col8(pey));
-      Codebook6<prc>(cb3y, Col8(msy), Col8(cey));
-      Codebook6<prc>(cb4y, Col8(psy), Col8(cey));
+      Codebook6<min,max,prc>(cb0y, Col8(csy), Col8(cey));
+      Codebook6<min,max,prc>(cb1y, Col8(csy), Col8(mey));
+      Codebook6<min,max,prc>(cb2y, Col8(csy), Col8(pey));
+      Codebook6<min,max,prc>(cb3y, Col8(msy), Col8(cey));
+      Codebook6<min,max,prc>(cb4y, Col8(psy), Col8(cey));
     }
     else if (stepy == 7) {
-      Codebook8<prc>(cb0y, Col8(csy), Col8(cey));
-      Codebook8<prc>(cb1y, Col8(csy), Col8(mey));
-      Codebook8<prc>(cb2y, Col8(csy), Col8(pey));
-      Codebook8<prc>(cb3y, Col8(msy), Col8(cey));
-      Codebook8<prc>(cb4y, Col8(psy), Col8(cey));
+      Codebook8<min,max,prc>(cb0y, Col8(csy), Col8(cey));
+      Codebook8<min,max,prc>(cb1y, Col8(csy), Col8(mey));
+      Codebook8<min,max,prc>(cb2y, Col8(csy), Col8(pey));
+      Codebook8<min,max,prc>(cb3y, Col8(msy), Col8(cey));
+      Codebook8<min,max,prc>(cb4y, Col8(psy), Col8(cey));
     }
 
     if (stepx == 5) {
-      Codebook6<prc>(cb0x, Col8(csx), Col8(cex));
-      Codebook6<prc>(cb1x, Col8(csx), Col8(mex));
-      Codebook6<prc>(cb2x, Col8(csx), Col8(pex));
-      Codebook6<prc>(cb3x, Col8(msx), Col8(cex));
-      Codebook6<prc>(cb4x, Col8(psx), Col8(cex));
+      Codebook6<min,max,prc>(cb0x, Col8(csx), Col8(cex));
+      Codebook6<min,max,prc>(cb1x, Col8(csx), Col8(mex));
+      Codebook6<min,max,prc>(cb2x, Col8(csx), Col8(pex));
+      Codebook6<min,max,prc>(cb3x, Col8(msx), Col8(cex));
+      Codebook6<min,max,prc>(cb4x, Col8(psx), Col8(cex));
     }
     else if (stepx == 7) {
-      Codebook8<prc>(cb0x, Col8(csx), Col8(cex));
-      Codebook8<prc>(cb1x, Col8(csx), Col8(mex));
-      Codebook8<prc>(cb2x, Col8(csx), Col8(pex));
-      Codebook8<prc>(cb3x, Col8(msx), Col8(cex));
-      Codebook8<prc>(cb4x, Col8(psx), Col8(cex));
+      Codebook8<min,max,prc>(cb0x, Col8(csx), Col8(cex));
+      Codebook8<min,max,prc>(cb1x, Col8(csx), Col8(mex));
+      Codebook8<min,max,prc>(cb2x, Col8(csx), Col8(pex));
+      Codebook8<min,max,prc>(cb3x, Col8(msx), Col8(cex));
+      Codebook8<min,max,prc>(cb4x, Col8(psx), Col8(cex));
     }
 
     Scr4 error0x1y, error0x2y, error0x3y, error0x4y;
@@ -859,7 +858,7 @@ static doinline void WriteNormalBlock7(int coord0, int coord1, u8 const* indices
 /* -----------------------------------------------------------------------------
  */
 
-template<const int min, const int max, const int prc, typename dtyp>
+template<const int min, const int max, const int prc, typename otyp, typename dtyp>
 static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* blocky, int flags)
 {
   Col8 codes55x, codes57x, codes75x, codes77x;
@@ -871,23 +870,22 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
   Col4 min77 = Col4(max), min75;
   Col4 max77 = Col4(min), max75;
 
-  for (int i = 0; i < 16; ++i) {
+  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
     // check this pixel is valid
-    int bit = 1 << i;
-    if ((mask & bit) == 0)
+    if ((imask & 1) == 0)
       continue;
 
     // create integer vector
     Col4 value = 
-      FloatToInt<true>((Vec4(FSCALE) * xyz[i]) - Vec4(FOFFSET));
+      FloatToInt<true>((xyz[i] * Vec4(FSCALE)) - Vec4(FOFFSET));
 
-    Col4 mask =
-      IsZero(value) |
-      IsOne (value);
+    Col4 vmask =
+      IsValue<min>(value) |
+      IsValue<max>(value);
 
     // incorporate into the min/max
-    min55 = Min(min55, (mask % value) + (mask & min55));
-    max55 = Max(max55, (mask % value) + (mask & max55));
+    min55 = Min(min55, (vmask % value) + (vmask & min55));
+    max55 = Max(max55, (vmask % value) + (vmask & max55));
     min77 = Min(min77, value);
     max77 = Max(max77, value);
   }
@@ -903,10 +901,10 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
 //FixRange(min77, max77, 7);
 
   // construct code-book at desired precision
-  Codebook6<prc>(codes55x, Col8(min55.SplatR()), Col8(max55.SplatR()));
-  Codebook6<prc>(codes55y, Col8(min55.SplatG()), Col8(max55.SplatG()));
-  Codebook8<prc>(codes77x, Col8(max77.SplatR()), Col8(min77.SplatR()));
-  Codebook8<prc>(codes77y, Col8(max77.SplatG()), Col8(min77.SplatG()));
+  Codebook6<min,max,prc>(codes55x, Col8(min55.SplatR()), Col8(max55.SplatR()));
+  Codebook6<min,max,prc>(codes55y, Col8(min55.SplatG()), Col8(max55.SplatG()));
+  Codebook8<min,max,prc>(codes77x, Col8(max77.SplatR()), Col8(min77.SplatR()));
+  Codebook8<min,max,prc>(codes77y, Col8(max77.SplatG()), Col8(min77.SplatG()));
 
   // construct cross-over ranges/codebooks
   // min57 = Col4(min55.R(), min77.G());
@@ -921,7 +919,7 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
   // do the iterative tangent search
   if (flags & kNormalIterativeFit) {
     // get best error for the current min/max
-    Vec4 error = GetError<min,max,prc>(xyz, mask, codes55x, codes77x, codes55y, codes77y);
+    Vec4 error = GetError<min,max,prc,otyp>(xyz, mask, codes55x, codes77x, codes55y, codes77y);
 
     // binary search, tangent-fitting
     Scr4 err55 = error.SplatX();
@@ -935,32 +933,32 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
       errM0x0y = FitError<min,max,prc,7,7>(xyz, min77, max77, err77);
 
       // if better, reconstruct code-book
-      Codebook8<prc>(codes77x, Col8(max77.SplatR()), Col8(min77.SplatR()));
-      Codebook8<prc>(codes77y, Col8(max77.SplatG()), Col8(min77.SplatG()));
+      Codebook8<min,max,prc>(codes77x, Col8(max77.SplatR()), Col8(min77.SplatR()));
+      Codebook8<min,max,prc>(codes77y, Col8(max77.SplatG()), Col8(min77.SplatG()));
 
     // !lossless
     if (errM0x0y > Scr4(FIT_THRESHOLD)) {
       errM0x0y = FitError<min,max,prc,7,5>(xyz, min75, max75, err75);
 
       // if better, reconstruct code-book
-      Codebook8<prc>(codes75x, Col8(max75.SplatR()), Col8(min75.SplatR()));
-      Codebook6<prc>(codes75y, Col8(min75.SplatG()), Col8(max75.SplatG()));
+      Codebook8<min,max,prc>(codes75x, Col8(max75.SplatR()), Col8(min75.SplatR()));
+      Codebook6<min,max,prc>(codes75y, Col8(min75.SplatG()), Col8(max75.SplatG()));
 
     // !lossless
     if (errM0x0y > Scr4(FIT_THRESHOLD)) {
       errM0x0y = FitError<min,max,prc,5,7>(xyz, min57, max57, err57);
 
       // if better, reconstruct code-book
-      Codebook6<prc>(codes57x, Col8(min57.SplatR()), Col8(max57.SplatR()));
-      Codebook8<prc>(codes57y, Col8(max57.SplatG()), Col8(min57.SplatG()));
+      Codebook6<min,max,prc>(codes57x, Col8(min57.SplatR()), Col8(max57.SplatR()));
+      Codebook8<min,max,prc>(codes57y, Col8(max57.SplatG()), Col8(min57.SplatG()));
 
     // !lossless
     if (errM0x0y > Scr4(FIT_THRESHOLD)) {
       errM0x0y = FitError<min,max,prc,5,5>(xyz, min55, max55, err55);
 
       // if better, reconstruct code-book
-      Codebook6<prc>(codes55x, Col8(min55.SplatR()), Col8(max55.SplatR()));
-      Codebook6<prc>(codes55y, Col8(min55.SplatG()), Col8(max55.SplatG()));
+      Codebook6<min,max,prc>(codes55x, Col8(min55.SplatR()), Col8(max55.SplatR()));
+      Codebook6<min,max,prc>(codes55y, Col8(min55.SplatG()), Col8(max55.SplatG()));
 
     }}}}
   }
@@ -969,10 +967,10 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
   u8 indices55x[16], indices57x[16], indices75x[16], indices77x[16];
   u8 indices55y[16], indices57y[16], indices75y[16], indices77y[16];
 
-  Scr4 err55 = FitCodes<min,max,prc>(xyz, mask, codes55x, indices55x, codes55y, indices55y);
-  Scr4 err57 = FitCodes<min,max,prc>(xyz, mask, codes57x, indices57x, codes57y, indices57y);
-  Scr4 err75 = FitCodes<min,max,prc>(xyz, mask, codes75x, indices75x, codes75y, indices75y);
-  Scr4 err77 = FitCodes<min,max,prc>(xyz, mask, codes77x, indices77x, codes77y, indices77y);
+  Scr4 err55 = FitCodes<min,max,prc,otyp>(xyz, mask, codes55x, indices55x, codes55y, indices55y);
+  Scr4 err57 = FitCodes<min,max,prc,otyp>(xyz, mask, codes57x, indices57x, codes57y, indices57y);
+  Scr4 err75 = FitCodes<min,max,prc,otyp>(xyz, mask, codes75x, indices75x, codes75y, indices75y);
+  Scr4 err77 = FitCodes<min,max,prc,otyp>(xyz, mask, codes77x, indices77x, codes77y, indices77y);
   Scr4 err   = Min(Min(err55, err77), Min(err57, err75));
   
   /*
@@ -985,6 +983,7 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
 #endif
    */
 
+#if 0
   /* save the block with least error (prefer 77, capture min==max)
    *     | Brickwork | TerrainRk |
    * all |    211288 |    312500 |
@@ -1008,11 +1007,35 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
     WriteNormalBlock5(min55.R(), max55.R(), indices55x, blockx);
     WriteNormalBlock5(min55.G(), max55.G(), indices55y, blocky);
   }
+#else
+  Col4 min__x, max__x; u8* indices__x;
+  Col4 min__y, max__y; u8* indices__y;
+
+  /**/ if (err == err77) {
+    min__x = max77, max__x = min77; indices__x = indices77x;
+    min__y = max77, max__y = min77; indices__y = indices77y;
+  }
+  else if (err == err75) {
+    min__x = max75, max__x = min75; indices__x = indices75x;
+    min__y = min75, max__y = max75; indices__y = indices75y;
+  }
+  else if (err == err57) {
+    min__x = min57, max__x = max57; indices__x = indices57x;
+    min__y = max57, max__y = min57; indices__y = indices57y;
+  }
+  else {
+    min__x = min55, max__x = max55; indices__x = indices55x;
+    min__y = min55, max__y = max55; indices__y = indices55y;
+  }
+
+  WriteNormalBlock(min__x.R(), max__x.R(), indices__x, blockx);
+  WriteNormalBlock(min__y.G(), max__y.G(), indices__y, blocky);
+#endif
 }
 
 #undef	FIT_THRESHOLD
 
-template<const int min, const int max, const int prc, const int lwr, const int upr, typename dtyp>
+template<const int min, const int max, const int prc, const int lwr, const int upr, typename otyp, typename dtyp>
 static void CompressNormalsBtc5i(dtyp const* xyzd, int mask, void* blockx, void* blocky, int flags)
 {
   Vec4 xyz[16];
@@ -1022,13 +1045,13 @@ static void CompressNormalsBtc5i(dtyp const* xyzd, int mask, void* blockx, void*
     Col4 value; LoadUnaligned(value, &xyzd[i * 4]);
 
     // create floating point vector
-    xyz[i] = Normalize(Vec4(ISCALE) * KillW(Vec4(IOFFSET) + value));
+    xyz[i] = Normalize(KillW(value + Vec4(IOFFSET)) * Vec4(ISCALE));
   }
     
-  CompressNormalBtc5v<min,max,prc,dtyp>(xyz, mask, blockx, blocky, flags);
+  CompressNormalBtc5v<min,max,prc,otyp,dtyp>(xyz, mask, blockx, blocky, flags);
 }
 
-template<const int min, const int max, const int prc, typename dtyp>
+template<const int min, const int max, const int prc, typename otyp, typename dtyp>
 static void CompressNormalsBtc5f(dtyp const* xyzd, int mask, void* blockx, void* blocky, int flags)
 {
   Vec4 xyz[16];
@@ -1041,23 +1064,23 @@ static void CompressNormalsBtc5f(dtyp const* xyzd, int mask, void* blockx, void*
     xyz[i] = Normalize(KillW(value));
   }
     
-  CompressNormalBtc5v<min,max,prc,dtyp>(xyz, mask, blockx, blocky, flags);
+  CompressNormalBtc5v<min,max,prc,otyp,dtyp>(xyz, mask, blockx, blocky, flags);
 }
 
 void CompressNormalsBtc5u(u8 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
-  CompressNormalsBtc5i<   0,255, CBLB,    0,255>(xyzd, mask, blockx, blocky, flags); }
+  CompressNormalsBtc5i<   0,255, CBLB,    0,255, unsigned>(xyzd, mask, blockx, blocky, flags); }
 void CompressNormalsBtc5s(s8 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
-  CompressNormalsBtc5i<-127,127, CBLB, -127,127>(xyzd, mask, blockx, blocky, flags); }
+  CompressNormalsBtc5i<-127,127, CBLB, -127,127,   signed>(xyzd, mask, blockx, blocky, flags); }
 
 void CompressNormalsBtc5u(u16 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
-  CompressNormalsBtc5i<   0,255, CBHB,      0,65535>(xyzd, mask, blockx, blocky, flags); }
+  CompressNormalsBtc5i<   0,255, CBHB,      0,65535, unsigned>(xyzd, mask, blockx, blocky, flags); }
 void CompressNormalsBtc5s(s16 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
-  CompressNormalsBtc5i<-127,127, CBHB, -32767,32767>(xyzd, mask, blockx, blocky, flags); }
+  CompressNormalsBtc5i<-127,127, CBHB, -32767,32767,   signed>(xyzd, mask, blockx, blocky, flags); }
 
 void CompressNormalsBtc5u(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
-  CompressNormalsBtc5f<   0,255, CBHB>(xyzd, mask, blockx, blocky, flags); }
+  CompressNormalsBtc5f<   0,255, CBHB, unsigned>(xyzd, mask, blockx, blocky, flags); }
 void CompressNormalsBtc5s(f23 const* xyzd, int mask, void* blockx, void* blocky, int flags) {
-  CompressNormalsBtc5f<-127,127, CBHB>(xyzd, mask, blockx, blocky, flags); }
+  CompressNormalsBtc5f<-127,127, CBHB,   signed>(xyzd, mask, blockx, blocky, flags); }
 
 /* *****************************************************************************
  */
@@ -1081,19 +1104,9 @@ static void ReadNormalBlock(
   codesy[0] = (ctyp)coord0y << prc;
   codesy[1] = (ctyp)coord1y << prc;
 
-  if (coord0x <= coord1x)
-    // use 5-coord codebook
-    Codebook6<prc>(codesx);
-  else
-    // use 7-coord codebook
-    Codebook8<prc>(codesx);
-
-  if (coord0y <= coord1y)
-    // use 5-coord codebook
-    Codebook6<prc>(codesy);
-  else
-    // use 7-coord codebook
-    Codebook8<prc>(codesy);
+  // use 5-coord or 7-coord  codebook
+  Codebook6or8<prc>(codesx, coord0x <= coord1x);
+  Codebook6or8<prc>(codesy, coord0y <= coord1y);
 
   // decode the indices
   u8 const* srcx = (u8*)bytesx + 2;
@@ -1132,9 +1145,9 @@ static void DecompressNormalsBtc5i(dtyp* xyzd, void const* blockx, void const* b
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i) {
     Col3 _xyz0  = Col3(codesx[indicesx[i]], codesy[indicesy[i]]);
-    Vec3 cxyz0  = Vec3(CSCALE) * (Vec3(COFFSET) + _xyz0);
+    Vec3 cxyz0  = (_xyz0 + Vec3(COFFSET)) * Vec3(CSCALE);
          cxyz0  = Complement<DISARM>(cxyz0);
-	 cxyz0  = (Vec3(OSCALE) * cxyz0) - Vec3(OOFFSET);
+	 cxyz0  = (cxyz0 * Vec3(OSCALE)) - Vec3(OOFFSET);
 	 _xyz0  = FloatToInt<true>(cxyz0);
 
     StoreUnaligned(_xyz0, &xyzd[4 * i]);
@@ -1152,9 +1165,9 @@ static void DecompressNormalsBtc5f(dtyp* xyzd, void const* blockx, void const* b
   // write out the indexed codebook values
   for (int i = 0; i < 16; ++i) {
     Col3 _xyz0  = Col3(codesx[indicesx[i]], codesy[indicesy[i]]);
-    Vec3 cxyz0  = Vec3(CSCALE) * (Vec3(COFFSET) + _xyz0);
+    Vec3 cxyz0  = (_xyz0 + Vec3(COFFSET)) * Vec3(CSCALE);
          cxyz0  = Complement<DISARM>(cxyz0);
-//	 cxyz0  = (Vec4(OSCALE) * cxyz0) - Vec4(OOFFSET);
+//	 cxyz0  = (cxyz0 * Vec4(OSCALE)) - Vec4(OOFFSET);
 //	 _xyz0  = FloatToFloat<false>(cxyz0);
 
     StoreUnaligned(cxyz0, &xyzd[4 * i]);

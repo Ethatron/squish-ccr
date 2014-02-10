@@ -74,10 +74,9 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
 #endif
 
   // create the minimal set, O(16*count/2)
-  for (int i = 0, index; i < 16; ++i) {
+  for (int i = 0, imask = amask, index; i < 16; ++i, imask >>= 1) {
     // check this pixel is enabled
-    int bit = 1 << i;
-    if ((amask & bit) == 0) {
+    if ((imask & 1) == 0) {
       m_remap[i] = -1;
       continue;
     }
@@ -134,12 +133,10 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
     if (!m_count) {
       Vec3 sum = Vec3(0.0f);
 
-      for (int i = 0; i < 16; ++i) {
-	int bit = 1 << i;
-
+      for (int i = 0, imask = amask; i < 16; ++i, imask >>= 1) {
 	/* assign blanked out pixels when weighting
 	 */
-	if ((amask & bit) == 0) {
+	if ((imask & 1) == 0) {
 	  m_remap[i] = 0;
 
 	  u8 *rgbvalue = &rgbx[4 * i + 0];
@@ -160,12 +157,10 @@ BitoneSet::BitoneSet(u8 const* rgba, int mask, int flags)
       m_unweighted = true;
     }
     else {
-      for (int i = 0, index; i < 16; ++i) {
-	int bit = 1 << i;
-
+      for (int i = 0, imask = amask, index; i < 16; ++i, imask >>= 1) {
 	/* assign blanked out pixels when weighting
 	 */
-	if ((amask & bit) == 0) {
+	if ((imask & 1) == 0) {
 	  u8 *rgbvalue = &rgbx[4 * i + 0];
 
 	  // normalize coordinates to [0,1]
@@ -248,10 +243,9 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
   amask &= mask;
 
   // create the minimal set, O(16*count/2)
-  for (int i = 0, index; i < 16; ++i) {
+  for (int i = 0, imask = amask, index; i < 16; ++i, imask >>= 1) {
     // check this pixel is enabled
-    int bit = 1 << i;
-    if ((amask & bit) == 0) {
+    if ((imask & 1) == 0) {
       m_remap[i] = -1;
       continue;
     }
@@ -310,12 +304,10 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
     if (!m_count) {
       Vec3 sum = Vec3(0.0f);
 
-      for (int i = 0; i < 16; ++i) {
-	int bit = 1 << i;
-
+      for (int i = 0, imask = amask; i < 16; ++i, imask >>= 1) {
 	/* assign blanked out pixels when weighting
 	 */
-	if ((amask & bit) == 0) {
+	if ((imask & 1) == 0) {
 	  m_remap[i] = 0;
 
 	  Vec3 *rgbvalue = &rgbx[i];
@@ -338,12 +330,10 @@ BitoneSet::BitoneSet(f23 const* rgba, int mask, int flags)
       m_unweighted = true;
     }
     else {
-      for (int i = 0, index; i < 16; ++i) {
-	int bit = 1 << i;
-
+      for (int i = 0, imask = amask, index; i < 16; ++i, imask >>= 1) {
 	/* assign blanked out pixels when weighting
 	 */
-	if ((amask & bit) == 0) {
+	if ((imask & 1) == 0) {
 	  Vec3 *rgbvalue = &rgbx[i];
 
 #if 0

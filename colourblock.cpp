@@ -133,10 +133,7 @@ void ReadColourBlock(
   int b = Unpack565(bytes + 2, codes + 4);
 
   // generate the midpoints
-  if (isBtc1)
-    Codebook3(codes, a <= b);
-  else
-    Codebook4(codes);
+  Codebook3or4(codes, isBtc1 & (a <= b));
 
   // unpack the indices
   for (int i = 0; i < 4; ++i) {

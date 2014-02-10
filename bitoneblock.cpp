@@ -115,7 +115,7 @@ void ReadBitoneBlock(
   Unpack88(bytes + 2, codes + 4);
 
   // generate the midpoints
-  Codebook4(codes);
+  Codebook3or4(codes, false);
 
   // unpack the indices
   for (int i = 0; i < 4; ++i) {

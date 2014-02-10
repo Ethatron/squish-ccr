@@ -413,12 +413,10 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	  int num = 0;
 	  int p = m_count[s];
 
-	  for (int i = 0; i < 16; ++i) {
-	    int bit = 1 << i;
-
+	  for (int i = 0, imask = amask; i < 16; ++i, imask >>= 1) {
 	    /* assign blanked out pixels when weighting
 	     */
-	    if ((amask & bit) == 0) {
+	    if ((imask & 1) == 0) {
 	      m_remap[s][i] = (u8)p;
 
 	      u8 *rgbvalue = &rgbx[4 * i + 0];
@@ -542,12 +540,10 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
 	    int num = 0;
 	    int p = m_count[a];
 
-	    for (int i = 0; i < 16; ++i) {
-	      int bit = 1 << i;
-
+	    for (int i = 0, imask = amask; i < 16; ++i, imask >>= 1) {
 	      /* assign blanked out pixels when weighting
 	       */
-	      if ((amask & bit) == 0) {
+	      if ((imask & 1) == 0) {
 		m_remap[a][i] = (u8)p;
 	      
 		u8 *avalue = &___a[1 * i + 0];
@@ -776,12 +772,10 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
 	  int num = 0;
 	  int p = m_count[s];
 
-	  for (int i = 0; i < 16; ++i) {
-	    int bit = 1 << i;
-
+	  for (int i = 0, imask = amask; i < 16; ++i, imask >>= 1) {
 	    /* assign blanked out pixels when weighting
 	     */
-	    if ((amask & bit) == 0) {
+	    if ((imask & 1) == 0) {
 	      m_remap[s][i] = (u8)p;
 
 	      Vec4 *rgbvalue = &rgbx[i];
@@ -905,12 +899,10 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
 	    int num = 0;
 	    int p = m_count[a];
 
-	    for (int i = 0; i < 16; ++i) {
-	      int bit = 1 << i;
-
+	    for (int i = 0, imask = amask; i < 16; ++i, imask >>= 1) {
 	      /* assign blanked out pixels when weighting
 	       */
-	      if ((amask & bit) == 0) {
+	      if ((mask & 1) == 0) {
 		m_remap[a][i] = (u8)p;
 	      
 		Scr4 *avalue = &___a[i];
@@ -1142,10 +1134,9 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 #endif
 
     // create the minimal set
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 0, imask = pmask; i < 16; ++i, imask >>= 1) {
       // check this pixel is enabled
-      int bit = 1 << i;
-      if ((pmask & bit) == 0)
+      if ((imask & 1) == 0)
 	continue;
 
       // copy "unset"
@@ -1242,10 +1233,9 @@ void PaletteSet::RemapIndices(u8 const* source, u8* target, int set) const
     // selection mask
     int pmask = m_mask[s];
 
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 0, imask = pmask; i < 16; ++i, imask >>= 1) {
       // check this pixel is enabled
-      int bit = 1 << i;
-      if ((pmask & bit) == 0)
+      if ((imask & 1) == 0)
 	continue;
 
       u8 t = 0; t = ((m_remap[s][i] == -1) ? t : source[m_remap[s][i]]); target[i] = t;
@@ -1258,11 +1248,10 @@ void PaletteSet::UnmapIndices(u8 const* source, u8* destination, int set, unsign
   const int s = set; {
     // selection mask
     int pmask = m_mask[s];
-
-    for (int i = 0; i < 16; ++i) {
+    
+    for (int i = 0, imask = pmask; i < 16; ++i, imask >>= 1) {
       // check this pixel is enabled
-      int bit = 1 << i;
-      if ((pmask & bit) == 0)
+      if ((imask & 1) == 0)
 	continue;
 
       if ((cmask >>  0) & 0xFF) destination[4 * i + 0] = (u8)(codes[source[i]] >>  0);

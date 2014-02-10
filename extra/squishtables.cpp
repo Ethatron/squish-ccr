@@ -1010,8 +1010,8 @@ private:
   fprintf(stderr, "b [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minb, maxb, 0x01F);
   fprintf(stderr, "r [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minr, maxr, 0x000);
 #endif
-  
-#if 1
+
+#if 0
   unsigned int ming = 0xFFFFFFFF, maxg = 0x00000000;
   unsigned int minb = 0xFFFFFFFF, maxb = 0x00000000;
   unsigned int minr = 0xFFFFFFFF, maxr = 0x00000000;
@@ -1055,7 +1055,7 @@ private:
         (be << (0 + RB      - 1)) +
         (re << (0              ))
        ) >> (8 - RB)) / (1.0f * ((1 << NB) - 1)),
-       
+
        /*
       (ge / 255.0f) * ((float)0xFF / (1 << (8 +               0))) +
       (be / 255.0f) * ((float)0xFF / (1 << (8 + GB          - 1))) +
@@ -1073,7 +1073,7 @@ private:
 	*/
       ee);
   }
-  
+
   fprintf(stderr, "g [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", ming, maxg, 0x1FF);
   fprintf(stderr, "b [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minb, maxb, 0x01F);
   fprintf(stderr, "r [0x%04x,0x%04x] remaining corrective capacity is 0x%04x\n", minr, maxr, 0x000);
@@ -1166,6 +1166,72 @@ private:
 
       fprintf(stderr, " %2d: %7.3f%%, %8.4f RMSE\n", i, num * 100.0f / 256.0f, sqrtf(error / 256.0f));
     }
+  }
+  }
+#endif
+
+#if 0
+  for (int m = 0; m <= 7; m++)
+  for (int i = 0; i <= 127; i++) {
+    int ipol = i * m * 32;
+    int codes0 =  ipol / 7;
+    int codes1 = -ipol / 7;
+//  int codes1 = ((((ipol * 0x2493 + (ipol << 16)) >> 16)) >> 3);
+//  int codes2 = ((((ipol * 0x2493 + (ipol << 16) + (0xFFFF << 3)) >> 16)) >> 3);
+//  int codes2 = ((((ipol * 0x2493) >> 16) + ipol + 0x7) >> 3);
+    int codes2 = (((( ipol * 0x2493) >> 16) +  ipol) >> 3);
+    int codes3 = ((((-ipol * 0x2493) >> 16) + -ipol) >> 3) + (ipol != 0);
+
+//  fprintf(stderr, "%d %4d 0x%08x 0x%08x%c 0x%08x%c\n", m, i, codes0, codes1, codes1 == codes0 ? '+' : '-', codes2, codes2 == codes0 ? '+' : '-');
+    fprintf(stderr, "%d %4d 0x%08x 0x%08x %d | 0x%08x 0x%08x %d\n", m, i, codes0, codes2, codes0 - codes2, codes1, codes3, codes1 - codes3);
+  }
+#endif
+  
+#if 0
+  for (int m = 0; m <= 5; m++)
+  for (int i = -127; i <= 127; i++) {
+    int ipol = i * m * 32;
+    int codes0 = ipol / 5;
+//  int codes2 = ((((ipol * 0x2493) >> 16) + ipol) >> 3) + (ipol < 0);
+    int codes2 = ((((ipol * 0xCCCD) >> 16)       ) >> 2) + (ipol < 0);
+
+//  fprintf(stderr, "%d %4d 0x%08x 0x%08x%c 0x%08x%c\n", m, i, codes0, codes1, codes1 == codes0 ? '+' : '-', codes2, codes2 == codes0 ? '+' : '-');
+    fprintf(stderr, "%d %4d 0x%08x 0x%08x %d\n", m, i, codes0, codes2, codes0 - codes2);
+  }
+#endif
+  
+#if 1
+  for (unsigned int S = 0; S <= 3; S++) {
+  for (unsigned int A = 0; A <= 1; A++) {
+  for (unsigned int O = 0; O <= 1; O++) {
+  for (unsigned int N = 0; N <= 0xFFFF; N++) {
+
+  bool good = true;
+  for (int m = 0; m <= 5; m++)
+  for (int i = 0; i <= 255; i++) {
+    int xpol = (i * m * 32);
+    int ipol = (i * m * 32);
+
+    int codes0 = xpol / 5;
+    int codes2 = (int((int(ipol * N) >> 16) + (A * ipol)) >> S) + (O * (ipol < 0));
+    
+    if (codes2 != codes0) {
+    //fprintf(stderr, "((((ipol * 0x%04x) >> 16) + (%d * ipol >> 1) + %d) >> %d): %c\n", N, A, O, S, good ? '#' : '-');
+      good = false; break; }
+  }
+  
+  // ((((ipol * 0x3334) >> 16) + (0 * ipol)) >> 0) + (1 * (ipol < 0)): # divide by 5 from -127 to 127
+  // ((((ipol * 0x4925) >> 16) + (0 * ipol)) >> 1) + (1 * (ipol < 0)): # divide by 7 from -127 to 127
+  //
+  // ((((ipol * 0xcccd) >> 16) + (0 * ipol)) >> 2) + (1 * (ipol < 0)): # divide by 5 from -127 to 127
+  // ((((ipol * 0x2493) >> 16) + (1 * ipol)) >> 3) + (1 * (ipol < 0)): # divide by 7 from -127 to 127
+  if (good) {
+    fprintf(stderr, "((((ipol * 0x%04x) >> 16) + (%d * ipol)) >> %d) + (%d * (ipol < 0)): %c\n", N, A, S, O, good ? '#' : '-');
+    fflush(stderr);
+  }
+
+  }
+  }
   }
   }
 #endif

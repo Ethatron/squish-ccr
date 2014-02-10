@@ -89,8 +89,14 @@ public:
 
 	Col3( int r, int g, int b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
 	Col3( int r, int g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
+	Col3( u16 r, u16 g, u16 b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
+	Col3( s16 r, s16 g, s16 b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
+	Col3( u16 r, u16 g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
+	Col3( s16 r, s16 g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
 	Col3( u8 r, u8 g, u8 b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
+	Col3( s8 r, s8 g, s8 b ) : m_v( _mm_setr_epi32( r, g, b, 0 ) ) {}
 	Col3( u8 r, u8 g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
+	Col3( s8 r, s8 g ) : m_v( _mm_setr_epi32( r, g, 0, 0 ) ) {}
 
 	explicit Col3( unsigned int s ) : m_v( _mm_set1_epi32( s ) ) {}
 	explicit Col3( const unsigned int (&_rgb)[3] ) : m_v( _mm_load_si128( (const __m128i *)&_rgb ) ) {}
@@ -905,12 +911,12 @@ public:
 		return Col4( _mm_or_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator>>( Col4::Arg left, int right  )
+	friend Col4 operator>>( Col4::Arg left, unsigned int right  )
 	{
 		return Col4( _mm_srli_epi32( left.m_v, right ) );
 	}
 
-	friend Col4 operator<<( Col4::Arg left, int right  )
+	friend Col4 operator<<( Col4::Arg left, unsigned int right  )
 	{
 		return Col4( _mm_slli_epi32( left.m_v, right ) );
 	}
@@ -936,7 +942,13 @@ public:
 	//	return Col4( _mm_mullo_epi32( left.m_v, _mm_set1_epi32( right ) ) );
 		return Col4( _mm_mullo_epi16( left.m_v, _mm_set1_epi32( right ) ) );
 	}
-
+	
+	template<const int n>
+	friend Col4 ExtendSign( Col4::Arg a )
+	{
+		return Col4( _mm_srai_epi32( a.m_v, n ) );
+	}
+	
 	template<const int n>
 	friend Col4 ShiftLeft( Col4::Arg a )
 	{
@@ -958,7 +970,7 @@ public:
 
 			return Col4( _mm_srli_si128( a.m_v, n >> 3 ) );
 	}
-
+	
 	template<const int n>
 	friend Col4 ShiftRightHalf( Col4::Arg a )
 	{
@@ -1389,6 +1401,12 @@ public:
 	{
 		return Col4( _mm_cmpeq_epi32( v.m_v, _mm_set1_epi32( 0x000000FF ) ) );
 	}
+	
+	template<const int value>
+	friend Col4 IsValue( Col4::Arg v )
+	{
+		return Col4( _mm_cmpeq_epi32( v.m_v, _mm_set1_epi32( value ) ) );
+	}
 
 	friend Col4 TransferA( Col4::Arg left, Col4::Arg right )
 	{
@@ -1471,8 +1489,8 @@ public:
 		r = _mm_cvtsi32_si128 ( loc );
 		r = _mm_unpacklo_epi8( r, r );
 		r = _mm_unpacklo_epi16( r, r );
-
-		a = Col4( r ) >> 24;
+		
+		a = ExtendSign<24>( Col4( r ) );
 	}
 	
 	friend void UnpackWords( Col4 &a, const unsigned __int64 &loc )
@@ -1491,8 +1509,8 @@ public:
 
 		r = _mm_loadl_epi64( (__m128i *)&loc );
 		r = _mm_unpacklo_epi16( r, r );
-
-		a = Col4( r ) >> 16;
+		
+		a = ExtendSign<16>( Col4( r ) );
 	}
 	
 	// clamp the output to [0, 1]
@@ -1505,7 +1523,7 @@ public:
 
 	friend void Interleave( Col4 &a, Col4::Arg b, Col4::Arg c )
 	{
-		a = Col4( _mm_shuffle_epi32( _mm_unpacklo_epi32( b.m_v , c.m_v ), SQUISH_SSE_SHUF(0, 2, 0, 2) ) );
+		a = Col4( _mm_shuffle_epi32( _mm_unpacklo_epi32( b.m_v , c.m_v ), SQUISH_SSE_SHUF(0, 3, 0, 3) ) );
 	}
 
 	friend void LoadAligned( Col4 &a, Col4 &b, Col4::Arg c )
@@ -1621,16 +1639,26 @@ public:
 	}
 
 	explicit Col8(Col4 &s) : m_v( s.m_v ) {
-	  m_v = _mm_or_si128( m_v, _mm_slli_epi32( m_v, 16 ) );
+		m_v = _mm_packs_epi32( m_v, m_v );
 	}
 
 	explicit Col8(int s) : m_v( _mm_set1_epi16( (short)s ) ) {}
-	explicit Col8(short s) : m_v( _mm_set1_epi16( s ) ) {}
+	explicit Col8(u16 s) : m_v( _mm_set1_epi16( s ) ) {}
+	explicit Col8(s16 s) : m_v( _mm_set1_epi16( s ) ) {}
+	explicit Col8(u8 s) : m_v( _mm_set1_epi16( s ) ) {}
+	explicit Col8(s8 s) : m_v( _mm_set1_epi16( s ) ) {}
 
+	// TODO: terrible assembly is this!!!
 	Col8( int a, int b, int c, int d, int e, int f, int g, int h )
 	  : m_v( _mm_setr_epi16( (short)a, (short)b, (short)c, (short)d,
 				 (short)e, (short)f, (short)g, (short)h ) ) {}
 	Col8( u16 a, u16 b, u16 c, u16 d, u16 e, u16 f, u16 g, u16 h )
+	  : m_v( _mm_setr_epi16( a, b, c, d, e, f, g, h ) ) {}
+	Col8( s16 a, s16 b, s16 c, s16 d, s16 e, s16 f, s16 g, s16 h )
+	  : m_v( _mm_setr_epi16( a, b, c, d, e, f, g, h ) ) {}
+	Col8( u8 a, u8 b, u8 c, u8 d, u8 e, u8 f, u8 g, u8 h )
+	  : m_v( _mm_setr_epi16( a, b, c, d, e, f, g, h ) ) {}
+	Col8( s8 a, s8 b, s8 c, s8 d, s8 e, s8 f, s8 g, s8 h )
 	  : m_v( _mm_setr_epi16( a, b, c, d, e, f, g, h ) ) {}
 
 	int Get0() const
@@ -1638,16 +1666,29 @@ public:
 		return _mm_extract_epi16( m_v, 0 );
 	}
 	
-	friend Col4 LoCol4(Col8 const&v)
+#pragma warning ( push )
+#pragma warning ( disable : 4100 )
+	friend Col4 LoCol4(Col8 const&v, const unsigned dummy)
 	{
 		return Col4( _mm_unpacklo_epi16( v.m_v, _mm_setzero_si128() ) );
 	}
 	
-	friend Col4 HiCol4(Col8 const&v)
+	friend Col4 HiCol4(Col8 const&v, const unsigned dummy)
 	{
 		return Col4( _mm_unpackhi_epi16( v.m_v, _mm_setzero_si128() ) );
 	}
-
+	
+	friend Col4 LoCol4(Col8 const&v, const signed dummy)
+	{
+		return Col4( _mm_srai_epi32( _mm_unpacklo_epi16( _mm_setzero_si128(), v.m_v ), 16 ) );
+	}
+	
+	friend Col4 HiCol4(Col8 const&v, const signed dummy)
+	{
+		return Col4( _mm_srai_epi32( _mm_unpackhi_epi16( _mm_setzero_si128(), v.m_v ), 16 ) );
+	}
+#pragma warning ( pop )
+	
 	const u16 &operator[]( int pos ) const
 	{
 		return m_v.m128i_u16[pos];
@@ -1659,11 +1700,21 @@ public:
 		return *this;
 	}
 
+	friend Col8 operator>>( Col8::Arg left, unsigned int right  )
+	{
+		return Col8( _mm_srli_epi16( left.m_v, right ) );
+	}
+	
 	friend Col8 operator>>( Col8::Arg left, int right  )
 	{
 		return Col8( _mm_srai_epi16( left.m_v, right ) );
 	}
 
+	friend Col8 operator<<( Col8::Arg left, unsigned int right  )
+	{
+		return Col8( _mm_slli_epi16( left.m_v, right ) );
+	}
+	
 	friend Col8 operator<<( Col8::Arg left, int right  )
 	{
 		return Col8( _mm_slli_epi16( left.m_v, right ) );
@@ -1684,11 +1735,22 @@ public:
 		return Col8( _mm_mullo_epi16( left.m_v, right.m_v ) );
 	}
 
+	friend Col8 operator*( Col8::Arg left, unsigned int right  )
+	{
+		return Col8( _mm_mulhi_epu16( left.m_v, _mm_set1_epi16( (unsigned short)right ) ) );
+	}
+	
 	friend Col8 operator*( Col8::Arg left, int right  )
 	{
-		return Col8( _mm_mulhi_epu16( left.m_v, _mm_set1_epi16( (short)right ) ) );
+		return Col8( _mm_mulhi_epi16( left.m_v, _mm_set1_epi16( (short)right ) ) );
 	}
-
+	
+	template<const int n>
+	friend Col8 ExtendSign( Col8::Arg a )
+	{
+		return Col8( _mm_srai_epi16( a.m_v, n ) );
+	}
+	
 	friend Col8 HorizontalMin( Arg a )
 	{
 		__m128i res = a.m_v;
@@ -1726,7 +1788,132 @@ public:
 
 		return Col8( res );
 	}
+	
+	template<const int n>
+	friend Col8 ShiftUp( Arg a )
+	{
+		return Col8( _mm_slli_si128( a.m_v, n << 1 ) );
+	}
+	
+#pragma warning ( push )
+#pragma warning ( disable : 4100 )
+	friend Col4 ExpandUpper(Arg a, const unsigned dummy) {
+		__m128i res = a.m_v;
+		
+		res = _mm_unpackhi_epi16( res, _mm_setzero_si128() );
 
+		assert(res.m128i_u32[0] == a.m_v.m128i_u16[4]);
+		assert(res.m128i_u32[1] == a.m_v.m128i_u16[5]);
+		assert(res.m128i_u32[2] == a.m_v.m128i_u16[6]);
+		assert(res.m128i_u32[3] == a.m_v.m128i_u16[7]);
+
+		return Col4( res );
+	}
+
+	friend Col4 RepeatUpper(Arg a, const unsigned dummy) {
+		__m128i res = a.m_v;
+		
+		res = _mm_unpackhi_epi16( res, _mm_setzero_si128() );
+		res = _mm_shuffle_epi32( res, SQUISH_SSE_SPLAT(3) );
+		
+		assert(res.m128i_u32[0] == a.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[1] == a.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[2] == a.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[3] == a.m_v.m128i_u16[7]);
+
+		return Col4( res );
+	}
+	
+	friend Col4 InterleaveUpper(Arg a, Arg b, const unsigned dummy) {
+		__m128i res;
+		
+		res = _mm_unpackhi_epi16( a.m_v, b.m_v );
+		res = _mm_unpackhi_epi16( res, _mm_setzero_si128() );
+		res = _mm_unpackhi_epi64( res, res );
+		
+		assert(res.m128i_u32[0] == a.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[1] == b.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[2] == a.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[3] == b.m_v.m128i_u16[7]);
+
+		return Col4( res );
+	}
+
+	friend Col4 ReplicateUpper(Arg a, Arg b, const unsigned dummy) {
+		__m128i res;
+		
+		res = _mm_unpackhi_epi16( a.m_v, b.m_v );
+		res = _mm_unpackhi_epi16( res, _mm_setzero_si128() );
+		res = _mm_unpackhi_epi32( res, res );
+		
+		assert(res.m128i_u32[0] == a.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[1] == a.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[2] == b.m_v.m128i_u16[7]);
+		assert(res.m128i_u32[3] == b.m_v.m128i_u16[7]);
+
+		return Col4( res );
+	}
+
+	friend Col4 ExpandUpper(Arg a, const signed dummy) {
+		__m128i res = a.m_v;
+		
+		res = _mm_unpackhi_epi16( res, res );
+		res = _mm_srai_epi32( res, 16 );
+
+		assert(res.m128i_i32[0] == a.m_v.m128i_i16[4]);
+		assert(res.m128i_i32[1] == a.m_v.m128i_i16[5]);
+		assert(res.m128i_i32[2] == a.m_v.m128i_i16[6]);
+		assert(res.m128i_i32[3] == a.m_v.m128i_i16[7]);
+
+		return Col4( res );
+	}
+
+	friend Col4 RepeatUpper(Arg a, const signed dummy) {
+		__m128i res = a.m_v;
+
+		res = _mm_srai_epi32( res, 16 );
+		res = _mm_shuffle_epi32( res, SQUISH_SSE_SPLAT(3) );
+		
+		assert(res.m128i_i32[0] == a.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[1] == a.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[2] == a.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[3] == a.m_v.m128i_i16[7]);
+
+		return Col4( res );
+	}
+	
+	friend Col4 InterleaveUpper(Arg a, Arg b, const signed dummy) {
+		__m128i res;
+		
+		res = _mm_unpackhi_epi32( a.m_v, b.m_v );
+		res = _mm_srai_epi32( res, 16 );
+		res = _mm_unpackhi_epi64( res, res );
+		
+		assert(res.m128i_i32[0] == a.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[1] == b.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[2] == a.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[3] == b.m_v.m128i_i16[7]);
+
+		return Col4( res );
+	}
+
+	friend Col4 ReplicateUpper(Arg a, Arg b, const signed dummy) {
+		__m128i res;
+		
+		res = _mm_unpackhi_epi32( a.m_v, b.m_v );
+		res = _mm_srai_epi32( res, 16 );
+		res = _mm_unpackhi_epi32( res, res );
+		
+		assert(res.m128i_i32[0] == a.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[1] == a.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[2] == b.m_v.m128i_i16[7]);
+		assert(res.m128i_i32[3] == b.m_v.m128i_i16[7]);
+
+		return Col4( res );
+	}
+#pragma warning ( pop )
+	
+	/*
 	friend Col4 Expand(Arg a, int ia) {
 		__m128i res = _mm_setzero_si128();
 
@@ -1766,10 +1953,21 @@ public:
 
 		return Col4( res );
 	}
+	*/
 	
 	friend int CompareEqualTo( Col8::Arg left, Col8::Arg right )
 	{
 		return _mm_movemask_epi8( _mm_cmpeq_epi16( left.m_v, right.m_v ) );
+	}
+	
+	friend Col8 CompareAllEqualTo( Col8::Arg left, Col8::Arg right )
+	{
+		return Col8( _mm_cmpeq_epi16( left.m_v, right.m_v ) );
+	}
+	
+	friend Col8 CompareAllLessThan( Col8::Arg left, Col8::Arg right )
+	{
+		return Col8( _mm_cmplt_epi16( left.m_v, right.m_v ) );
 	}
 
 private:
@@ -2505,14 +2703,14 @@ public:
 		return _mm_movemask_ps( m_v );
 	}
 
-	friend Vec4 LoVec4(Col8 const&v)
+	template<class dtyp> friend Vec4 LoVec4(Col8 const&v, const dtyp& dummy)
 	{
-		return Vec4( LoCol4( v ) );
+		return Vec4( LoCol4( v, dummy ) );
 	}
 	
-	friend Vec4 HiVec4(Col8 const&v)
+	template<class dtyp> friend Vec4 HiVec4(Col8 const&v, const dtyp& dummy)
 	{
-		return Vec4( HiCol4( v ) );
+		return Vec4( HiCol4( v, dummy ) );
 	}
 
 	void StoreX(float *x) const { _mm_store_ss(x, m_v); }

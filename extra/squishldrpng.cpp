@@ -442,8 +442,13 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
 	}
       }
 
+      if (flags & kSignedExternal) {
+	for (int i = 0; i < 16 * 4; ++i)
+	  sourceRgba[i] = sourceRgba[i] - 0x80 + (sourceRgba[i] < 0x80);
+      }
+
       // compress this block
-      s.encoder(sourceRgba, 0xFFFF, targetBlock, flags);
+      s.encoder(sourceRgba, -1, targetBlock, flags);
 
 #if (defined(VERIFY_QUANTIZER) || defined(VERIFY_ENCODER))
       // write the data into the target rows
@@ -606,6 +611,11 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
       u8 targetRgba[16 * 4];
 
       s.decoder(targetRgba, sourceBlock, flags);
+      
+      if (flags & kSignedExternal) {
+	for (int i = 0; i < 16 * 4; ++i)
+	  targetRgba[i] = targetRgba[i] + 0x80;
+      }
 
       // write the data into the target rows
       for (int py = 0, i = 0; py < 4; ++py) {
@@ -887,9 +897,14 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 	    }
 	  }
 	}
+	
+	if (flags & kSignedExternal) {
+	  for (int i = 0; i < 16 * 4; ++i)
+	    sourceRgba[i] = sourceRgba[i] - 0x80;
+	}
 
 	// compress this block
-	s.encoder(sourceRgba, 0xFFFF, targetBlock, flags);
+	s.encoder(sourceRgba, -1, targetBlock, flags);
 
 	// advance
 	targetBlock += bytesPerBlock;
@@ -996,6 +1011,7 @@ int main(int argc, char* argv[]) {
     int alpha = 0;//kAlphaIterativeFit;
     int extra = 0;
     int paint = 0;
+    int sign = 0;
     int mapping = -1;
     bool help = false;
     bool arguments = true;
@@ -1037,6 +1053,8 @@ int main(int argc, char* argv[]) {
 	    case 'r': fit = kColourRangeFit; break;
 	    case 'i': fit = kColourIterativeClusterFit; break;
 	    case 'x': fit = kColourClusterFit * 15; break;
+	      
+	    case 's': sign = kSignedExternal + kSignedInternal; break;
 
 	    case 'w': extra = kWeightColourByAlpha; break;
 	    case 'W': extra = kWeightColourByAlpha + kExcludeAlphaFromPalette; break;
@@ -1072,6 +1090,7 @@ int main(int argc, char* argv[]) {
 	<< "\t-45\tSpecifies whether to use ATI/BC4, ATI2/BC5 compression" << std::endl
 	<< "\t-7\tSpecifies whether to use BC7 compression" << std::endl
 	<< "\t-0\tSpecifies whether to use CTX1 compression" << std::endl
+	<< "\t-s\tSpecifies whether to signed block compression" << std::endl
 	<< "\t-a\tUse the slow iterative alpha/gray/normal compressor" << std::endl
 	<< "\t-r\tUse the fast but inferior range-based colour compressor" << std::endl
 	<< "\t-i\tUse the very slow but slightly better iterative colour compressor" << std::endl
@@ -1106,11 +1125,11 @@ int main(int argc, char* argv[]) {
     // do the work
     switch (mode) {
       case kCompress:
-	Compress(sourceFileName, targetFileName, paint, mapping, method + metric + fit + alpha + extra);
+	Compress(sourceFileName, targetFileName, paint, mapping, method + sign + metric + fit + alpha + extra);
 	break;
 
       case kDecompress:
-	Decompress(sourceFileName, targetFileName, paint, mapping, method + metric /*+ extra*/);
+	Decompress(sourceFileName, targetFileName, paint, mapping, method + sign + metric /*+ extra*/);
 	break;
 
       case kDiff:
@@ -1118,7 +1137,7 @@ int main(int argc, char* argv[]) {
 	break;
 
       case kBenchmark:
-	Benchmark(sourceFileName, mapping, method + metric + fit + alpha + extra);
+	Benchmark(sourceFileName, mapping, method + metric + sign + fit + alpha + extra);
 	break;
 
       default:

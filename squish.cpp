@@ -1214,19 +1214,19 @@ void CompressMasked(f23 const* rgba, int mask, void* block, int flags)
 void Compress(u8 const* rgba, void* block, int flags)
 {
   // compress with full mask
-  CompressMasked(rgba, 0xFFFF, block, flags);
+  CompressMasked(rgba, -1, block, flags);
 }
 
 void Compress(u16 const* rgb, void* block, int flags)
 {
   // compress with full mask
-  CompressMasked(rgb, 0xFFFF, block, flags);
+  CompressMasked(rgb, -1, block, flags);
 }
 
 void Compress(f23 const* rgba, void* block, int flags)
 {
   // compress with full mask
-  CompressMasked(rgba, 0xFFFF, block, flags);
+  CompressMasked(rgba, -1, block, flags);
 }
 
 /* *****************************************************************************
@@ -1551,10 +1551,10 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
       s.encoder = (sqio::enc)CompressMaskedNormalBtc5s<s8>,
       s.decoder = (sqio::dec)DecompressNormalBtc5s<s8>;
     // ATI-type compression
-    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc4 | kSignedExternal | kSignedInternal))
+    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc4 | kSignedExternal | kSignedInternal | kColourMetricUniform))
       s.encoder = (sqio::enc)CompressMaskedAlphaBtc4s<s8>,
       s.decoder = (sqio::dec)DecompressAlphaBtc4s<s8>;
-    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal))
+    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal | kColourMetricUniform))
       s.encoder = (sqio::enc)CompressMaskedAlphaBtc5s<s8>,
       s.decoder = (sqio::dec)DecompressAlphaBtc5s<s8>;
 
@@ -1613,10 +1613,10 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
       s.encoder = (sqio::enc)CompressMaskedNormalBtc5s<s16>,
       s.decoder = (sqio::dec)DecompressNormalBtc5s<s16>;
     // ATI-type compression
-    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc4 | kSignedExternal | kSignedInternal))
+    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc4 | kSignedExternal | kSignedInternal | kColourMetricUniform))
       s.encoder = (sqio::enc)CompressMaskedAlphaBtc4s<s16>,
       s.decoder = (sqio::dec)DecompressAlphaBtc4s<s16>;
-    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal))
+    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal | kColourMetricUniform))
       s.encoder = (sqio::enc)CompressMaskedAlphaBtc5s<s16>,
       s.decoder = (sqio::dec)DecompressAlphaBtc5s<s16>;
 
@@ -1676,10 +1676,10 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
       s.encoder = (sqio::enc)CompressMaskedNormalBtc5s<f23>,
       s.decoder = (sqio::dec)DecompressNormalBtc5s<f23>;
     // ATI-type compression
-    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc4 | kSignedExternal | kSignedInternal))
+    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc4 | kSignedExternal | kSignedInternal | kColourMetricUniform))
       s.encoder = (sqio::enc)CompressMaskedAlphaBtc4s<f23>,
       s.decoder = (sqio::dec)DecompressAlphaBtc4s<f23>;
-    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal))
+    else if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal | kColourMetricUniform))
       s.encoder = (sqio::enc)CompressMaskedAlphaBtc5s<f23>,
       s.decoder = (sqio::dec)DecompressAlphaBtc5s<f23>;
 
