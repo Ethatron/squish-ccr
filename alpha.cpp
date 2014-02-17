@@ -321,7 +321,7 @@ static doinline void GetError(f23 const* rgba, int mask, Col8 const &codes5, Col
 
 /* -----------------------------------------------------------------------------
  */
-#define FIT_THRESHOLD 1e-5f
+#define FIT_THRESHOLD 1e-15f
 
 template<const int min, const int max, const int prc, const int steps>
 static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {

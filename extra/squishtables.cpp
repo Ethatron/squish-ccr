@@ -1200,7 +1200,7 @@ private:
   }
 #endif
   
-#if 1
+#if 0
   for (unsigned int S = 0; S <= 3; S++) {
   for (unsigned int A = 0; A <= 1; A++) {
   for (unsigned int O = 0; O <= 1; O++) {
@@ -1235,4 +1235,47 @@ private:
   }
   }
 #endif
+
+  for (float X = -1.0f; X <= 1.0f; X += 0.125f)
+  for (float Y = -1.0f; Y <= 1.0f; Y += 0.125f)
+  for (float Z =  0.0f; Z <= 1.0f; Z += 0.125f)
+  {
+    float x = X, y = Y, z = Z;
+    float len = sqrtf(x * x + y * y + z * z);
+    x /= len; y /= len; z /= len;
+    float u, v, w;
+
+    float rx = fabsf(x);
+    float ry = fabsf(y);
+    float nx, ny, nz;
+      nz = 1.0f;
+    if (rx > ry)
+      nx = 1.0f, ny = 0.0f;
+    else
+      ny = 1.0f, nx = 0.0f;
+    if (x < 0.0f)
+      nx = -nx;
+    if (y < 0.0f)
+      ny = -ny;
+    
+    // 0.70710678118654752440084436210485
+//  float dist = sqrtf(0.5f * 0.5f + 0.5f * 0.5f);
+//  float dist = (0.5f * 0.5f + 0.5f * 0.5f);
+    float dist = 0.70710678118654752440084436210485;
+//  float dot = (x * nx / dist + y * ny / dist + z * nz / dist);
+//  float dot = (x * nx + y * ny + z * nz) / (dist);
+    float dot = (x * nx + y * ny + z * nz);
+    
+    dot = (rx > ry ? rx : ry) + z;
+
+    u = x / dot;
+    v = y / dot;
+    w = z / dot;
+    
+    float ru = fabsf(u);
+    float rv = fabsf(v);
+    float p = (ru > rv ? ru : rv) + w;
+
+    fprintf(stdout, "%f,%f,%f | %f,%f,%f: %f | %f,%f,%f = %f\n", x, y, z, nx, ny, nz, dot, u, v, w, p);
+  }
 }

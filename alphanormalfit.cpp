@@ -37,6 +37,9 @@
 
 #include "inlineables.cpp"
 
+//#define PYRAMID_PROJECTION
+//#define Complement  ComplementPyramidal
+
 // Codebook precision bits, up to 5 (+8)
 #define CBLB	0	// low precision
 #define CBHB	5	// high precision
@@ -181,7 +184,7 @@ static Vec4 GetError(Vec4 const* xyz, int mask,
   return error;
 }
 
-#define FIT_THRESHOLD 1e-5f
+#define FIT_THRESHOLD 1e-15f
 
 template<const int min, const int max, const int prc, const int stepx, const int stepy>
 static Scr4 FitError(Vec4 const* xyz, Col4 &minXY, Col4 &maxXY, Scr4 &errXY) {
@@ -875,9 +878,17 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
     if ((imask & 1) == 0)
       continue;
 
+    Vec4 norm = xyz[i];
+#ifdef PYRAMID_PROJECTION
+    Vec4 nabs = Abs(norm);
+    Vec4 len = HorizontalMaxXY(nabs) + nabs.SplatZ();
+
+    norm /= len;
+#endif
+
     // create integer vector
     Col4 value = 
-      FloatToInt<true>((xyz[i] * Vec4(FSCALE)) - Vec4(FOFFSET));
+      FloatToInt<true>((norm * Vec4(FSCALE)) - Vec4(FOFFSET));
 
     Col4 vmask =
       IsValue<min>(value) |

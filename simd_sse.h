@@ -76,9 +76,9 @@ public:
 
 	explicit Col3( __m128i v ) : m_v( v ) {}
 
-	Col3( Col3 const& arg ) : m_v( arg.m_v ) {}
+	Col3( Arg arg ) : m_v( arg.m_v ) {}
 
-	Col3& operator=( Col3 const& arg )
+	Col3& operator=( Arg arg )
 	{
 		m_v = arg.m_v;
 		return *this;
@@ -208,60 +208,60 @@ public:
 		return *this;
 	}
 
-	friend Col3 operator&( Col3::Arg left, Col3::Arg right  )
+	friend Col3 operator&( Arg left, Arg right  )
 	{
 		return Col3( _mm_and_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 operator%( Col3::Arg left, Col3::Arg right  )
+	friend Col3 operator%( Arg left, Arg right  )
 	{
 		return Col3( _mm_andnot_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 operator^( Col3::Arg left, Col3::Arg right  )
+	friend Col3 operator^( Arg left, Arg right  )
 	{
 		return Col3( _mm_xor_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 operator|( Col3::Arg left, Col3::Arg right  )
+	friend Col3 operator|( Arg left, Arg right  )
 	{
 		return Col3( _mm_or_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 operator>>( Col3::Arg left, int right  )
+	friend Col3 operator>>( Arg left, int right  )
 	{
 		return Col3( _mm_srli_epi32( left.m_v, right ) );
 	}
 
-	friend Col3 operator<<( Col3::Arg left, int right  )
+	friend Col3 operator<<( Arg left, int right  )
 	{
 		return Col3( _mm_slli_epi32( left.m_v, right ) );
 	}
 
-	friend Col3 operator+( Col3::Arg left, Col3::Arg right  )
+	friend Col3 operator+( Arg left, Arg right  )
 	{
 		return Col3( _mm_add_epi32( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 operator-( Col3::Arg left, Col3::Arg right  )
+	friend Col3 operator-( Arg left, Arg right  )
 	{
 		return Col3( _mm_sub_epi32( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 operator*( Col3::Arg left, Col3::Arg right  )
+	friend Col3 operator*( Arg left, Arg right  )
 	{
 	//	return Col3( _mm_mullo_epi32( left.m_v, right.m_v ) );
 		return Col3( _mm_mullo_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 operator*( Col3::Arg left, int right  )
+	friend Col3 operator*( Arg left, int right  )
 	{
 	//	return Col3( _mm_mullo_epi32( left.m_v, _mm_set1_epi32( right ) ) );
 		return Col3( _mm_mullo_epi16( left.m_v, _mm_set1_epi32( right ) ) );
 	}
 
 	template<const int n>
-	friend Col3 ShiftLeft( Col3::Arg a )
+	friend Col3 ShiftLeft( Arg a )
 	{
 		if (n <= 0)
 			return Col3( a.m_v );
@@ -272,7 +272,7 @@ public:
 	}
 
 	template<const int n>
-	friend Col3 ShiftRight( Col3::Arg a )
+	friend Col3 ShiftRight( Arg a )
 	{
 		if (n <= 0)
 			return Col3( a.m_v );
@@ -283,34 +283,34 @@ public:
 	}
 
 	template<const int n>
-	friend Col3 ShiftRightHalf( Col3::Arg a )
+	friend Col3 ShiftRightHalf( Arg a )
 	{
 		return Col3( n > 0 ? _mm_srli_epi64( a.m_v, n ) : a.m_v );
 	}
 
-	friend Col3 ShiftRightHalf( Col3::Arg a, const int n )
+	friend Col3 ShiftRightHalf( Arg a, const int n )
 	{
 		return Col3( _mm_srl_epi64( a.m_v, _mm_cvtsi32_si128( n ) ) );
 	}
 
-	friend Col3 ShiftRightHalf( Col3::Arg a, Col3::Arg b )
+	friend Col3 ShiftRightHalf( Arg a, Arg b )
 	{
 		return Col3( _mm_srl_epi64( a.m_v, b.m_v ) );
 	}
 
 	template<const int n>
-	friend Col3 ShiftLeftHalf( Col3::Arg a )
+	friend Col3 ShiftLeftHalf( Arg a )
 	{
 		return Col3( n > 0 ? _mm_slli_epi64( a.m_v, n ) : a.m_v );
 	}
 
-	friend Col3 ShiftLeftHalf( Col3::Arg a, const int n )
+	friend Col3 ShiftLeftHalf( Arg a, const int n )
 	{
 		return Col3( _mm_sll_epi64( a.m_v, _mm_cvtsi32_si128( n ) ) );
 	}
 
 	template<const int r, const int g, const int b>
-	friend Col3 ShiftLeftLo( Col3::Arg v )
+	friend Col3 ShiftLeftLo( Arg v )
 	{
 		// (1 << r, 1 << g, 1 << b);
 		Col3 p2; p2.SetRGBApow2<0>(r, g, b);
@@ -320,7 +320,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col3 MaskBits( Col3::Arg a )
+	friend Col3 MaskBits( Arg a )
 	{
 		if ((p + n) <= 0)
 			return Col3(0);
@@ -338,7 +338,7 @@ public:
 		return Col3( _mm_and_si128( a.m_v, mask ) );
 	}
 
-	friend Col3 MaskBits( Col3::Arg a, const int n, const int p )
+	friend Col3 MaskBits( Arg a, const int n, const int p )
 	{
 		const int val = 64 - (p + n);
 
@@ -355,7 +355,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col3 CopyBits( Col3::Arg left, Col3::Arg right )
+	friend Col3 CopyBits( Arg left, Arg right )
 	{
 		if (!n)
 			return left;
@@ -372,7 +372,7 @@ public:
 #endif
 	}
 
-	friend Col3 CopyBits( Col3::Arg left, Col3 right, const int n, const int p )
+	friend Col3 CopyBits( Arg left, Col3 &right, const int n, const int p )
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ---bl xxxx xxxx */
@@ -387,7 +387,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col3 ExtrBits( Col3::Arg a )
+	friend Col3 ExtrBits( Arg a )
 	{
 		if (!n)
 			return Col3(0);
@@ -403,7 +403,7 @@ public:
 #endif
 	}
 
-	friend Col3 ExtrBits( Col3::Arg a, const int n, const int p )
+	friend Col3 ExtrBits( Arg a, const int n, const int p )
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ----- ---- ---bl */
@@ -416,13 +416,13 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend void ExtrBits( Col3::Arg left, Col3 &right )
+	friend void ExtrBits( Arg left, Col3 &right )
 	{
 		right  = ExtrBits<n, p>( left );
 	}
 
 	template<const int n, const int p>
-	friend void ConcBits( Col3::Arg left, Col3 &right )
+	friend void ConcBits( Arg left, Col3 &right )
 	{
 		right  = ShiftLeft<32>( right );
 		if (n > 0)
@@ -430,7 +430,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend void ReplBits( Col3::Arg left, Col3 &right )
+	friend void ReplBits( Arg left, Col3 &right )
 	{
 		if (!n)
 			return;
@@ -445,14 +445,14 @@ public:
 	}
 
 	//! Returns a*b + c
-	friend Col3 MultiplyAdd( Col3::Arg a, Col3::Arg b, Col3::Arg c )
+	friend Col3 MultiplyAdd( Arg a, Arg b, Arg c )
 	{
 	//	return Col3( _mm_add_epi32( _mm_mullo_epi32( a.m_v, b.m_v ), c.m_v ) );
 		return Col3( _mm_add_epi32( _mm_mullo_epi16( a.m_v, b.m_v ), c.m_v ) );
 	}
 
 	//! Returns -( a*b - c )
-	friend Col3 NegativeMultiplySubtract( Col3::Arg a, Col3::Arg b, Col3::Arg c )
+	friend Col3 NegativeMultiplySubtract( Arg a, Arg b, Arg c )
 	{
 	//	return Col3( _mm_sub_epi32( c.m_v, _mm_mullo_epi32( a.m_v, b.m_v ) ) );
 		return Col3( _mm_sub_epi32( c.m_v, _mm_mullo_epi16( a.m_v, b.m_v ) ) );
@@ -579,48 +579,48 @@ public:
 		return HorizontalAddTiny( Col3( _mm_mullo_epi16( left.m_v, right.m_v ) ) );
 	}
 
-	friend Col3 Min( Col3::Arg left, Col3::Arg right )
+	friend Col3 Min( Arg left, Arg right )
 	{
 	//	return Col3( _mm_min_epi32( left.m_v, right.m_v ) );
 		return Col3( _mm_min_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend Col3 Max( Col3::Arg left, Col3::Arg right )
+	friend Col3 Max( Arg left, Arg right )
 	{
 	//	return Col3( _mm_max_epi32( left.m_v, right.m_v ) );
 		return Col3( _mm_max_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend bool CompareAnyLessThan( Col3::Arg left, Col3::Arg right )
+	friend bool CompareAnyLessThan( Arg left, Arg right )
 	{
 		__m128i bits = _mm_cmpeq_epi32( left.m_v, right.m_v );
 		int value = _mm_movemask_epi8( bits );
 		return (value & 0x0FFF) != 0x0000;
 	}
 
-	friend bool CompareAllEqualTo( Col3::Arg left, Col3::Arg right )
+	friend bool CompareAllEqualTo( Arg left, Arg right )
 	{
 		__m128i bits = _mm_cmpeq_epi32( left.m_v, right.m_v );
 		int value = _mm_movemask_epi8( bits );
 		return (value & 0x0FFF) == 0x0FFF;
 	}
 
-	friend Col3 IsOne( Col3::Arg v )
+	friend Col3 IsOne( Arg v )
 	{
 		return Col3( _mm_cmpeq_epi32( v.m_v, _mm_set1_epi32( 0x000000FF ) ) );
 	}
 
-	friend Col3 IsZero( Col3::Arg v )
+	friend Col3 IsZero( Arg v )
 	{
 		return Col3( _mm_cmpeq_epi32( v.m_v, _mm_setzero_si128( ) ) );
 	}
 
-	friend Col3 IsNotZero( Col3::Arg v )
+	friend Col3 IsNotZero( Arg v )
 	{
 		return Col3( _mm_cmpgt_epi32( v.m_v, _mm_setzero_si128( ) ) );
 	}
 
-	friend void PackBytes( Col3::Arg a, unsigned int &loc )
+	friend void PackBytes( Arg a, unsigned int &loc )
 	{
 		__m128i
 
@@ -630,7 +630,7 @@ public:
 		loc = _mm_cvtsi128_si32( r );
 	}
 	
-	friend void PackBytes( Col3::Arg a, int &loc )
+	friend void PackBytes( Arg a, int &loc )
 	{
 		__m128i
 
@@ -640,7 +640,7 @@ public:
 		loc = _mm_cvtsi128_si32( r );
 	}
 	
-	friend void PackWords( Col3::Arg a, unsigned __int64 &loc )
+	friend void PackWords( Arg a, unsigned __int64 &loc )
 	{
 		__m128i
 		  
@@ -652,7 +652,7 @@ public:
 		_mm_storel_epi64( (__m128i *)&loc, r );
 	}
 	
-	friend void PackWords( Col3::Arg a, __int64 &loc )
+	friend void PackWords( Arg a, __int64 &loc )
 	{
 		__m128i
 		  
@@ -670,7 +670,7 @@ public:
 		return Min(one, Max(zero, *this));
 	}
 
-	friend void LoadAligned( Col3 &a, Col3 &b, Col3::Arg c )
+	friend void LoadAligned( Col3 &a, Col3 &b, Arg c )
 	{
 	        a.m_v = c.m_v;
 		b.m_v = _mm_shuffle_epi32( a.m_v, SQUISH_SSE_SWAP64() );
@@ -693,38 +693,38 @@ public:
 		b.m_v = _mm_shuffle_epi32( a.m_v, SQUISH_SSE_SWAP64() );
 	}
 
-	friend void StoreAligned( Col3::Arg a, Col3::Arg b, Col3 &c )
+	friend void StoreAligned( Arg a, Arg b, Col3 &c )
 	{
 		c.m_v = _mm_unpacklo_epi64( a.m_v, b.m_v );
 	}
 
-	friend void StoreAligned( Col3::Arg a, void *destination )
+	friend void StoreAligned( Arg a, void *destination )
 	{
 		_mm_store_si128( (__m128i *)destination, a.m_v );
 	}
 
-	friend void StoreAligned( Col3::Arg a, Col3::Arg b, void *destination )
+	friend void StoreAligned( Arg a, Arg b, void *destination )
 	{
 		_mm_store_si128( (__m128i *)destination, _mm_unpacklo_epi64( a.m_v, b.m_v ) );
 	}
 	
-	friend void StoreUnaligned( Col3::Arg a, void *destination )
+	friend void StoreUnaligned( Arg a, void *destination )
 	{
 		_mm_storeu_si128( (__m128i *)destination, a.m_v );
 	}
 	
-	friend void StoreUnaligned( Col3::Arg a, Col3::Arg b, void *destination )
+	friend void StoreUnaligned( Arg a, Arg b, void *destination )
 	{
 		_mm_storeu_si128( (__m128i *)destination, _mm_unpacklo_epi64( a.m_v, b.m_v ) );
 	}
 	
-	friend void StoreUnaligned( Col3::Arg a, u8* loc ) {
+	friend void StoreUnaligned( Arg a, u8* loc ) {
 	  PackBytes( a, (unsigned int&) (*((unsigned int *)loc)) ); }
-	friend void StoreUnaligned( Col3::Arg a, u16* loc ) {
+	friend void StoreUnaligned( Arg a, u16* loc ) {
 	  PackWords( a, (unsigned __int64&) (*((unsigned __int64 *)loc)) ); }
-	friend void StoreUnaligned( Col3::Arg a, s8* loc ) {
+	friend void StoreUnaligned( Arg a, s8* loc ) {
 	  PackBytes( a, (int&) (*((int *)loc)) ); }
-	friend void StoreUnaligned( Col3::Arg a, s16* loc ) {
+	friend void StoreUnaligned( Arg a, s16* loc ) {
 	  PackWords( a, (__int64&) (*((__int64 *)loc)) ); }
 
 private:
@@ -743,9 +743,9 @@ public:
 
 	explicit Col4( __m128i v ) : m_v( v ) {}
 
-	Col4( Col4 const& arg ) : m_v( arg.m_v ) {}
+	Col4( Arg arg ) : m_v( arg.m_v ) {}
 
-	Col4& operator=( Col4 const& arg )
+	Col4& operator=( Arg arg )
 	{
 		m_v = arg.m_v;
 		return *this;
@@ -891,66 +891,66 @@ public:
 		return *this;
 	}
 
-	friend Col4 operator&( Col4::Arg left, Col4::Arg right  )
+	friend Col4 operator&( Arg left, Arg right  )
 	{
 		return Col4( _mm_and_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator%( Col4::Arg left, Col4::Arg right  )
+	friend Col4 operator%( Arg left, Arg right  )
 	{
 		return Col4( _mm_andnot_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator^( Col4::Arg left, Col4::Arg right  )
+	friend Col4 operator^( Arg left, Arg right  )
 	{
 		return Col4( _mm_xor_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator|( Col4::Arg left, Col4::Arg right  )
+	friend Col4 operator|( Arg left, Arg right  )
 	{
 		return Col4( _mm_or_si128( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator>>( Col4::Arg left, unsigned int right  )
+	friend Col4 operator>>( Arg left, unsigned int right  )
 	{
 		return Col4( _mm_srli_epi32( left.m_v, right ) );
 	}
 
-	friend Col4 operator<<( Col4::Arg left, unsigned int right  )
+	friend Col4 operator<<( Arg left, unsigned int right  )
 	{
 		return Col4( _mm_slli_epi32( left.m_v, right ) );
 	}
 
-	friend Col4 operator+( Col4::Arg left, Col4::Arg right  )
+	friend Col4 operator+( Arg left, Arg right  )
 	{
 		return Col4( _mm_add_epi32( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator-( Col4::Arg left, Col4::Arg right  )
+	friend Col4 operator-( Arg left, Arg right  )
 	{
 		return Col4( _mm_sub_epi32( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator*( Col4::Arg left, Col4::Arg right  )
+	friend Col4 operator*( Arg left, Arg right  )
 	{
 	//	return Col4( _mm_mullo_epi32( left.m_v, right.m_v ) );
 		return Col4( _mm_mullo_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 operator*( Col4::Arg left, int right  )
+	friend Col4 operator*( Arg left, int right  )
 	{
 	//	return Col4( _mm_mullo_epi32( left.m_v, _mm_set1_epi32( right ) ) );
 		return Col4( _mm_mullo_epi16( left.m_v, _mm_set1_epi32( right ) ) );
 	}
 	
 	template<const int n>
-	friend Col4 ExtendSign( Col4::Arg a )
+	friend Col4 ExtendSign( Arg a )
 	{
 		return Col4( _mm_srai_epi32( a.m_v, n ) );
 	}
 	
 	template<const int n>
-	friend Col4 ShiftLeft( Col4::Arg a )
+	friend Col4 ShiftLeft( Arg a )
 	{
 		if (n <= 0)
 			return Col4( a.m_v );
@@ -961,7 +961,7 @@ public:
 	}
 
 	template<const int n>
-	friend Col4 ShiftRight( Col4::Arg a )
+	friend Col4 ShiftRight( Arg a )
 	{
 		if (n <= 0)
 			return Col4( a.m_v );
@@ -972,34 +972,34 @@ public:
 	}
 	
 	template<const int n>
-	friend Col4 ShiftRightHalf( Col4::Arg a )
+	friend Col4 ShiftRightHalf( Arg a )
 	{
 		return Col4( n > 0 ? _mm_srli_epi64( a.m_v, n ) : a.m_v );
 	}
 
-	friend Col4 ShiftRightHalf( Col4::Arg a, const int n )
+	friend Col4 ShiftRightHalf( Arg a, const int n )
 	{
 		return Col4( _mm_srl_epi64( a.m_v, _mm_cvtsi32_si128( n ) ) );
 	}
 
-	friend Col4 ShiftRightHalf( Col4::Arg a, Col4::Arg b )
+	friend Col4 ShiftRightHalf( Arg a, Arg b )
 	{
 		return Col4( _mm_srl_epi64( a.m_v, b.m_v ) );
 	}
 
 	template<const int n>
-	friend Col4 ShiftLeftHalf( Col4::Arg a )
+	friend Col4 ShiftLeftHalf( Arg a )
 	{
 		return Col4( n > 0 ? _mm_slli_epi64( a.m_v, n ) : a.m_v );
 	}
 
-	friend Col4 ShiftLeftHalf( Col4::Arg a, const int n )
+	friend Col4 ShiftLeftHalf( Arg a, const int n )
 	{
 		return Col4( _mm_sll_epi64( a.m_v, _mm_cvtsi32_si128( n ) ) );
 	}
 
 	template<const int r, const int g, const int b, const int a>
-	friend Col4 ShiftLeftLo( Col4::Arg v )
+	friend Col4 ShiftLeftLo( Arg v )
 	{
 		// (1 << r, 1 << g, 1 << b, 1 << a);
 		Col4 p2; p2.SetRGBApow2<0>(r, g, b, a);
@@ -1009,7 +1009,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col4 MaskBits( Col4::Arg a )
+	friend Col4 MaskBits( Arg a )
 	{
 		if ((p + n) <= 0)
 			return Col4(0);
@@ -1027,7 +1027,7 @@ public:
 		return Col4( _mm_and_si128( a.m_v, mask ) );
 	}
 
-	friend Col4 MaskBits( Col4::Arg a, const int n, const int p )
+	friend Col4 MaskBits( Arg a, const int n, const int p )
 	{
 		const int val = 64 - (p + n);
 
@@ -1044,7 +1044,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col4 CopyBits( Col4::Arg left, Col4::Arg right )
+	friend Col4 CopyBits( Arg left, Arg right )
 	{
 		if (!n)
 			return left;
@@ -1061,7 +1061,7 @@ public:
 #endif
 	}
 
-	friend Col4 CopyBits( Col4::Arg left, Col4 right, const int n, const int p )
+	friend Col4 CopyBits( Arg left, Col4& right, const int n, const int p )
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ---bl xxxx xxxx */
@@ -1076,7 +1076,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col4 KillBits( Col4::Arg a )
+	friend Col4 KillBits( Arg a )
 	{
 		if ((p + n) <= 0)
 			return Col4(0);
@@ -1096,7 +1096,7 @@ public:
 		return Col4( _mm_and_si128( a.m_v, mask ) );
 	}
 
-	friend Col4 KillBits( Col4::Arg a, const int n, const int p )
+	friend Col4 KillBits( Arg a, const int n, const int p )
 	{
 		const int val1 =      (p + 0);
 		const int val2 = 64 - (p + n);
@@ -1119,7 +1119,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col4 InjtBits( Col4::Arg left, Col4::Arg right )
+	friend Col4 InjtBits( Arg left, Arg right )
 	{
 		if (!n)
 			return left;
@@ -1136,7 +1136,7 @@ public:
 #endif
 	}
 
-	friend Col4 InjtBits( Col4::Arg left, Col4 right, const int n, const int p )
+	friend Col4 InjtBits( Arg left, Col4& right, const int n, const int p )
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ---bl xxxx xxxx */
@@ -1151,7 +1151,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend Col4 ExtrBits( Col4::Arg a )
+	friend Col4 ExtrBits( Arg a )
 	{
 		if (!n)
 			return Col4(0);
@@ -1167,7 +1167,7 @@ public:
 #endif
 	}
 
-	friend Col4 ExtrBits( Col4::Arg a, const int n, const int p )
+	friend Col4 ExtrBits( Arg a, const int n, const int p )
 	{
 #if ( SQUISH_USE_XSSE == 4 )
 		/* ---- ----- ---- ---bl */
@@ -1180,13 +1180,13 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend void ExtrBits( Col4::Arg left, Col4 &right )
+	friend void ExtrBits( Arg left, Col4 &right )
 	{
 		right  = ExtrBits<n, p>( left );
 	}
 
 	template<const int n, const int p>
-	friend void ConcBits( Col4::Arg left, Col4 &right )
+	friend void ConcBits( Arg left, Col4 &right )
 	{
 		right  = ShiftLeft<32>( right );
 		if (n > 0)
@@ -1194,7 +1194,7 @@ public:
 	}
 
 	template<const int n, const int p>
-	friend void ReplBits( Col4::Arg left, Col4 &right )
+	friend void ReplBits( Arg left, Col4 &right )
 	{
 		if (!n)
 			return;
@@ -1209,14 +1209,14 @@ public:
 	}
 
 	//! Returns a*b + c
-	friend Col4 MultiplyAdd( Col4::Arg a, Col4::Arg b, Col4::Arg c )
+	friend Col4 MultiplyAdd( Arg a, Arg b, Arg c )
 	{
 	//	return Col4( _mm_add_epi32( _mm_mullo_epi32( a.m_v, b.m_v ), c.m_v ) );
 		return Col4( _mm_add_epi32( _mm_mullo_epi16( a.m_v, b.m_v ), c.m_v ) );
 	}
 
 	//! Returns -( a*b - c )
-	friend Col4 NegativeMultiplySubtract( Col4::Arg a, Col4::Arg b, Col4::Arg c )
+	friend Col4 NegativeMultiplySubtract( Arg a, Arg b, Arg c )
 	{
 	//	return Col4( _mm_sub_epi32( c.m_v, _mm_mullo_epi32( a.m_v, b.m_v ) ) );
 		return Col4( _mm_sub_epi32( c.m_v, _mm_mullo_epi16( a.m_v, b.m_v ) ) );
@@ -1333,82 +1333,82 @@ public:
 		return HorizontalAddTiny( Col4( _mm_mullo_epi16( left.m_v, right.m_v ) ) );
 	}
 
-	friend Col4 Min( Col4::Arg left, Col4::Arg right )
+	friend Col4 Min( Arg left, Arg right )
 	{
 	//	return Col4( _mm_min_epi32( left.m_v, right.m_v ) );
 		return Col4( _mm_min_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 Max( Col4::Arg left, Col4::Arg right )
+	friend Col4 Max( Arg left, Arg right )
 	{
 	//	return Col4( _mm_max_epi32( left.m_v, right.m_v ) );
 		return Col4( _mm_max_epi16( left.m_v, right.m_v ) );
 	}
 	
-	friend int CompareGreaterThan( Col4::Arg left, Col4::Arg right )
+	friend int CompareGreaterThan( Arg left, Arg right )
 	{
 		__m128i bits = _mm_cmpgt_epi8( left.m_v, right.m_v );
 		return _mm_movemask_epi8( bits );
 	}
 	
-	friend int CompareLessThan( Col4::Arg left, Col4::Arg right )
+	friend int CompareLessThan( Arg left, Arg right )
 	{
 		__m128i bits = _mm_cmplt_epi8( left.m_v, right.m_v );
 		return _mm_movemask_epi8( bits );
 	}
 	
-	friend int CompareEqualTo( Col4::Arg left, Col4::Arg right )
+	friend int CompareEqualTo( Arg left, Arg right )
 	{
 		__m128i bits = _mm_cmpeq_epi8( left.m_v, right.m_v );
 		return _mm_movemask_epi8( bits );
 	}
 	
-	friend bool CompareAnyLessThan( Col4::Arg left, Col4::Arg right )
+	friend bool CompareAnyLessThan( Arg left, Arg right )
 	{
 		__m128i bits = _mm_cmpeq_epi32( left.m_v, right.m_v );
 		int value = _mm_movemask_epi8( bits );
 		return value != 0x0000;
 	}
 
-	friend bool CompareAllEqualTo( Col4::Arg left, Col4::Arg right )
+	friend bool CompareAllEqualTo( Arg left, Arg right )
 	{
 		__m128i bits = _mm_cmpeq_epi32( left.m_v, right.m_v );
 		int value = _mm_movemask_epi8( bits );
 		return value == 0xFFFF;
 	}
 	
-	friend Col4 CompareAllLessThan_M8( Col4::Arg left, Col4::Arg right )
+	friend Col4 CompareAllLessThan_M8( Arg left, Arg right )
 	{
 		return Col4( _mm_cmplt_epi8( left.m_v, right.m_v ) );
 	}
 	
-	friend Col4 CompareAllEqualTo_M8( Col4::Arg left, Col4::Arg right )
+	friend Col4 CompareAllEqualTo_M8( Arg left, Arg right )
 	{
 		return Col4( _mm_cmpeq_epi8( left.m_v, right.m_v ) );
 	}
 
-	friend Col4 IsNotZero( Col4::Arg v )
+	friend Col4 IsNotZero( Arg v )
 	{
 		return Col4( _mm_cmpgt_epi32( v.m_v, _mm_setzero_si128( ) ) );
 	}
 
-	friend Col4 IsZero( Col4::Arg v )
+	friend Col4 IsZero( Arg v )
 	{
 		return Col4( _mm_cmpeq_epi32( v.m_v, _mm_setzero_si128( ) ) );
 	}
 
-	friend Col4 IsOne( Col4::Arg v )
+	friend Col4 IsOne( Arg v )
 	{
 		return Col4( _mm_cmpeq_epi32( v.m_v, _mm_set1_epi32( 0x000000FF ) ) );
 	}
 	
 	template<const int value>
-	friend Col4 IsValue( Col4::Arg v )
+	friend Col4 IsValue( Arg v )
 	{
 		return Col4( _mm_cmpeq_epi32( v.m_v, _mm_set1_epi32( value ) ) );
 	}
 
-	friend Col4 TransferA( Col4::Arg left, Col4::Arg right )
+	friend Col4 TransferA( Arg left, Arg right )
 	{
 		__m128i l = _mm_and_si128( left.m_v , _mm_setr_epi32( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 ) );
 		__m128i r = _mm_and_si128( right.m_v, _mm_setr_epi32( 0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF ) );
@@ -1416,12 +1416,12 @@ public:
 		return Col4( _mm_or_si128( l, r ) );
 	}
 
-	friend Col4 KillA( Col4::Arg left )
+	friend Col4 KillA( Arg left )
 	{
 		return Col4( _mm_or_si128( left.m_v, _mm_setr_epi32( 0x00, 0x00, 0x00, 0xFF ) ) );
 	}
 	
-	friend Col4 CollapseA( Col4::Arg r, Col4::Arg g, Col4::Arg b, Col4::Arg a )
+	friend Col4 CollapseA( Arg r, Arg g, Arg b, Arg a )
 	{
 		return Col4( _mm_packus_epi16(
 			_mm_packs_epi32( _mm_srli_epi32( r.m_v, 24 ), _mm_srli_epi32( g.m_v, 24 ) ),
@@ -1429,7 +1429,7 @@ public:
 		) );
 	}
 
-	friend void PackBytes( Col4::Arg a, unsigned int &loc )
+	friend void PackBytes( Arg a, unsigned int &loc )
 	{
 		__m128i
 
@@ -1439,7 +1439,7 @@ public:
 		loc = _mm_cvtsi128_si32 ( r );
 	}
 	
-	friend void PackBytes( Col4::Arg a, int &loc )
+	friend void PackBytes( Arg a, int &loc )
 	{
 		__m128i
 
@@ -1449,7 +1449,7 @@ public:
 		loc = _mm_cvtsi128_si32 ( r );
 	}
 	
-	friend void PackWords( Col4::Arg a, unsigned __int64 &loc )
+	friend void PackWords( Arg a, unsigned __int64 &loc )
 	{
 		__m128i
 		  
@@ -1461,7 +1461,7 @@ public:
 		_mm_storel_epi64( (__m128i *)&loc, r );
 	}
 	
-	friend void PackWords( Col4::Arg a, __int64 &loc )
+	friend void PackWords( Arg a, __int64 &loc )
 	{
 		__m128i
 		  
@@ -1521,12 +1521,12 @@ public:
 		return Min(one, Max(zero, *this));
 	}
 
-	friend void Interleave( Col4 &a, Col4::Arg b, Col4::Arg c )
+	friend void Interleave( Col4 &a, Arg b, Arg c )
 	{
 		a = Col4( _mm_shuffle_epi32( _mm_unpacklo_epi32( b.m_v , c.m_v ), SQUISH_SSE_SHUF(0, 3, 0, 3) ) );
 	}
 
-	friend void LoadAligned( Col4 &a, Col4 &b, Col4::Arg c )
+	friend void LoadAligned( Col4 &a, Col4 &b, Arg c )
 	{
 	        a.m_v = c.m_v;
 		b.m_v = _mm_shuffle_epi32( a.m_v, SQUISH_SSE_SWAP64() );
@@ -1549,38 +1549,38 @@ public:
 		b.m_v = _mm_shuffle_epi32( a.m_v, SQUISH_SSE_SWAP64() );
 	}
 
-	friend void StoreAligned( Col4::Arg a, Col4::Arg b, Col4 &c )
+	friend void StoreAligned( Arg a, Arg b, Col4 &c )
 	{
 		c.m_v = _mm_unpacklo_epi64( a.m_v, b.m_v );
 	}
 
-	friend void StoreAligned( Col4::Arg a, void *destination )
+	friend void StoreAligned( Arg a, void *destination )
 	{
 		_mm_store_si128( (__m128i *)destination, a.m_v );
 	}
 
-	friend void StoreAligned( Col4::Arg a, Col4::Arg b, void *destination )
+	friend void StoreAligned( Arg a, Arg b, void *destination )
 	{
 		_mm_store_si128( (__m128i *)destination, _mm_unpacklo_epi64( a.m_v, b.m_v ) );
 	}
 
-	friend void StoreUnaligned( Col4::Arg a, void *destination )
+	friend void StoreUnaligned( Arg a, void *destination )
 	{
 		_mm_storeu_si128( (__m128i *)destination, a.m_v );
 	}
 
-	friend void StoreUnaligned( Col4::Arg a, Col4::Arg b, void *destination )
+	friend void StoreUnaligned( Arg a, Arg b, void *destination )
 	{
 		_mm_storeu_si128( (__m128i *)destination, _mm_unpacklo_epi64( a.m_v, b.m_v ) );
 	}
 	
-	friend void StoreUnaligned( Col4::Arg a, u8* loc ) {
+	friend void StoreUnaligned( Arg a, u8* loc ) {
 	  PackBytes( a, (unsigned int&) (*((unsigned int *)loc)) ); }
-	friend void StoreUnaligned( Col4::Arg a, u16* loc ) {
+	friend void StoreUnaligned( Arg a, u16* loc ) {
 	  PackWords( a, (unsigned __int64&) (*((unsigned __int64 *)loc)) ); }
-	friend void StoreUnaligned( Col4::Arg a, s8* loc ) {
+	friend void StoreUnaligned( Arg a, s8* loc ) {
 	  PackBytes( a, (int&) (*((int *)loc)) ); }
-	friend void StoreUnaligned( Col4::Arg a, s16* loc ) {
+	friend void StoreUnaligned( Arg a, s16* loc ) {
 	  PackWords( a, (__int64&) (*((__int64 *)loc)) ); }
 	
 	friend void LoadUnaligned( Col4 &a, const u8* loc ) {
@@ -1630,9 +1630,9 @@ public:
 
 	explicit Col8( __m128i v ) : m_v( v ) {}
 
-	Col8( Col8 const& arg ) : m_v( arg.m_v ) {}
+	Col8( Arg arg ) : m_v( arg.m_v ) {}
 
-	Col8& operator=( Col8 const& arg )
+	Col8& operator=( Arg arg )
 	{
 		m_v = arg.m_v;
 		return *this;
@@ -1668,22 +1668,22 @@ public:
 	
 #pragma warning ( push )
 #pragma warning ( disable : 4100 )
-	friend Col4 LoCol4(Col8 const&v, const unsigned dummy)
+	friend Col4 LoCol4(Arg v, const unsigned dummy)
 	{
 		return Col4( _mm_unpacklo_epi16( v.m_v, _mm_setzero_si128() ) );
 	}
 	
-	friend Col4 HiCol4(Col8 const&v, const unsigned dummy)
+	friend Col4 HiCol4(Arg v, const unsigned dummy)
 	{
 		return Col4( _mm_unpackhi_epi16( v.m_v, _mm_setzero_si128() ) );
 	}
 	
-	friend Col4 LoCol4(Col8 const&v, const signed dummy)
+	friend Col4 LoCol4(Arg v, const signed dummy)
 	{
 		return Col4( _mm_srai_epi32( _mm_unpacklo_epi16( _mm_setzero_si128(), v.m_v ), 16 ) );
 	}
 	
-	friend Col4 HiCol4(Col8 const&v, const signed dummy)
+	friend Col4 HiCol4(Arg v, const signed dummy)
 	{
 		return Col4( _mm_srai_epi32( _mm_unpackhi_epi16( _mm_setzero_si128(), v.m_v ), 16 ) );
 	}
@@ -1700,58 +1700,58 @@ public:
 		return *this;
 	}
 
-	friend Col8 operator>>( Col8::Arg left, unsigned int right  )
+	friend Col8 operator>>( Arg left, unsigned int right  )
 	{
 		return Col8( _mm_srli_epi16( left.m_v, right ) );
 	}
 	
-	friend Col8 operator>>( Col8::Arg left, int right  )
+	friend Col8 operator>>( Arg left, int right  )
 	{
 		return Col8( _mm_srai_epi16( left.m_v, right ) );
 	}
 
-	friend Col8 operator<<( Col8::Arg left, unsigned int right  )
+	friend Col8 operator<<( Arg left, unsigned int right  )
 	{
 		return Col8( _mm_slli_epi16( left.m_v, right ) );
 	}
 	
-	friend Col8 operator<<( Col8::Arg left, int right  )
+	friend Col8 operator<<( Arg left, int right  )
 	{
 		return Col8( _mm_slli_epi16( left.m_v, right ) );
 	}
 
-	friend Col8 operator+( Col8::Arg left, Col8::Arg right  )
+	friend Col8 operator+( Arg left, Arg right  )
 	{
 		return Col8( _mm_add_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend Col8 operator-( Col8::Arg left, Col8::Arg right  )
+	friend Col8 operator-( Arg left, Arg right  )
 	{
 		return Col8( _mm_sub_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend Col8 operator*( Col8::Arg left, Col8::Arg right  )
+	friend Col8 operator*( Arg left, Arg right  )
 	{
 		return Col8( _mm_mullo_epi16( left.m_v, right.m_v ) );
 	}
 
-	friend Col8 operator*( Col8::Arg left, unsigned int right  )
+	friend Col8 operator*( Arg left, unsigned int right  )
 	{
 		return Col8( _mm_mulhi_epu16( left.m_v, _mm_set1_epi16( (unsigned short)right ) ) );
 	}
 	
-	friend Col8 operator*( Col8::Arg left, int right  )
+	friend Col8 operator*( Arg left, int right  )
 	{
 		return Col8( _mm_mulhi_epi16( left.m_v, _mm_set1_epi16( (short)right ) ) );
 	}
 	
 	template<const int n>
-	friend Col8 ExtendSign( Col8::Arg a )
+	friend Col8 ExtendSign(Arg a)
 	{
 		return Col8( _mm_srai_epi16( a.m_v, n ) );
 	}
 	
-	friend Col8 HorizontalMin( Arg a )
+	friend Col8 HorizontalMin(Arg a)
 	{
 		__m128i res = a.m_v;
 
@@ -1770,7 +1770,7 @@ public:
 		return Col8( res );
 	}
 
-	friend Col8 HorizontalMax( Arg a )
+	friend Col8 HorizontalMax(Arg a)
 	{
 		__m128i res = a.m_v;
 
@@ -1790,7 +1790,7 @@ public:
 	}
 	
 	template<const int n>
-	friend Col8 ShiftUp( Arg a )
+	friend Col8 ShiftUp(Arg a)
 	{
 		return Col8( _mm_slli_si128( a.m_v, n << 1 ) );
 	}
@@ -1955,17 +1955,17 @@ public:
 	}
 	*/
 	
-	friend int CompareEqualTo( Col8::Arg left, Col8::Arg right )
+	friend int CompareEqualTo( Arg left, Arg right )
 	{
 		return _mm_movemask_epi8( _mm_cmpeq_epi16( left.m_v, right.m_v ) );
 	}
 	
-	friend Col8 CompareAllEqualTo( Col8::Arg left, Col8::Arg right )
+	friend Col8 CompareAllEqualTo( Arg left, Arg right )
 	{
 		return Col8( _mm_cmpeq_epi16( left.m_v, right.m_v ) );
 	}
 	
-	friend Col8 CompareAllLessThan( Col8::Arg left, Col8::Arg right )
+	friend Col8 CompareAllLessThan( Arg left, Arg right )
 	{
 		return Col8( _mm_cmplt_epi16( left.m_v, right.m_v ) );
 	}
@@ -1987,9 +1987,9 @@ public:
 
 	explicit Vec3( __m128 v ) : m_v( v ) {}
 
-	Vec3( Vec3 const& arg ) : m_v( arg.m_v ) {}
+	Vec3( Arg arg ) : m_v( arg.m_v ) {}
 
-	Vec3& operator=( Vec3 const& arg )
+	Vec3& operator=( Arg arg )
 	{
 		m_v = arg.m_v;
 		return *this;
@@ -2081,7 +2081,7 @@ public:
 		return *this;
 	}
 	
-	Vec3& operator/=( Vec3 v )
+	Vec3& operator/=( Arg v )
 	{
 		*this *= Reciprocal( v );
 		return *this;
@@ -2314,6 +2314,18 @@ public:
 
 		return Vec3( res );
 	}
+	
+	friend Vec3 HorizontalMaxXY( Arg a )
+	{
+		__m128 res = a.m_v;
+
+		res = _mm_max_ps(
+		  _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 0, 1, 0, 1 ) ),
+		  _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 0, 1, 0 ) )
+		);
+
+		return Vec3( res );
+	}
 
 	friend Vec3 Reciprocal( Vec3::Arg v )
 	{
@@ -2416,6 +2428,26 @@ public:
 			// sqrt(1.0f - (x² + y²))
 			return Sqrt(Vec3(1.0f) - len);
 		}
+	}
+	
+	template<const bool disarm>
+	friend Vec3 ComplementPyramidal( Vec3 &left )
+	{
+		Vec3 res = Vec3(1.0f) - HorizontalMaxXY(Abs(left));
+
+		res = Normalize(TransferZ(left, res));
+
+		return res;
+	}
+
+	template<const bool disarm>
+	friend Vec3 ComplementPyramidal( Vec3 &left, Vec3 &right )
+	{
+		Vec3 res = Vec3(1.0f) - Max(Abs(left), Abs(right));
+
+		Normalize(left, right, res);
+
+		return res;
 	}
 
 	friend Vec3 Dot( Arg left, Arg right )
@@ -2549,6 +2581,11 @@ public:
 	Vec3 IsNotOne( ) const
 	{
 		return Vec3( _mm_cmpneq_ps( m_v, _mm_set1_ps( 1.0f ) ) );
+	}
+	
+	friend Vec3 TransferZ( Vec3::Arg left, Vec3::Arg right )
+	{
+		return Vec3( _mm_shuffle_ps( left.m_v, right.m_v, SQUISH_SSE_SHUF( 0, 1, 2, 3 ) ) );
 	}
 
 	void SwapXYZ( Vec3 &with )
@@ -3070,6 +3107,18 @@ public:
 
 		return Vec4( res );
 	}
+	
+	friend Vec4 HorizontalMaxXY( Arg a )
+	{
+		__m128 res = a.m_v;
+
+		res = _mm_max_ps(
+		  _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 0, 1, 0, 1 ) ),
+		  _mm_shuffle_ps( res, res, SQUISH_SSE_SHUF( 1, 0, 1, 0 ) )
+		);
+
+		return Vec4( res );
+	}
 
 	friend Vec4 Reciprocal( Vec4::Arg v )
 	{
@@ -3111,13 +3160,29 @@ public:
 
 		return rsq;
 	}
-
+	
 	friend Vec4 Normalize( Arg left )
 	{
 		Vec4 sum = HorizontalAdd( Vec4( _mm_mul_ps( left.m_v, left.m_v ) ) );
 		Vec4 rsq = ReciprocalSqrt(sum);
 
 		return left * rsq;
+	}
+	
+	friend Vec4 Normalize( Vec4& x, Vec4& y, Vec4& z )
+	{
+		Vec4 xx = x * x;
+		Vec4 yy = y * y;
+		Vec4 zz = z * z;
+
+		Vec4 sum = xx + yy + zz;
+		Vec4 rsq = ReciprocalSqrt(sum);
+
+		x = x * rsq;
+		y = y * rsq;
+		z = z * rsq;
+
+		return rsq;
 	}
 	
 	template<const bool disarm, const bool killw>
@@ -3183,6 +3248,26 @@ public:
 			// sqrt(1.0f - (x² + y²))
 			return Sqrt(Vec4(1.0f) - len);
 		}
+	}
+	
+	template<const bool disarm>
+	friend Vec4 ComplementPyramidal( Vec4 &left )
+	{
+		Vec4 res = Vec4(1.0f) - HorizontalMaxXY(Abs(left));
+
+		res = TransferW(Normalize(TransferZW(left, KillW(res))), left);
+
+		return res;
+	}
+
+	template<const bool disarm>
+	friend Vec4 ComplementPyramidal( Vec4 &left, Vec4 &right )
+	{
+		Vec4 res = Vec4(1.0f) - Max(Abs(left), Abs(right));
+
+		Normalize(left, right, res);
+
+		return res;
 	}
 
 	friend Vec4 Dot( Arg left, Arg right )
