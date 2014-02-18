@@ -55,10 +55,11 @@ ColourSingleFit::ColourSingleFit(ColourSet const* colours, int flags)
 {
   // grab the single colour
   Vec3 const* values = m_colours->GetPoints();
+  Col3 integers = Min(FloatToInt<true>(*values * Vec3(255.0f)), Col3(255));
 
-  m_colour[0] = (u8)FloatToInt<true,false>(255.0f * values->X(), 255);
-  m_colour[1] = (u8)FloatToInt<true,false>(255.0f * values->Y(), 255);
-  m_colour[2] = (u8)FloatToInt<true,false>(255.0f * values->Z(), 255);
+  m_colour[0] = (u8)integers.R();
+  m_colour[1] = (u8)integers.G();
+  m_colour[2] = (u8)integers.B();
 
   // initialize the best error
   m_besterror = Scr3(FLT_MAX);
@@ -145,16 +146,19 @@ int ColourSingleFit::ComputeEndPoints(ColourSingleLookup const* const* lookups)
       besterror = error;
 
       m_start = Vec3(
-	(float)sources[0]->start / 31.0f,
-	(float)sources[1]->start / 63.0f,
-	(float)sources[2]->start / 31.0f
+	(float)sources[0]->start,
+	(float)sources[1]->start,
+	(float)sources[2]->start
       );
 
       m_end = Vec3(
-	(float)sources[0]->end / 31.0f,
-	(float)sources[1]->end / 63.0f,
-	(float)sources[2]->end / 31.0f
+	(float)sources[0]->end,
+	(float)sources[1]->end,
+	(float)sources[2]->end
       );
+
+      m_start /= Vec3(31.0f, 63.0f, 31.0f);
+      m_end   /= Vec3(31.0f, 63.0f, 31.0f);
 
       m_index = (u8)(2 * index);
 

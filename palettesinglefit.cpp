@@ -171,7 +171,7 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, int cb, int
   }
 }
 
-Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup2 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup2 const* const* lookups, u8 mask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -195,10 +195,10 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
     // check the error for this codebook index
     SP_SourceBlock const* sources[4] = {NULL};
     Vec4 cerror(0.0f);
-
-    for (int channel = 0; channel < 4; ++channel) {
+    
+    for (int channel = 0, cmask = mask; channel < 4; ++channel, cmask >>= 1) {
       // skip if it's completely irrelevant what's in a specific channel
-      if (cmask & (1 << channel)) {
+      if (cmask & 1) {
 	// grab the lookup table and index for this channel
 	PaletteSingleLookup2 const* lookup = lookups[channel];
 	int target = m_entry[set][channel];
@@ -244,7 +244,7 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
   return besterror;
 }
 
-Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup4 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup4 const* const* lookups, u8 mask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -268,10 +268,10 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
     // check the error for this codebook index
     SP_SourceBlock const* sources[4] = {NULL};
     Vec4 cerror(0.0f);
-
-    for (int channel = 0; channel < 4; ++channel) {
+    
+    for (int channel = 0, cmask = mask; channel < 4; ++channel, cmask >>= 1) {
       // skip if it's completely irrelevant what's in a specific channel
-      if (cmask & (1 << channel)) {
+      if (cmask & 1) {
 	// grab the lookup table and index for this channel
 	PaletteSingleLookup4 const* lookup = lookups[channel];
 	int target = m_entry[set][channel];
@@ -316,7 +316,7 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
   return besterror;
 }
 
-Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup8 const* const* lookups, u8 cmask)
+Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSingleLookup8 const* const* lookups, u8 mask)
 {
   // check each index combination (endpoint or intermediate)
   Scr4 besterror = Scr4(FLT_MAX);
@@ -341,9 +341,9 @@ Scr4 PaletteSingleFit::ComputeEndPoints(int set, Vec4 const &metric, PaletteSing
     SP_SourceBlock const* sources[4] = {NULL};
     Vec4 cerror(0.0f);
 
-    for (int channel = 0; channel < 4; ++channel) {
+    for (int channel = 0, cmask = mask; channel < 4; ++channel, cmask >>= 1) {
       // skip if it's completely irrelevant what's in a specific channel
-      if (cmask & (1 << channel)) {
+      if (cmask & 1) {
 	// grab the lookup table and index for this channel
 	PaletteSingleLookup8 const* lookup = lookups[channel];
 	int target = m_entry[set][channel];

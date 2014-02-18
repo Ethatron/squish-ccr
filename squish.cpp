@@ -189,7 +189,7 @@ struct statistics gstat = {0};
 #endif
 
 template<typename dtyp, class PaletteTypeFit>
-float CompressPaletteBtc7uV1(dtyp const* rgba, int mask, void* block, int flags)
+Scr4 CompressPaletteBtc7uV1(dtyp const* rgba, int mask, void* block, int flags)
 {
 #if !defined(NDEBUG) && defined(DEBUG_SETTING)
 #define DEBUG_MODE	kVariableCodingMode1
@@ -417,7 +417,7 @@ float CompressPaletteBtc7uV1(dtyp const* rgba, int mask, void* block, int flags)
 	  fit.PaletteTypeFit::Compress(block, qnt, mnum);
 	  if (fit.IsBest()) {
 	    if (fit.Lossless())
-	      return 0.0f;
+	      return Scr4(0.0f);
 
 #if   !defined(TRACK_STATISTICS) && !defined(VERIFY_QUANTIZER)
 	    if (cluster)
@@ -465,7 +465,7 @@ float CompressPaletteBtc7uV1(dtyp const* rgba, int mask, void* block, int flags)
 	  fit.PaletteClusterFit::Compress(block, qnt, mnum);
 	  if (fit.IsBest()) {
 	    if (fit.Lossless())
-	      return 0.0f;
+	      return Scr4(0.0f);
 
 	    if (cluster || 1)
 	      besttyp = 1;
@@ -520,11 +520,11 @@ float CompressPaletteBtc7uV1(dtyp const* rgba, int mask, void* block, int flags)
   DecompressColoursBtc7u((u8*)rgba, block);
 #endif
 
-  return error.X();
+  return error;
 }
 
 template<typename dtyp, class PaletteTypeFit>
-float CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
+Scr4 CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
 {
   vQuantizer q7778(7, 7, 7, 8);
   vQuantizer q5556(5, 5, 5, 6);
@@ -728,7 +728,7 @@ float CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
 	      fit.PaletteTypeFit::Compress(block, *caseqnt[m].qnt, mnum);
 	      if (fit.IsBest()) {
 		if (fit.Lossless())
-		  return 0.0f;
+		  return Scr4(0.0f);
 
 #if   !defined(TRACK_STATISTICS) && !defined(VERIFY_QUANTIZER)
 		if (PaletteTypeFit::IsClusterable(flags))
@@ -843,7 +843,7 @@ float CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
 		  fit.PaletteClusterFit::Compress(block, *caseqnt[bestqnt[m]].qnt, mnum);
 		  if (fit.IsBest()) {
 		    if (fit.Lossless())
-		      return 0.0f;
+		      return Scr4(0.0f);
 
 		    if (cluster || 1)
 		      besttyp[m] = 1;
@@ -879,7 +879,7 @@ float CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
   DecompressColoursBtc7u((u8*)rgba, block);
 #endif
 
-  return error[0].X();
+  return error[0];
 }
 
 template<typename dtyp>
@@ -1073,9 +1073,9 @@ void CompressMaskedColourBtc7u(dtyp const* rgba, int mask, void* block, int flag
 #ifndef NDEBUG
   // compress color and alpha merged if necessary
   fprintf(stderr, "CompressPaletteBtc7uV1\n");
-  float errora = CompressPaletteBtc7uV1<dtyp,PaletteRangeFit>(rgba, mask, mixedBlock, flags);
+  Scr4 errora = CompressPaletteBtc7uV1<dtyp,PaletteRangeFit>(rgba, mask, mixedBlock, flags);
   fprintf(stderr, "CompressPaletteBtc7uV2\n");
-  float errorb = CompressPaletteBtc7uV2<dtyp,PaletteRangeFit>(rgba, mask, mixedBlock, flags);
+  Scr4 errorb = CompressPaletteBtc7uV2<dtyp,PaletteRangeFit>(rgba, mask, mixedBlock, flags);
 
   if (errorb > errora) {
     bool damn = true; damn = false;

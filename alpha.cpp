@@ -366,8 +366,8 @@ static Scr4 FitError(float const* aaaa, int &minS, int &maxS, Scr4 &errS) {
       cb3 = (cssmp * twof) + (cmpee * thrf); cb3 = Truncate(cb3);
       cb4 = (cssmp * onef) + (cmpee * fouf); cb4 = Truncate(cb4);
       cb5 =                  (cmpee * mprc); //5 = Truncate(cb5);
-      cb6 = Vec4(  0.0f * (1 << prc));
-      cb7 = Vec4(255.0f * (1 << prc));
+      cb6 = Vec4(min * (1 << prc));
+      cb7 = Vec4(max * (1 << prc));
     }
     else if (steps == 7) {
       cb0 = (cssmp * mprc)                 ; //0 = Truncate(cb0);

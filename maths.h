@@ -176,6 +176,11 @@ public:
 	{
 		return m_x[index];
 	}
+	
+	const float* operator()( int index ) const
+	{
+		return &m_x[index];
+	}
 
 private:
 	float m_x[3];
@@ -203,6 +208,11 @@ public:
 	{
 		return m_x[index];
 	}
+	
+	const float* operator()( int index ) const
+	{
+		return &m_x[index];
+	}
 
 private:
 	float m_x[6];
@@ -229,6 +239,11 @@ public:
 	float& operator[]( int index ) ccr_restricted
 	{
 		return m_x[index];
+	}
+	
+	const float* operator()( int index ) const
+	{
+		return &m_x[index];
 	}
 
 private:

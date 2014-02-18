@@ -703,9 +703,19 @@ void ComputePrincipleComponent(Sym3x3 const& smatrix, Vec4 &out)
 
 void EstimatePrincipleComponent(Sym2x2 const& matrix, Vec4 &out)
 {
-  Vec4 const row0(matrix[0], matrix[1], 0.0f, 0.0f);
-  Vec4 const row1(matrix[1], matrix[2], 0.0f, 0.0f);
+//Vec4 const row0(matrix[0], matrix[1], 0.0f, 0.0f);
+//Vec4 const row1(matrix[1], matrix[2], 0.0f, 0.0f);
+  Vec4 row0; 
+  Vec4 row1; 
   Vec4 v;
+  
+  LoadUnaligned(row0, matrix(0));
+  
+  row1 = Merge<1,2,1,2>(row0, row0) & Vec4(true, true, false, false);
+  row0 =                row0        & Vec4(true, true, false, false);
+  
+  assert(row0.GetO(0) == matrix[0]); assert(row0.GetO(1) == matrix[1]); assert(row0.GetO(2) == 0.0f); assert(row0.GetO(3) == 0.0f);
+  assert(row1.GetO(0) == matrix[1]); assert(row1.GetO(1) == matrix[2]); assert(row1.GetO(2) == 0.0f); assert(row1.GetO(3) == 0.0f);
 
   Scr4 r0 = LengthSquared(row0);
   Scr4 r1 = LengthSquared(row1);
@@ -731,54 +741,37 @@ void EstimatePrincipleComponent(Sym2x2 const& matrix, Vec4 &out)
 #if defined(TRACK_STATISTICS)
   gstat.num_poweritrs[std::min(i, 63)]++;
 #endif
-
+  
+  assert(v.GetZ() == 0.0f);
+  assert(v.GetW() == 0.0f);
   out = v;
 }
 
 void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec3 &out)
 {
-  Vec3 const row0(matrix[0], matrix[1], matrix[2]);
-  Vec3 const row1(matrix[1], matrix[3], matrix[4]);
-  Vec3 const row2(matrix[2], matrix[4], matrix[5]);
-  Vec3 v;
-
-  Scr3 r0 = LengthSquared(row0);
-  Scr3 r1 = LengthSquared(row1);
-  Scr3 r2 = LengthSquared(row2);
-
-  if (r0 > r1 && r0 > r2) v = row0;
-  else if (r1 > r2) v = row1;
-  else v = row2;
-
-#if POWER_ITERATION_COUNT > 0
-  for (int i = 0; i < POWER_ITERATION_COUNT; i++) {
-#else
-  int i = 0; Vec3 d; do { d = v; i++;
-#endif
-    Scr3 x = Dot(v, row0);
-    Scr3 y = Dot(v, row1);
-    Scr3 z = Dot(v, row2);
-
-    v  = Vec3(x, y, z);
-    v *= Reciprocal(HorizontalMax(Abs(v)));
-  }
-#if POWER_ITERATION_COUNT <= 0
-  while (CompareAnyGreaterThan(AbsoluteDifference(v, d), Vec3(POWER_ITERATION_PREC)) && (i < 64));
-#endif
-
-#if defined(TRACK_STATISTICS)
-  gstat.num_poweritrs[std::min(i, 63)]++;
-#endif
-
-  out = v;
+  Vec4 tmp; EstimatePrincipleComponent(matrix, tmp); out = tmp.GetVec3();
 }
 
 void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec4 &out)
 {
-  Vec4 const row0(matrix[0], matrix[1], matrix[2], 0.0f);
-  Vec4 const row1(matrix[1], matrix[3], matrix[4], 0.0f);
-  Vec4 const row2(matrix[2], matrix[4], matrix[5], 0.0f);
+//Vec4 const row0(matrix[0], matrix[1], matrix[2], 0.0f);
+//Vec4 const row1(matrix[1], matrix[3], matrix[4], 0.0f);
+//Vec4 const row2(matrix[2], matrix[4], matrix[5], 0.0f);
+  Vec4 row0;
+  Vec4 row1;
+  Vec4 row2;
   Vec4 v;
+
+  LoadUnaligned(row0, matrix(0));
+  LoadUnaligned(row1, matrix(2));
+
+  row2 = Merge<0,2,3,3>(row1, row1) & Vec4(true, true, true, false);
+  row1 = Merge<1,3,2,2>(row0, row1) & Vec4(true, true, true, false);
+  row0 =                row0        & Vec4(true, true, true, false);
+
+  assert(row0.GetO(0) == matrix[0]); assert(row0.GetO(1) == matrix[1]); assert(row0.GetO(2) == matrix[2]); assert(row0.GetO(3) == 0.0f);
+  assert(row1.GetO(0) == matrix[1]); assert(row1.GetO(1) == matrix[3]); assert(row1.GetO(2) == matrix[4]); assert(row1.GetO(3) == 0.0f);
+  assert(row2.GetO(0) == matrix[2]); assert(row2.GetO(1) == matrix[4]); assert(row2.GetO(2) == matrix[5]); assert(row2.GetO(3) == 0.0f);
 
   Scr4 r0 = LengthSquared(row0);
   Scr4 r1 = LengthSquared(row1);
@@ -808,6 +801,7 @@ void EstimatePrincipleComponent(Sym3x3 const& matrix, Vec4 &out)
   gstat.num_poweritrs[std::min(i, 63)]++;
 #endif
 
+  assert(v.GetW() == 0.0f);
   out = v;
 }
 

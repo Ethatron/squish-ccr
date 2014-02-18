@@ -89,7 +89,7 @@ PaletteNormalFit::PaletteNormalFit(PaletteSet const* palette, int flags, int swa
       
       // get the min and max normal as the codebook endpoints
       Vec4 start(127.5f, 127.5f, 255.0f, 1.0f);
-      Vec4 end(127.5f, 127.5f, 255.0f, 1.0f);
+      Vec4   end(127.5f, 127.5f, 255.0f, 1.0f);
       
       // get the min and max range as the codebook endpoints
 
