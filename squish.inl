@@ -23,7 +23,6 @@
 #include "paletteclusterfit.cpp"
 #include "palettechannelfit.cpp"
 #include "alphanormalfit.cpp"
-#include "palettenormalfit.cpp"
 #include "squish.cpp"
 #else
 #include <xutility>
@@ -50,6 +49,5 @@
 #include "paletteclusterfit.h"
 #include "palettechannelfit.h"
 #include "alphanormalfit.h"
-#include "palettenormalfit.h"
 #include "squish.h"
 #endif

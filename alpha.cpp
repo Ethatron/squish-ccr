@@ -50,7 +50,7 @@ static void CompressAlphaBtc2u(dtyp const* rgba, int mask, void* block, float sc
   u8* bytes = reinterpret_cast< u8* >(block);
 
   // quantize and pack the alpha values pairwise
-  for (int i = 0; i < 8; ++i, mask >>= 2) {
+  for (int i = 0, imask = mask; i < 8; ++i, imask >>= 2) {
     // quantize down to 4 bits
     float alpha1 = (float)rgba[8 * i + 3] * scale;
     float alpha2 = (float)rgba[8 * i + 7] * scale;
@@ -59,9 +59,9 @@ static void CompressAlphaBtc2u(dtyp const* rgba, int mask, void* block, float sc
     int quant2 = FloatToInt<true,false>(alpha2, 15);
 
     // set alpha to zero where masked
-    if ((mask & 1) == 0)
+    if ((imask & 1) == 0)
       quant1 = 0;
-    if ((mask & 2) == 0)
+    if ((imask & 2) == 0)
       quant2 = 0;
 
     // pack into the byte
@@ -121,9 +121,9 @@ static Scr4 FitCodesS(dtyp const* rgba, int mask, Col8 const &codes, u8* indices
 {
   // fit each alpha value to the codebook
   int err = 0;
-  for (int i = 0; i < 16; ++i, mask >>= 1) {
+  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
     // check this pixel is valid
-    if ((mask & 1) == 0) {
+    if ((imask & 1) == 0) {
       // use the first code
       indices[i] = 0;
       continue;
@@ -166,9 +166,9 @@ static Scr4 FitCodesL(dtyp const* rgba, int mask, Col8 const &codes, u8* indices
 
   // fit each alpha value to the codebook
   Scr4 err = Scr4(0.0f);
-  for (int i = 0; i < 16; ++i, mask >>= 1) {
+  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
     // check this pixel is valid
-    if ((mask & 1) == 0) {
+    if ((imask & 1) == 0) {
       // use the first code
       indices[i] = 0;
       continue;
@@ -656,9 +656,9 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
   int min5 = max, max5 = min;
   int min7 = max, max7 = min;
 
-  for (int i = 0; i < 16; ++i, mask >>= 1) {
+  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
     // check this pixel is valid
-    if ((mask & 1) == 0)
+    if ((imask & 1) == 0)
       continue;
 
     // incorporate into the min/max
@@ -737,9 +737,9 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
   int min5 = max, max5 = min;
   int min7 = max, max7 = min;
 
-  for (int i = 0; i < 16; ++i, mask >>= 1) {
+  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
     // check this pixel is valid
-    if ((mask & 1) == 0)
+    if ((imask & 1) == 0)
       continue;
 
     // incorporate into the min/max
