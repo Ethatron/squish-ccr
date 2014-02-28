@@ -855,8 +855,8 @@ static void ReadAlphaBlock(
   etyp alpha1 = bytes[1];
 
   // compare the values to build the codebook
-  codes[0] = (ctyp)alpha0;
-  codes[1] = (ctyp)alpha1;
+  codes[0] = (ctyp)alpha0 << prc;
+  codes[1] = (ctyp)alpha1 << prc;
 
   // use 5-alpha or 7-alpha codebook
   Codebook6or8<prc>(codes, alpha0 <= alpha1);

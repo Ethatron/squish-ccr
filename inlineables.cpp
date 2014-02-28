@@ -1043,8 +1043,8 @@ static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg e
   assert(s16(codes[3]) == (((s16(smul[3]) * s16(start[3])) + (s16(emul[3]) * s16(end[3]))) / 5 + s16(mask[3])));
   assert(s16(codes[4]) == (((s16(smul[4]) * s16(start[4])) + (s16(emul[4]) * s16(end[4]))) / 5 + s16(mask[4])));
   assert(s16(codes[5]) == (((s16(smul[5]) * s16(start[5])) + (s16(emul[5]) * s16(end[5]))) / 5 + s16(mask[5])));
-  assert(s16(codes[6]) == min);
-  assert(s16(codes[7]) == max);
+  assert(s16(codes[6]) == mask[6]);
+  assert(s16(codes[7]) == mask[7]);
 }
 
 template<const int min, const int max, const int pb>
