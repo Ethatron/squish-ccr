@@ -36,6 +36,8 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
+extern Vec4 g_metric[8];
+
 static const int skip[2][4] = {
   {0, 1 /* 1 to 1 */,  3 /* 3 to  3 */,  7 /*  7 to  7 */},
   {0, 3 /* 1 to 3 */, 15 /* 7 to 15 */, 63 /* 37 to 63 */}
@@ -164,30 +166,27 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
 {
   int const ix = m_palette->GetRotation();
 
-  // initialize the metric
-  const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
-  const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
-
   // the weighting of colour against alpha is 1:1, which
   // is a middle-ground of quality. increasing the alpha-weight
   // will start showing false colour assignments, decreasing
   // alpha-weight will start showing flatness of moderately
   // transparent areas
+#ifdef FEATURE_METRIC_ROOTED
+  const Vec4 onehalf(sqrtf(0.5f));
+  const Vec4 onethird(sqrtf(0.3333f));
+#else
+  const Vec4 onehalf(0.5f);
+  const Vec4 onethird(0.3333f);
+#endif
 
-  // sum is 2.0f
-  if (unit)
-//  m_metric[0] = Vec4(0.5000f, 0.5000f, 0.0000f, 1.0000f);
-    m_metric[0] = Vec4(0.3333f, 0.3333f, 0.3333f, 1.0000f);
-  else if (perceptual)	// linear RGB luminance
-    m_metric[0] = Vec4(0.2126f, 0.7152f, 0.0722f, 1.0000f);
-  else
-    m_metric[0] = Vec4(0.3333f, 0.3333f, 0.3333f, 1.0000f);
+  // initialize the metric
+  m_metric[0] = g_metric[(flags & kColourMetrics) >> 4];
 
   // sum is 1.0f
   if (!m_palette->IsTransparent())
     m_metric[0] = KillW(m_metric[0]);
   else
-    m_metric[0] = m_metric[0] * 0.5f;
+    m_metric[0] = m_metric[0] * onehalf;
 
   // swap channel-weights
   switch (ix) {
@@ -199,7 +198,7 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
   // split metric into two, double sum is 1.0f
   if (m_palette->IsSeperateAlpha()) {
     // alpha-metric in xyz
-    m_metric[2] = KillW(m_metric[0].SplatW()) * Vec4(0.3333f, 0.3333f, 0.3333f, 0.0000f);
+    m_metric[2] = KillW(m_metric[0].SplatW()) * onethird;
 
     // alpha-metric in w
     m_metric[1] = OnlyW(m_metric[0]);
@@ -210,12 +209,6 @@ PaletteFit::PaletteFit(PaletteSet const* palette, int flags, int swap, int share
     m_metric[2] =
     m_metric[1] =
     m_metric[0];
-
-#ifdef FEATURE_METRIC_ROOTED
-  m_metric[2] = Sqrt(m_metric[2]);
-  m_metric[1] = Sqrt(m_metric[1]);
-  m_metric[0] = Sqrt(m_metric[0]);
-#endif
 
   // initialize the best error
   m_besterror = Scr4(FLT_MAX);

@@ -146,6 +146,44 @@ static doinline int passreg Unpack88(u8 const* packed, u8* colour) ccr_restricte
 #define	SHARED	1	// 2
 #define	FIELDN	2	// 3
 
+static const vQuantizer q7778s0(7, 7, 7, 8,  0);
+static const vQuantizer q5556s0(5, 5, 5, 6,  0);
+static const vQuantizer q8888s0(8, 8, 8, 8,  0);
+static const vQuantizer q6666s0(6, 6, 6, 6,  0);
+static const vQuantizer q8880s0(8, 8, 8, 0,  0);
+static const vQuantizer q7770s0(7, 7, 7, 0,  0);
+static const vQuantizer q5550s0(5, 5, 5, 0,  0);
+
+static const vQuantizer q7778s1(7, 7, 7, 8, ~0);
+static const vQuantizer q5556s1(5, 5, 5, 6, ~0);
+static const vQuantizer q8888s1(8, 8, 8, 8, ~0);
+static const vQuantizer q6666s1(6, 6, 6, 6, ~0);
+static const vQuantizer q8880s1(8, 8, 8, 0, ~0);
+static const vQuantizer q7770s1(7, 7, 7, 0, ~0);
+static const vQuantizer q5550s1(5, 5, 5, 0, ~0);
+
+#define vGetQuantizer(r, g, b, a)					\
+	(((r) == 7) && ((a) == 8)                ? q7778s1 :		\
+	(((r) == 5) && ((a) == 6)                ? q5556s1 :		\
+	(((r) == 5) && ((a) == 0)                ? q5550s1 :		\
+	(((r) == 8) && ((a) == 8)                ? q8888s1 :		\
+	(((r) == 6) && ((a) == 6)                ? q6666s1 :		\
+	(((r) == 8) && ((a) == 1)                ? q8880s1 :		\
+	(((r) == 7) && ((a) == 1)                ? q7770s1 :		\
+	(((r) == 5) && ((a) == 1)                ? q5550s1 :		\
+	(vQuantizer&)*(vQuantizer*)nullptr))))))))
+
+#define eGetQuantizer(r, g, b, a, e)					\
+	(((r) == 7) && ((a) == 8) && ((e) == ~0) ? q7778s1 :		\
+	(((r) == 5) && ((a) == 6) && ((e) == ~0) ? q5556s1 :		\
+	(((r) == 5) && ((a) == 0) && ((e) == ~0) ? q5550s1 :		\
+	(((r) == 8) && ((a) == 8) && ((e) ==  0) ? q8888s0 :		\
+	(((r) == 6) && ((a) == 6) && ((e) ==  0) ? q6666s0 :		\
+	(((r) == 8) && ((a) == 1) && ((e) ==  0) ? q8880s0 :		\
+	(((r) == 7) && ((a) == 1) && ((e) ==  0) ? q7770s0 :		\
+	(((r) == 5) && ((a) == 1) && ((e) ==  0) ? q5550s0 :		\
+	(vQuantizer&)*(vQuantizer*)nullptr))))))))
+
 template<const int rb, const int gb, const int bb, const int ab, const int eb, const int sb>
 static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN], int bitset) ccr_restricted
 {
@@ -154,7 +192,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
   assert((!eb && !sb && !(~bitset)) || ((eb || sb) && (~bitset)));
 
   // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
-  vQuantizer q = vQuantizer(
+  const vQuantizer &q = eGetQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
@@ -164,7 +202,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
 
   // pack into a single value
           field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1 << 0);
-          field[0][COLORA] = field[0][COLORA] >> (eb + sb);
+          field[0][COLORA] = ShiftRight<eb + sb>(field[0][COLORA]);
 
   if (eb) field[0][UNIQUE] = (Col4(bitset) >> 0) & Col4(1);
   if (sb) field[0][SHARED] = (Col4(bitset) >> 0) & Col4(1);
@@ -183,7 +221,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
   const int em = (1 << (     eb + sb)) - 1;
   const int sm = (1 << (          sb)) - 1;
 
-  vQuantizer q = vQuantizer(
+  const vQuantizer &q = vGetQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
@@ -205,7 +243,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
   rcomplete[0] = q.QuantizeToInt(colour[0]);
 
   // get the components in the explicit range
-  rexplicit[0] = rcomplete[0] >> (eb + sb);
+  rexplicit[0] = ShiftRight<eb + sb>(rcomplete[0]);
 
   if (eb + sb) {
     /* stick g in a for skewing the rounding */
@@ -222,13 +260,13 @@ static doinline void passreg FloatTo(Vec4 (&colour)[1], Col4 (&field)[1][FIELDN]
       rcomplete[0] &= z0 | Col4(~em);
 
       /* if alpha is white the shared bit must be 1 */
-      rcomplete[0] |= o0 >> (32 - (eb + sb));
+      rcomplete[0] |= ShiftRight<32 - (eb + sb)>(o0);
     }
 #endif
 
     if (eb) {
       // get the components in the unique range
-      runique[0] = (rcomplete[0] & umask) >> sb;
+      runique[0] = ShiftRight<sb>(rcomplete[0] & umask);
 
       _e[0] = HorizontalAddTiny(runique[0], Col4(2, 0, 0, 0)) >> 2;
     }
@@ -271,7 +309,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
   assert((!eb && !sb && !(~bitset)) || ((eb || sb) && (~bitset)));
 
   // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
-  vQuantizer q = vQuantizer(
+  const vQuantizer &q = eGetQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
@@ -282,8 +320,8 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
   // pack into a single value
           field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1 << 0);
           field[1][COLORA] = q.QuantizeToInt(colour[1], bitset, 1 << 1);
-          field[0][COLORA] = field[0][COLORA] >> (eb + sb);
-          field[1][COLORA] = field[1][COLORA] >> (eb + sb);
+          field[0][COLORA] = ShiftRight<eb + sb>(field[0][COLORA]);
+          field[1][COLORA] = ShiftRight<eb + sb>(field[1][COLORA]);
 
   if (eb) field[0][UNIQUE] = (Col4(bitset) >> 0) & Col4(1);
   if (eb) field[1][UNIQUE] = (Col4(bitset) >> 1) & Col4(1);
@@ -304,7 +342,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
   const int em = (1 << (     eb + sb)) - 1;
   const int sm = (1 << (          sb)) - 1;
 
-  vQuantizer q = vQuantizer(
+  const vQuantizer &q = vGetQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
@@ -327,8 +365,8 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
   rcomplete[1] = q.QuantizeToInt(colour[1]);
 
   // get the components in the explicit range
-  rexplicit[0] = rcomplete[0] >> (eb + sb);
-  rexplicit[1] = rcomplete[1] >> (eb + sb);
+	rexplicit[0] = ShiftRight<eb + sb>(rcomplete[0]);
+	rexplicit[1] = ShiftRight<eb + sb>(rcomplete[1]);
 
   if (eb + sb) {
     /* stick g in a for skewing the rounding */
@@ -349,15 +387,15 @@ static doinline void passreg FloatTo(Vec4 (&colour)[2], Col4 (&field)[2][FIELDN]
       rcomplete[1] &= z1 | Col4(~em);
 
       /* if alpha is white the shared bit must be 1 */
-      rcomplete[0] |= o0 >> (32 - (eb + sb));
-      rcomplete[1] |= o1 >> (32 - (eb + sb));
+			rcomplete[0] |= ShiftRight<32 - (eb + sb)>(o0);
+			rcomplete[1] |= ShiftRight<32 - (eb + sb)>(o1);
     }
 #endif
 
     if (eb) {
       // get the components in the unique range
-      runique[0] = (rcomplete[0] & umask) >> sb;
-      runique[1] = (rcomplete[1] & umask) >> sb;
+			runique[0] = ShiftRight<sb>(rcomplete[0] & umask);
+			runique[1] = ShiftRight<sb>(rcomplete[1] & umask);
 
       _e[0] = HorizontalAddTiny(runique[0], Col4(2, 0, 0, 0)) >> 2;
       _e[1] = HorizontalAddTiny(runique[1], Col4(2, 0, 0, 0)) >> 2;
@@ -406,7 +444,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
   assert((!eb && !sb && !(~bitset)) || ((eb || sb) && (~bitset)));
 
   // we can't just drop the eb/sb bits in fp-representation, we have to use the exact quantizer
-  vQuantizer q = vQuantizer(
+  const vQuantizer &q = eGetQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
@@ -418,9 +456,9 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
           field[0][COLORA] = q.QuantizeToInt(colour[0], bitset, 1 << 0);
           field[1][COLORA] = q.QuantizeToInt(colour[1], bitset, 1 << 1);
           field[2][COLORA] = q.QuantizeToInt(colour[2], bitset, 1 << 2);
-          field[0][COLORA] = field[0][COLORA] >> (eb + sb);
-          field[1][COLORA] = field[1][COLORA] >> (eb + sb);
-          field[2][COLORA] = field[2][COLORA] >> (eb + sb);
+          field[0][COLORA] = ShiftRight<eb + sb>(field[0][COLORA]);
+          field[1][COLORA] = ShiftRight<eb + sb>(field[1][COLORA]);
+          field[2][COLORA] = ShiftRight<eb + sb>(field[2][COLORA]);
 
   if (eb) field[0][UNIQUE] = (Col4(bitset) >> 0) & Col4(1);
   if (eb) field[1][UNIQUE] = (Col4(bitset) >> 1) & Col4(1);
@@ -443,7 +481,7 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
   const int em = (1 << (     eb + sb)) - 1;
   const int sm = (1 << (          sb)) - 1;
 
-  vQuantizer q = vQuantizer(
+  const vQuantizer &q = vGetQuantizer(
     rb + eb + sb,
     gb + eb + sb,
     bb + eb + sb,
@@ -467,9 +505,9 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
   rcomplete[2] = q.QuantizeToInt(colour[2]);
 
   // get the components in the explicit range
-  rexplicit[0] = rcomplete[0] >> (eb + sb);
-  rexplicit[1] = rcomplete[1] >> (eb + sb);
-  rexplicit[2] = rcomplete[2] >> (eb + sb);
+  rexplicit[0] = ShiftRight<eb + sb>(rcomplete[0]);
+  rexplicit[1] = ShiftRight<eb + sb>(rcomplete[1]);
+  rexplicit[2] = ShiftRight<eb + sb>(rcomplete[2]);
 
   if (eb + sb) {
     /* stick g in a for skewing the rounding */
@@ -494,17 +532,17 @@ static doinline void passreg FloatTo(Vec4 (&colour)[3], Col4 (&field)[3][FIELDN]
       rcomplete[2] &= z2 | Col4(~em);
 
       /* if alpha is white the shared bit must be 1 */
-      rcomplete[0] |= o0 >> (32 - (eb + sb));
-      rcomplete[1] |= o1 >> (32 - (eb + sb));
-      rcomplete[2] |= o2 >> (32 - (eb + sb));
+			rcomplete[0] |= ShiftRight<32 - (eb + sb)>(o0);
+			rcomplete[1] |= ShiftRight<32 - (eb + sb)>(o1);
+			rcomplete[2] |= ShiftRight<32 - (eb + sb)>(o2);
     }
 #endif
 
     if (eb) {
       // get the components in the unique range
-      runique[0] = (rcomplete[0] & umask) >> sb;
-      runique[1] = (rcomplete[1] & umask) >> sb;
-      runique[2] = (rcomplete[2] & umask) >> sb;
+			runique[0] = ShiftRight<sb>(rcomplete[0] & umask);
+			runique[1] = ShiftRight<sb>(rcomplete[1] & umask);
+			runique[2] = ShiftRight<sb>(rcomplete[2] & umask);
 
       _e[0] = HorizontalAddTiny(runique[0], Col4(2, 0, 0, 0)) >> 2;
       _e[1] = HorizontalAddTiny(runique[1], Col4(2, 0, 0, 0)) >> 2;
@@ -1035,7 +1073,7 @@ static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg e
     codes = ((ipol * 0xCCCDU) >> 2U) + mask;
   else
     // max   signed:  0x4F60 * 0x3334 = 0x0FE03F80 = 0x0FE0		127 << 5
-    codes = ((ipol * 0x3334 )      ) + mask - CompareAllLessThan(ipol, Col8(0,0,0,0,0,0, 0x8000, 0x8000));
+    codes = ((ipol * 0x6667 ) >> 1 ) + mask - CompareAllLessThan(ipol, Col8(0,0,0,0,0,0, 0x8000, 0x8000));
 
   assert(s16(codes[0]) == (((s16(smul[0]) * s16(start[0])) + (s16(emul[0]) * s16(end[0]))) / 5 + s16(mask[0])));
   assert(s16(codes[1]) == (((s16(smul[1]) * s16(start[1])) + (s16(emul[1]) * s16(end[1]))) / 5 + s16(mask[1])));
@@ -1043,8 +1081,8 @@ static doinline void passreg Codebook6(Col8 &codes, Col8::Arg start, Col8::Arg e
   assert(s16(codes[3]) == (((s16(smul[3]) * s16(start[3])) + (s16(emul[3]) * s16(end[3]))) / 5 + s16(mask[3])));
   assert(s16(codes[4]) == (((s16(smul[4]) * s16(start[4])) + (s16(emul[4]) * s16(end[4]))) / 5 + s16(mask[4])));
   assert(s16(codes[5]) == (((s16(smul[5]) * s16(start[5])) + (s16(emul[5]) * s16(end[5]))) / 5 + s16(mask[5])));
-  assert(s16(codes[6]) == mask[6]);
-  assert(s16(codes[7]) == mask[7]);
+  assert(s16(codes[6]) ==                                                                        s16(mask[6]) );
+  assert(s16(codes[7]) ==                                                                        s16(mask[7]) );
 }
 
 template<const int min, const int max, const int pb>
@@ -1132,6 +1170,42 @@ static int passreg CodebookP(unsigned int *codes, Col4::Arg start, Col4::Arg end
   return (1 << bits);
 }
 
+static int passreg CodebookP(Col3 *codes, int bits, Col3::Arg start, Col3::Arg end) ccr_restricted
+{
+  const int j = (1 << bits) - 1;
+
+  codes[0] = start;
+  codes[j] = end;
+
+  // the quantizer is not equi-distant, but it is symmetric
+  for (int i = 1; i < j; i++) {
+    Col3 s = Mul16x16u(weights_C4[bits][j - i].GetCol3(), start);
+    Col3 e = Mul16x16u(weights_C4[bits][i + 0].GetCol3(), end);
+
+    codes[i] = (s + e + Col3(32)) >> 6;
+  }
+
+  return (1 << bits);
+}
+
+template<const int bits>
+static int passreg CodebookP(unsigned__int64 *codes, Col3::Arg start, Col3::Arg end) ccr_restricted
+{
+  const int j = (1 << bits) - 1;
+
+  PackWords(Col4(start), codes[0]);
+  PackWords(Col4(end  ), codes[j]);
+
+  // the quantizer is not equi-distant, but it is symmetric
+  for (int i = 1; i < j; i++) {
+    Col3 s = Mul16x16u(weights_C4[bits][j - i].GetCol3(), start);
+    Col3 e = Mul16x16u(weights_C4[bits][i + 0].GetCol3(), end  );
+
+    PackWords(Col4((s + e + Col3(32)) >> 6), codes[i]);
+  }
+
+  return (1 << bits);
+}
 /* -----------------------------------------------------------------------------
  */
 static int passreg CodebookPn(Vec4 *codes, int bits, Vec4::Arg start, Vec4::Arg end) ccr_restricted

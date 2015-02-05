@@ -56,7 +56,7 @@ void PaletteIndexFit::ErrorEndPoints(int set, Vec4 const &metric, vQuantizer &q,
   
   // final check if it really improved
   {
-    m_berror = m_qerror;
+    m_berror = Scr4(m_qerror);
 
     // save the index
     closest[0] = 0; 
@@ -99,7 +99,7 @@ Scr4 PaletteIndexFit::ErrorInterpolantsS(Vec4 const &metric, vQuantizer &q, int 
 
   // error-sum of the two values
   Scr4 serror = LengthSquared(metric * (values[0] - scode)) * freq[0];
-  Scr4 eerror = m_qerror.SplatZ();
+  Scr4 eerror = Scr4(m_qerror.SplatZ());
       
   // return combined error
   return (serror + eerror);
@@ -116,7 +116,7 @@ Scr4 PaletteIndexFit::ErrorInterpolantsE(Vec4 const &metric, vQuantizer &q, int 
   Vec4 ecode = weights_V4[ib][idxs - closest1] * start + weights_V4[ib][closest1] * end;
 
   // error-sum of the two values
-  Scr4 serror = m_qerror.SplatY();
+  Scr4 serror = Scr4(m_qerror.SplatY());
   Scr4 eerror = LengthSquared(metric * (values[1] - ecode)) * freq[1];
       
   // return combined error
@@ -384,6 +384,10 @@ Scr4 PaletteIndexFit::StretchEndPoints(int set, Vec4 const &metric, vQuantizer &
   return m_berror;
 #endif
 }
+
+#undef	ChooseInterpolants
+#undef	ChooseInterpolantsS
+#undef	ChooseInterpolantsE
 #endif
 
 } // namespace squish

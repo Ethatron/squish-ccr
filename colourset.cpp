@@ -87,7 +87,7 @@ ColourSet::ColourSet(u8 const* rgba, int mask, int flags)
       /* check for transparent pixels when using dxt1
        * check for blanked out pixels when weighting
        */
-      m_transparent |= ((mask & (1 << i)) != 0);
+      m_transparent = m_transparent | ((mask & (1 << i)) != 0);
 
       continue;
     }
@@ -269,7 +269,7 @@ ColourSet::ColourSet(f23 const* rgba, int mask, int flags)
       /* check for transparent pixels when using dxt1
        * check for blanked out pixels when weighting
        */
-      m_transparent |= ((mask & (1 << i)) != 0);
+      m_transparent = m_transparent | ((mask & (1 << i)) != 0);
 
       continue;
     }

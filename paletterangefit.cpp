@@ -359,6 +359,7 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
   }
 
 #if defined(DEBUG_DETAILS)
+#if defined(DEBUG_DETAILS) && (DEBUG_DETAILS == 2)
   fprintf(stderr, "m: %1d, s: %1d+%1d, n:", mode, isets, asets);
   fprintf(stderr, " %2d", 0 < (isets + asets) ? m_palette->GetCount(0) : 0);
   fprintf(stderr, " %2d", 1 < (isets + asets) ? m_palette->GetCount(1) : 0);
@@ -424,12 +425,13 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
   }
 
   fprintf(stderr, ", e: %.8f (< %.8f)\n", error.X(), m_besterror.X());
-#endif // NDEBUG
+#endif // DEBUG_DETAILS == 2
+#endif // DEBUG_DETAILS
 
   if (!(error < m_besterror))
     return;
-  
-#ifndef NDEBUG
+
+#if defined(DEBUG_DETAILS)
   fprintf(stderr, "RangeFit m: %1d, s: %1d+%1d, n:", mode, isets, asets);
   fprintf(stderr, " %2d", 0 < (isets + asets) ? m_palette->GetCount(0) : 0);
   fprintf(stderr, " %2d", 1 < (isets + asets) ? m_palette->GetCount(1) : 0);
@@ -447,8 +449,8 @@ void PaletteRangeFit::Compress(void* block, vQuantizer &q, int mode)
     fprintf(stderr, ", i:  %1d ", ib);
   
   fprintf(stderr, ", e: %.8f (< %.8f)\n", error.X(), m_besterror.X() == FLT_MAX ? -1.0f : m_besterror.X());
-#endif
-#endif
+#endif // DEBUG_DETAILS
+#endif // NDEBUG
 
   // remap the indices
   for (int s = 0;     s <  isets         ; s++)

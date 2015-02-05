@@ -55,7 +55,6 @@ public:
   // makes it easier to loop
 #define SBSTART	0
 #define SBEND	3
-#define SB	1
 #define SR(s)	(s < 0 ? s : m_sharedmap[s])
 #define SBSKIP	-1
 #define SK(s)	(!(~s))

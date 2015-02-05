@@ -29,6 +29,34 @@
 
 #include "maths.h"
 
+namespace squish {
+
+  // FloatTo...
+  extern unsigned short uhLUTb[1 << 9];
+  extern char           uhLUTs[1 << 9];
+  extern unsigned short shLUTb[1 << 9];
+  extern char           shLUTs[1 << 9];
+
+  static inline u16 FloatToUHalf(f23 c) {
+    unsigned int f = *((unsigned int *)&c); return uhLUTb[(f >> 23) & 0x01FF] + (u16)((f & 0x007FFFFF) >> uhLUTs[(f >> 23) & 0x01FF]); }
+  static inline u16 FloatToSHalf(f23 c) {
+    unsigned int f = *((unsigned int *)&c); return shLUTb[(f >> 23) & 0x01FF] + (u16)((f & 0x007FFFFF) >> shLUTs[(f >> 23) & 0x01FF]); }
+
+  // ...ToFloat
+  extern unsigned int   uhLUTo[1 << 5];
+  extern unsigned int   uhLUTm[1 << 12];
+  extern unsigned int   uhLUTe[1 << 5];
+  extern unsigned int   shLUTo[1 << 6];
+  extern unsigned int   shLUTm[1 << 11];
+  extern unsigned int   shLUTe[1 << 6];
+
+  static inline f23 UHalfToFloat(u16 h) {
+    unsigned int c = uhLUTm[uhLUTo[h >> 11] + (h & 0x07FF)] + uhLUTe[h >> 11]; return *((float *)&c); }
+  static inline f23 SHalfToFloat(u16 h) {
+    unsigned int c = shLUTm[shLUTo[h >> 10] + (h & 0x03FF)] + shLUTe[h >> 10]; return *((float *)&c); }
+
+};
+
 #if	SQUISH_USE_ALTIVEC
 #include "simd_ve.h"
 #elif	SQUISH_USE_SSE

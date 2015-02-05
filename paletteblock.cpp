@@ -23,8 +23,10 @@
 
    -------------------------------------------------------------------------- */
 
-#if	!defined(__GNUC__) && (_MSC_VER > 1300)
+#if defined(_MSC_VER) && (_MSC_VER > 1300)
 #include <intrin.h>
+#elif defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
+#include <x86intrin.h>
 #endif
 
 #include "paletteblock.h"
@@ -82,7 +84,7 @@ namespace squish {
   __declspec(align(16))
 #endif
 
-const unsigned int blockxor[64][/*6*/5][4] = {
+extern const unsigned int blockxor[64][/*6*/5][4] = {
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x0000ffff,0x0000ffff,0x0000ffff,0x0000ffff}, {0xffff0000,0xffff0000,0xffff0000,0xffff0000}, {0x0000ffff,0x0000ffff,0x000000ff,0x00000000}, {0xffff0000,0xffff0000,0xff000000,0x00000000}, {0x00000000,0x00000000,0x00ffff00,0xffffffff} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x00ffffff,0x00ffffff,0x00ffffff,0x00ffffff}, {0xff000000,0xff000000,0xff000000,0xff000000}, {0x00ffffff,0x0000ffff,0x00000000,0x00000000}, {0xff000000,0xffff0000,0xffff0000,0xff000000}, {0x00000000,0x00000000,0x0000ffff,0x00ffffff} },
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0x000000ff,0x000000ff,0x000000ff,0x000000ff}, {0xffffff00,0xffffff00,0xffffff00,0xffffff00}, {0xffffffff,0x00ffff00,0x00000000,0x00000000}, {0x00000000,0xff000000,0xffff0000,0xffff0000}, {0x00000000,0x000000ff,0x0000ffff,0x0000ffff} },
@@ -152,7 +154,7 @@ const unsigned int blockxor[64][/*6*/5][4] = {
   { /*{0xffffffff,0xffffffff,0xffffffff,0xffffffff},*/ {0xffff00ff,0xffff00ff,0x000000ff,0x000000ff}, {0x0000ff00,0x0000ff00,0xffffff00,0xffffff00}, {0x000000ff,0x0000ff00,0x00ff0000,0xff000000}, {0xffffff00,0xffff0000,0xff000000,0x00000000}, {0x00000000,0x000000ff,0x0000ffff,0x00ffffff} }
 };
 
-const int shorterindex[64][/*6*/5] = {
+extern const int shorterindex[64][/*6*/5] = {
  //   1       1 | 2      1 | 2 | 3     1 | 2 | 3 (ordered)
   { /*0,*/  /*0,*/15,  /*0,*/ 3,15,  /*0,*/ 3,15},
   { /*0,*/  /*0,*/15,  /*0,*/ 3, 8,  /*0,*/ 3, 8},
@@ -425,6 +427,8 @@ static void passreg WritePaletteBlock(int partition, Col4 (&idx)[2], Col4 &blkl,
 //    sblk = ShiftRightHalf<sbits * 15>(sblk);
     } break;
   }
+#undef	fbits
+#undef	sbits
 }
 
 /* -----------------------------------------------------------------------------
@@ -600,6 +604,14 @@ static void passreg RemapPaletteBlock(int partition, Vec4 (&start)[1], Vec4 (&en
   idxs[0] ^= (xors & ihixor);
 #endif
 }
+
+#undef	ihibit
+#undef	ihimsk
+#undef	ihixor
+
+#undef	ahibit
+#undef	ahimsk
+#undef	ahixor
 
 /* -----------------------------------------------------------------------------
  * Remarks
@@ -1201,7 +1213,7 @@ void WritePaletteBlock4_m8(int partition, Vec4 const (&start)[2], Vec4 const (&e
 
 /* *****************************************************************************
  */
-const u8 whichsetinpartition[64][/*3*/2][16] = {
+extern const u8 whichsetinpartition[64][/*3*/2][16] = {
 { /*{0},*/ {0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1},{0,0,1,1,0,0,1,1,0,2,2,1,2,2,2,2}},
 { /*{0},*/ {0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1},{0,0,0,1,0,0,1,1,2,2,1,1,2,2,2,1}},
 { /*{0},*/ {0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1},{0,0,0,0,2,0,0,1,2,2,1,1,2,2,1,1}},
@@ -1638,6 +1650,8 @@ void ReadPaletteBlock(int partition, unsigned int *icodes, unsigned int *acodes,
             acodes[0 + a2.GetLong()];
   out[15] = icodes[0 + c3.GetLong()] +
             acodes[0 + a3.GetLong()];
+#undef	fbits
+#undef	sbits
 }
 
 /* -----------------------------------------------------------------------------
@@ -2359,6 +2373,10 @@ void ReadPaletteBlock4_m8(u8* rgba, void const* block) {
   // 128 - 98 -> 30 index bits + 2 bit from 2 set start/end order -> 16 * 2bit
   ReadPaletteBlock<2, 2, 98>(partition, (unsigned int *)codes, blkl, blkh, (int *)rgba);
 }
+
+#undef	C
+#undef	U
+#undef	S
 
 void DecompressColoursBtc7u(u8* rgba, void const* block)
 {

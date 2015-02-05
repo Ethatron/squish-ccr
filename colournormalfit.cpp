@@ -40,9 +40,6 @@ ColourNormalFit::ColourNormalFit(ColourSet const* colours, int flags)
 {
   cQuantizer3<5,6,5> q = cQuantizer3<5,6,5>();
 
-  // initialize the best error
-  m_besterror = Scr3(FLT_MAX);
-
   // cache some values
   int const count = m_colours->GetCount();
   Vec3 const* values = m_colours->GetPoints();

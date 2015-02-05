@@ -386,7 +386,7 @@ static void Compress(std::string const& sourceFileName, std::string const& targe
   int targetDataSize = bytesPerBlock * width * height / 16;
   Mem targetData(targetDataSize);
   
-  struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_F23, flags);
+  struct sqio s = GetSquishIO(width, height, sqio::DT_F23, flags);
 
   // loop over blocks and compress them
   clock_t start = std::clock();
@@ -596,7 +596,7 @@ static void Decompress(std::string const& sourceFileName, std::string const& tar
   // create the target rows
   PngRows targetRows(width, height, 4);
   
-  struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_F23, flags);
+  struct sqio s = GetSquishIO(width, height, sqio::DT_F23, flags);
 
   // loop over blocks and compress them
   clock_t start = std::clock();
@@ -836,7 +836,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 
   minduration = DBL_MAX;
   for (int l = 0; l < num; l += 1) {
-    struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U16, flags);
+    struct sqio s = GetSquishIO(width, height, sqio::DT_U16, flags);
 
     unsigned char* _targetBlock = benchData.Get();
 
@@ -931,7 +931,7 @@ static void Benchmark(std::string const& sourceFileName, int mapping, int flags)
 
   minduration = DBL_MAX;
   for (int l = 0; l < num; l += 1) {
-    struct sqio s = GetSquishIO(width, height, sqio::dtp::DT_U16, flags);
+    struct sqio s = GetSquishIO(width, height, sqio::DT_U16, flags);
 
     unsigned char const* sourceBlock = benchData.Get();
 

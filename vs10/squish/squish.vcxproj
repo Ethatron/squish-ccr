@@ -172,8 +172,6 @@
     <ClCompile Include="..\..\colourfit.cpp" />
     <ClCompile Include="..\..\colourrangefit.cpp" />
     <ClCompile Include="..\..\colourset.cpp" />
-    <ClCompile Include="..\..\coloursinglefit.cpp" />
-    <ClCompile Include="..\..\coloursinglesnap.cpp" />
     <ClCompile Include="..\..\inlineables.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -181,17 +179,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\maths.cpp" />
-    <ClCompile Include="..\..\normal.cpp" />
     <ClCompile Include="..\..\paletteblock.cpp" />
-    <ClCompile Include="..\..\palettechannelfit.cpp" />
     <ClCompile Include="..\..\paletteclusterfit.cpp" />
     <ClCompile Include="..\..\palettefit.cpp" />
-    <ClCompile Include="..\..\paletteindexfit.cpp" />
-    <ClCompile Include="..\..\palettenormalfit.cpp" />
     <ClCompile Include="..\..\paletterangefit.cpp" />
     <ClCompile Include="..\..\paletteset.cpp" />
-    <ClCompile Include="..\..\palettesinglefit.cpp" />
-    <ClCompile Include="..\..\palettesinglesnap.cpp" />
+    <ClCompile Include="..\..\singlecolourfit.cpp" />
+    <ClCompile Include="..\..\singlepalettefit.cpp" />
     <ClCompile Include="..\..\squish.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -201,32 +195,24 @@
     <ClInclude Include="..\..\colourfit.h" />
     <ClInclude Include="..\..\colourrangefit.h" />
     <ClInclude Include="..\..\colourset.h" />
-    <ClInclude Include="..\..\coloursinglefit.h" />
-    <ClInclude Include="..\..\coloursinglesnap.h" />
     <ClInclude Include="..\..\config.h" />
     <ClInclude Include="..\..\maths.h" />
-    <ClInclude Include="..\..\normal.h" />
     <ClInclude Include="..\..\paletteblock.h" />
-    <ClInclude Include="..\..\palettechannelfit.h" />
     <ClInclude Include="..\..\paletteclusterfit.h" />
     <ClInclude Include="..\..\palettefit.h" />
-    <ClInclude Include="..\..\paletteindexfit.h" />
-    <ClInclude Include="..\..\palettenormalfit.h" />
     <ClInclude Include="..\..\paletterangefit.h" />
     <ClInclude Include="..\..\paletteset.h" />
-    <ClInclude Include="..\..\palettesinglefit.h" />
-    <ClInclude Include="..\..\palettesinglesnap.h" />
     <ClInclude Include="..\..\simd.h" />
     <ClInclude Include="..\..\simd_float.h" />
     <ClInclude Include="..\..\simd_sse.h" />
     <ClInclude Include="..\..\simd_ve.h" />
+    <ClInclude Include="..\..\singlecolourfit.h" />
+    <ClInclude Include="..\..\singlepalettefit.h" />
     <ClInclude Include="..\..\squish.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\colourclusterfit.inl" />
-    <None Include="..\..\coloursinglelookup.inl" />
-    <None Include="..\..\paletteclusterfit.inl" />
-    <None Include="..\..\palettesinglelookup.inl" />
+    <None Include="..\..\singlecolourlookup.inl" />
+    <None Include="..\..\singlepalettelookup.inl" />
     <None Include="..\..\texture_compression_bptc.txt" />
     <None Include="..\..\texture_compression_fxt1.txt" />
     <None Include="..\..\texture_compression_latc.txt" />

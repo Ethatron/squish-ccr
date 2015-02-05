@@ -345,16 +345,16 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Vec3 SnapToLattice(Vec3 const &val) {
+  doinline Vec3 SnapToLattice(Vec3 const &val) const {
     return Truncate(grid * val.Clamp() + gridoff) * gridrcp;
   }
 
-  doinline Vec3 SnapToLatticeClamped(Vec3 const &val) {
+  doinline Vec3 SnapToLatticeClamped(Vec3 const &val) const {
     return Truncate(grid * val + gridoff) * gridrcp;
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col3 QuantizeToInt(Vec3 const &val) {
+  doinline Col3 QuantizeToInt(Vec3 const &val) const {
     // [0,255]
     Vec3 Qf = SnapToLattice(val);
 
@@ -362,7 +362,7 @@ public:
     return FloatToInt<true>(grid * Qf);
   }
 
-  doinline Col3 QuantizeToIntClamped(Vec3 const &val) {
+  doinline Col3 QuantizeToIntClamped(Vec3 const &val) const {
     Vec3 Qf = SnapToLatticeClamped(val);
 
     // [0,1<<b-1]
@@ -370,12 +370,12 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col3 LatticeToInt(Vec3 const &val) {
+  doinline Col3 LatticeToInt(Vec3 const &val) const {
     // [0,1<<b-1]
     return FloatToInt<true>(grid * val.Clamp());
   }
 
-  doinline Col3 LatticeToIntClamped(Vec3 const &val) {
+  doinline Col3 LatticeToIntClamped(Vec3 const &val) const {
     // [0,1<<b-1]
     return FloatToInt<true>(grid * val);
   }
@@ -402,7 +402,7 @@ public:
 	     (0.5f * br * bm) / 255.0f) {
   }
   
-  doinline Vec3 LookUpLattice(int r, int g, int b) {
+  doinline Vec3 LookUpLattice(int r, int g, int b) const {
     // exact nearest least-error quantization values
     return Vec3(
       &qLUT_a[rb][r],
@@ -411,7 +411,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Vec3 SnapToLattice(Vec3 const &val) {
+  doinline Vec3 SnapToLattice(Vec3 const &val) const {
     Col3 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
 #ifndef NDEBUG
     unsigned int lu; PackBytes(p, lu);
@@ -431,7 +431,7 @@ public:
     return rgb;
   }
 
-  doinline Vec3 SnapToLatticeClamped(Vec3 const &val) {
+  doinline Vec3 SnapToLatticeClamped(Vec3 const &val) const {
     Col3 p = FloatToInt<false>((grid * val) + gridgap);
 #ifndef NDEBUG
     unsigned int lu; PackBytes(p, lu);
@@ -452,7 +452,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col3 QuantizeToInt(Vec3 const &val) {
+  doinline Col3 QuantizeToInt(Vec3 const &val) const {
     // [0,255]
     Vec3 Qf = SnapToLattice(val);
 
@@ -460,7 +460,7 @@ public:
     return (FloatToInt<false>(Qf * Vec3(255.0f)) * gridinv) >> 8;
   }
 
-  doinline Col3 QuantizeToIntClamped(Vec3 const &val) {
+  doinline Col3 QuantizeToIntClamped(Vec3 const &val) const {
     // [0,255]
     Vec3 Qf = SnapToLatticeClamped(val);
 
@@ -469,7 +469,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col3 LatticeToInt(Vec3 const &val) {
+  doinline Col3 LatticeToInt(Vec3 const &val) const {
     // [0,255]
     Vec3 Qf = val.Clamp();
 
@@ -477,7 +477,7 @@ public:
     return (FloatToInt<false>(Qf * Vec3(255.0f)) * gridinv) >> 8;
   }
 
-  doinline Col3 LatticeToIntClamped(Vec3 const &val) {
+  doinline Col3 LatticeToIntClamped(Vec3 const &val) const {
     // [0,255]
     Vec3 Qf = val;
 
@@ -509,11 +509,11 @@ public:
     gridoff( 0.5f     , 0.5f     , 0.5f     , 0.0f ) {
   }
 
-  doinline Vec4 SnapToLattice(Vec4 const &val) {
+  doinline Vec4 SnapToLattice(Vec4 const &val) const {
     return Truncate(MultiplyAdd(grid, val.Clamp(), gridoff)) * gridrcp;
   }
 
-  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) const {
     return Truncate(MultiplyAdd(grid, val, gridoff)) * gridrcp;
   }
 #else
@@ -539,7 +539,7 @@ public:
 	     (0.5f * br * bm) / 255.0f) {
   }
   
-  doinline Vec4 LookUpLattice(int r, int g, int b) {
+  doinline Vec4 LookUpLattice(int r, int g, int b) const {
     // exact nearest least-error quantization values
     return Vec4(
       &qLUT_a[rb][r],
@@ -548,7 +548,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Vec4 SnapToLattice(Vec4 const &val) {
+  doinline Vec4 SnapToLattice(Vec4 const &val) const {
     Col4 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
 #ifndef NDEBUG
     unsigned int lu; PackBytes(p, lu);
@@ -568,7 +568,7 @@ public:
     return rgb;
   }
 
-  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) const {
     Col4 p = FloatToInt<false>((grid * val) + gridgap);
 #ifndef NDEBUG
     unsigned int lu; PackBytes(p, lu);
@@ -589,7 +589,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col4 QuantizeToInt(Vec4 const &val) {
+  doinline Col4 QuantizeToInt(Vec4 const &val) const {
     // [0,255]
     Vec4 Qf = SnapToLattice(val);
 
@@ -597,7 +597,7 @@ public:
     return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
-  doinline Col4 QuantizeToIntClamped(Vec4 const &val) {
+  doinline Col4 QuantizeToIntClamped(Vec4 const &val) const {
     // [0,255]
     Vec4 Qf = SnapToLatticeClamped(val);
 
@@ -606,7 +606,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col4 LatticeToInt(Vec4 const &val) {
+  doinline Col4 LatticeToInt(Vec4 const &val) const {
     // [0,255]
     Vec4 Qf = val.Clamp();
 
@@ -614,7 +614,7 @@ public:
     return (FloatToInt<false>(Qf * Vec4(255.0f)) * gridinv) >> 8;
   }
 
-  doinline Col4 LatticeToIntClamped(Vec4 const &val) {
+  doinline Col4 LatticeToIntClamped(Vec4 const &val) const {
     // [0,255]
     Vec4 Qf = val;
 
@@ -658,7 +658,7 @@ public:
     gridoff = Vec4(0.5f);
   }
   
-  doinline Vec4 LookUpLattice(int r, int g, int b, int a) {
+  doinline Vec4 LookUpLattice(int r, int g, int b, int a) const {
     // exact nearest least-error quantization values
     return Vec4(
       r,
@@ -668,21 +668,21 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset = 0, int bittest = 0) {
+  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset = 0, int bittest = 0) const {
     return Truncate(MultiplyAdd(grid, val.Clamp(), gridoff)) * gridrcp;
   }
 
-  doinline Vec4 SnapToLatticeClamped(Vec4 const &val, int bitset = 0, int bittest = 0) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val, int bitset = 0, int bittest = 0) const {
     return Truncate(MultiplyAdd(grid, val, gridoff)) * gridrcp;
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col4 QuantizeToInt(Vec4 const &val, int bitset = 0, int bittest = 0) {
+  doinline Col4 QuantizeToInt(Vec4 const &val, int bitset = 0, int bittest = 0) const {
     // rcomplete[?] = FloatToInt(grid * colour[?].Clamp());
     return FloatToInt<false>(MultiplyAdd(grid, val.Clamp(), gridoff));
   }
 
-  doinline Col4 QuantizeToIntClamped(Vec4 const &val, int bitset = 0, int bittest = 0) {
+  doinline Col4 QuantizeToIntClamped(Vec4 const &val, int bitset = 0, int bittest = 0) const {
     // rcomplete[?] = FloatToInt(grid * colour[?]);
     return FloatToInt<false>(MultiplyAdd(grid, val, gridoff));
   }
@@ -758,7 +758,7 @@ public:
     bool hb = !!sb; hb = false;
   }
   
-  doinline Vec4 LookUpLattice(int r, int g, int b, int a) {
+  doinline Vec4 LookUpLattice(int r, int g, int b, int a) const {
     // exact nearest least-error quantization values
     return Vec4(
       &qLUT_t[0][r],
@@ -767,7 +767,7 @@ public:
       &qLUT_t[3][a]);
   }
   
-  doinline Vec4 LookUpLattice(int r, int g, int b, int a, int o) {
+  doinline Vec4 LookUpLattice(int r, int g, int b, int a, int o) const {
     // exact nearest least-error quantization values
     return Vec4(
       &qLUT_t[0 + o][r],
@@ -777,7 +777,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Vec4 SnapToLattice(Vec4 const &val) {
+  doinline Vec4 SnapToLattice(Vec4 const &val) const {
     Col4 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
     int r = p.R(), g = p.G(), b = p.B(), a = p.A();
     assert((r >= 0) && (r <= 0xFF) &&
@@ -789,7 +789,7 @@ public:
     return LookUpLattice(r, g, b, a);
   }
 
-  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val) const {
     Col4 p = FloatToInt<false>((grid * val) + gridgap);
     int r = p.R(), g = p.G(), b = p.B(), a = p.A();
     assert((r >= 0) && (r <= 0xFF) &&
@@ -802,7 +802,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col4 QuantizeToInt(Vec4 const &val) {
+  doinline Col4 QuantizeToInt(Vec4 const &val) const {
     // [0,255]
     Vec4 Qf = SnapToLattice(val);
 
@@ -810,7 +810,7 @@ public:
     return FloatToInt<false>(Qf * gridint);
   }
 
-  doinline Col4 QuantizeToIntClamped(Vec4 const &val) {
+  doinline Col4 QuantizeToIntClamped(Vec4 const &val) const {
     // [0,255]
     Vec4 Qf = SnapToLatticeClamped(val);
     
@@ -828,7 +828,7 @@ public:
 #define bitrial	(bittest & bitset)
 #endif
 
-  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest) {
+  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest) const {
     Col4 p = FloatToInt<false>((grid * val.Clamp()) + gridgap);
     int r = p.R(), g = p.G(), b = p.B(), a = p.A();
     assert((r >= 0) && (r <= 0xFF) &&
@@ -840,7 +840,7 @@ public:
     return LookUpLattice(r, g, b, a, (bitrial ? 0 : 4));
   }
 
-  doinline Vec4 SnapToLatticeClamped(Vec4 const &val, int bitset, int bittest) {
+  doinline Vec4 SnapToLatticeClamped(Vec4 const &val, int bitset, int bittest) const {
     Col4 p = FloatToInt<false>((grid * val) + gridgap);
     int r = p.R(), g = p.G(), b = p.B(), a = p.A();
     assert((r >= 0) && (r <= 0xFF) &&
@@ -853,7 +853,7 @@ public:
   }
   
   /* ------------------------------------------------------------------------------- */
-  doinline Col4 QuantizeToInt(Vec4 const &val, int bitset, int bittest) {
+  doinline Col4 QuantizeToInt(Vec4 const &val, int bitset, int bittest) const {
     // [0,255]
     Vec4 Qf = SnapToLattice(val, bitset, bittest);
     
@@ -861,7 +861,7 @@ public:
     return FloatToInt<false>(Qf * gridint);
   }
 
-  doinline Col4 QuantizeToIntClamped(Vec4 const &val, int bitset, int bittest) {
+  doinline Col4 QuantizeToIntClamped(Vec4 const &val, int bitset, int bittest) const {
     // [0,255]
     Vec4 Qf = SnapToLatticeClamped(val, bitset, bittest);
     
@@ -871,7 +871,7 @@ public:
   
   /* ------------------------------------------------------------------------------- */
 #if	defined(FEATURE_SHAREDBITS_TRIALS) && (FEATURE_SHAREDBITS_TRIALS >= SHAREDBITS_TRIAL_PERMUTE)
-  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest, int oppose) {
+  doinline Vec4 SnapToLattice(Vec4 const &val, int bitset, int bittest, int oppose) const {
     // truncate the last valid bit (half multiplier)
     Vec4 Qf = Truncate(val * gridhlf);
 
@@ -900,6 +900,227 @@ public:
 
 //extern cQuantizer3<5,6,5  > q3_565;
 //extern cQuantizer4<5,6,5,0> q4_565;
+
+/* ********************************************************************************* */
+
+#undef	OLD_QUANTIZER
+
+class fQuantizer {
+
+public:
+  void ChangeField(const int tb, const int db) const {
+  }
+
+  int trunc;
+  Col3 gridprc;
+	Col3 gridrnd;
+  Col3 griddlt;
+  Col3 griddltp;
+  Col3 griddltm;
+
+  fQuantizer(const int tb, const int db) {
+    /* assign the precision bits */
+//  assert(tb > 0);
+    trunc = tb;
+
+    /* truncate: tb = 4, 1 << 4 = 0x10 - 1 = 0xF ~= 0xFFF0 */
+		gridprc.SetRGBpow2<0>(tb);
+		gridrnd  = gridprc;
+		gridprc -= Col3(1);
+		gridrnd >>= 1;
+    gridprc = ~gridprc;
+
+    if (db)
+      /* TODO: joint load and unpack */
+      griddlt.SetRGBpow2<0>((db >> 0) & 0xFF, (db >> 8) & 0xFF, (db >> 16) & 0xFF/*, (db >> 24) & 0xFF*/);
+    else
+      griddlt.SetRGBpow2<16>(tb);
+
+    /* plus/minus delta range */
+    griddltp = (griddlt >> 1) - Col3(1);
+    griddltm = (~griddltp) + Col3(1);
+  }
+
+  doinline Col3 MaskLattice(Col3 &p) const {
+    // exact nearest least-error quantization values
+    // NOTE: rounding doesn't help ... probably because of the log-scale
+    return (p & gridprc) + gridrnd;
+  }
+
+  doinline Col3 DeltaLattice(Col3 &p, Col3 &b) const {
+    // bring values into signed word range first
+    Col3 d = (p - b) >> trunc;
+
+    // exact nearest least-error quantization values
+    d = Max(Min(d, griddltp), griddltm);
+    d = d << trunc;
+
+    // mask to half-range
+    return (d + b) & Col3(0x0000FFFF);
+  }
+
+	/* ------------------------------------------------------------------------------- */
+#if 1
+	doinline Col3 QuantizeToLattice(Vec3 const &val) const {
+		Col3 p = FloatToSHalf<false>(val);
+		int prec = (16 - trunc);
+
+		// re-range X bits of precision to 0x7C00
+		p <<= prec;
+		p /= (0x7BFF + 1);
+
+		// zero bottom bits
+		p <<= trunc;
+		// add half a unit (if not zero or INF)
+		p += gridrnd & CompareAllEqualTo_M4(p, Col3(0x00000000));
+		p |=           CompareAllEqualTo_M4(p, Col3(0x0000FFFF) & gridprc);
+
+		return p;
+	}
+
+	doinline Vec3 UnquantizeFromLattice(Col3 const &val) const {
+		Col3 p = val;
+
+		// re-range 0xFFFF to X bits of precision
+		// 0xFFFF * 32 >> 6 = 0x7BFF
+		p *= 31 << (16 - 6);
+
+		return SHalfToFloat(p);
+	}
+
+	doinline Col3 QuantizeToLattice(Vec3 const &val, Col3 const &bse) const {
+		Col3 b =			 bse ;
+		Col3 p = QuantizeToLattice(val);
+
+		// exact nearest least-error quantization values
+		p = DeltaLattice(p, b);
+
+		return p;
+	}
+
+	doinline void QuantizeToLattice(Vec3 const (&val)[2], Col3 (&res)[2]) const {
+		Col3 b = QuantizeToLattice(val[0]);
+		Col3 p = QuantizeToLattice(val[1]);
+
+		// exact nearest least-error quantization values
+//	b = MaskLattice(b);
+		p = DeltaLattice(p, b);
+
+		res[0] = b;
+		res[1] = p;
+	}
+
+#else
+	doinline Col3 QuantizeToLattice(Vec3 const &val) const {
+    Col3 p = FloatToUHalf<false>(val);
+    assert((p.R() >= 0) && (p.R() <= 0xFFFF) &&
+	   (p.G() >= 0) && (p.G() <= 0xFFFF) &&
+	   (p.B() >= 0) && (p.B() <= 0xFFFF));
+
+    // exact nearest least-error quantization values
+    p = MaskLattice(p);
+
+    return p;
+  }
+
+  doinline Col3 QuantizeToLattice(Vec3 const &val, Col3 const &bse) const {
+    Col3 b =			 bse ;
+    Col3 p = FloatToUHalf<false>(val);
+    assert((p.R() >= 0) && (p.R() <= 0xFFFF) &&
+	   (p.G() >= 0) && (p.G() <= 0xFFFF) &&
+	   (p.B() >= 0) && (p.B() <= 0xFFFF));
+
+    // exact nearest least-error quantization values
+    p = DeltaLattice(p, b);
+
+    return p;
+  }
+
+  doinline void QuantizeToLattice(Vec3 const (&val)[2], Col3 (&res)[2]) const {
+    Col3 b = FloatToUHalf<false>(val[0]);
+    Col3 p = FloatToUHalf<false>(val[1]);
+    assert((p.R() >= 0) && (p.R() <= 0xFFFF) &&
+	   (p.G() >= 0) && (p.G() <= 0xFFFF) &&
+	   (p.B() >= 0) && (p.B() <= 0xFFFF));
+
+    // exact nearest least-error quantization values
+    b = MaskLattice(b);
+    p = DeltaLattice(p, b);
+
+    res[0] = b;
+    res[1] = p;
+  }
+
+  /* ------------------------------------------------------------------------------- */
+  doinline Vec3 SnapToLattice(Vec3 const &val) const {
+    Col3 p = FloatToUHalf<false>(val);
+    assert((p.R() >= 0) && (p.R() <= 0xFFFF) &&
+	   (p.G() >= 0) && (p.G() <= 0xFFFF) &&
+	   (p.B() >= 0) && (p.B() <= 0xFFFF));
+
+    // exact nearest least-error quantization values
+    p = MaskLattice(p);
+
+    return UHalfToFloat(p);
+  }
+
+  doinline Vec3 SnapToLattice(Vec3 const &val, Vec3 const &bse) const {
+    Col3 b = FloatToUHalf<false>(bse);
+    Col3 p = FloatToUHalf<false>(val);
+    assert((p.R() >= 0) && (p.R() <= 0xFFFF) &&
+	   (p.G() >= 0) && (p.G() <= 0xFFFF) &&
+	   (p.B() >= 0) && (p.B() <= 0xFFFF));
+
+    // exact nearest least-error quantization values
+    b = MaskLattice(b);
+    p = DeltaLattice(p, b);
+
+    return UHalfToFloat(p);
+  }
+
+  doinline void SnapToLattice(Vec3 const (&val)[2], Vec3 (&res)[2]) const {
+    Col3 b = FloatToUHalf<false>(val[0]);
+    Col3 p = FloatToUHalf<false>(val[1]);
+    assert((p.R() >= 0) && (p.R() <= 0xFFFF) &&
+	   (p.G() >= 0) && (p.G() <= 0xFFFF) &&
+	   (p.B() >= 0) && (p.B() <= 0xFFFF));
+
+    // exact nearest least-error quantization values
+    b = MaskLattice(b);
+    p = DeltaLattice(p, b);
+
+    res[0] = UHalfToFloat(b);
+    res[1] = UHalfToFloat(p);
+  }
+
+  doinline void SnapToLattice(Vec3 const (&val)[4], int base, Vec3 (&res)[4]) const {
+    Col3 b = FloatToUHalf<false>(val[base]);
+    assert((b.R() >= 0) && (b.R() <= 0xFFFF) &&
+	   (b.G() >= 0) && (b.G() <= 0xFFFF) &&
+	   (b.B() >= 0) && (b.B() <= 0xFFFF));
+
+    // exact nearest least-error quantization values
+    b = MaskLattice(b);
+
+    for (int i; i < 4; i++) {
+      if (i != base) {
+	Col3 d = FloatToUHalf<false>(val[i]);
+	assert((d.R() >= 0) && (d.R() <= 0xFFFF) &&
+	       (d.G() >= 0) && (d.G() <= 0xFFFF) &&
+	       (d.B() >= 0) && (d.B() <= 0xFFFF));
+
+	// exact nearest least-error quantization values
+	d = DeltaLattice(d, b);
+
+	res[i] = UHalfToFloat(d);
+      }
+    }
+
+    res[base] = UHalfToFloat(b);
+	}
+#endif
+
+};
 
 } // namespace squish
 

@@ -72,29 +72,6 @@ ColourSingleSnap::ColourSingleSnap(ColourSet const* colours, int flags)
   assert(m_colour[1] == (u8)FloatToInt<true,false>(255.0f * values->Y(), 255));
   assert(m_colour[2] == (u8)FloatToInt<true,false>(255.0f * values->Z(), 255));
    */
-
-  // initialize the metric
-  const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
-  const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
-  
-#ifdef FEATURE_METRIC_ROOTED
-  if (unit)
-    m_metric = Vec3(0.7071f, 0.7071f, 0.0000f);
-  else if (perceptual)	// linear RGB luminance
-    m_metric = Vec3(0.4611f, 0.8456f, 0.2687f);
-  else
-    m_metric = Vec3(0.5773f, 0.5773f, 0.5773f);
-#else
-  if (unit)
-    m_metric = Vec3(0.5000f, 0.5000f, 0.0000f);
-  else if (perceptual)	// linear RGB luminance
-    m_metric = Vec3(0.2126f, 0.7152f, 0.0722f);
-  else
-    m_metric = Vec3(0.3333f, 0.3333f, 0.3333f);
-#endif
-
-  // initialize the best error
-  m_besterror = Scr3(FLT_MAX);
 }
 
 void ColourSingleSnap::Compress3b(void* block)
@@ -104,7 +81,7 @@ void ColourSingleSnap::Compress3b(void* block)
   
   // if it's black, make it index 3
   if (values[0] == Vec3(0.0f)) {
-    *((unsigned __int64 *)block) = 0xFFFFFFFF00000000;
+    *((unsigned__int64 *)block) = 0xFFFFFFFF00000000ULL;
   }
 }
 

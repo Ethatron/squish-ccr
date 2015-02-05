@@ -58,10 +58,8 @@ private:
   virtual void Compress4(void* block);
 
   u8   m_colour[4];
-  Vec3 m_metric;
   Vec3 m_start;
   Vec3 m_end;
-  Scr3 m_besterror;
 };
 #endif
 

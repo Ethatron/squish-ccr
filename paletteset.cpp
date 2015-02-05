@@ -30,13 +30,13 @@
 namespace squish {
 
 // Associated to partition -1, 16 * 0 bit
-static const u16 partitionmasks_1[1] =
+extern const u16 partitionmasks_1[1] =
 {
   0xFFFF
 };
 
 // Associated to partition 0-63, 16 * 1 bit
-static const u16 partitionmasks_2[64] =
+extern const u16 partitionmasks_2[64] =
 {
   0xCCCC, 0x8888, 0xEEEE, 0xECC8,
   0xC880, 0xFEEC, 0xFEC8, 0xEC80,
@@ -58,7 +58,7 @@ static const u16 partitionmasks_2[64] =
 };
 
 // Associated to partition 64-127, 16 * 2 bit
-static const unsigned int partitionmasks_3[64] =
+extern const unsigned int partitionmasks_3[64] =
 {
   0xf60008cc, 0x73008cc8, 0x3310cc80, 0x00ceec00,
   0xcc003300, 0xcc0000cc, 0x00ccff00, 0x3300cccc,
@@ -599,7 +599,7 @@ void PaletteSet::BuildSet(u16 const* rgba, int mask, int flags) {
 }
 
 void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
-//const float *rgbLUT = ComputeGammaLUT((flags & kSrgbIn) != 0);
+//const float *rgbLUT = ComputeGammaLUT((flags & kSrgbExternal) != 0);
 //const float *aLUT   = ComputeGammaLUT(false);
 
   // check the compression mode for btc
@@ -609,7 +609,7 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
   bool const killByAlpha   = ((flags & kWeightColourByAlpha    ) != 0);
 
   // build mapped data
-  Vec4 const mska = !seperateAlpha ? Scr4(1.0f) : Scr4(1.0f, 1.0f, 1.0f, 0.0f);
+  Vec4 const mska = !seperateAlpha ? Vec4(1.0f) : Vec4(1.0f, 1.0f, 1.0f, 0.0f);
   Vec4 const clra = !clearAlpha    ? Vec4(0.0f) : Vec4(0.0f, 0.0f, 0.0f, 1.0f);
   Scr4 const wgta =  weightByAlpha ? Scr4(0.0f) : Scr4(1.0f);
   Scr4 const klla =  killByAlpha   ? Scr4(0.0f) : Scr4(1.0f);
@@ -663,7 +663,7 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
     rgbx[i] = Min(temp, mska);
 
     // separate channel 3
-    ___a[i] = temp.SplatW();
+    ___a[i] = Scr4(temp.SplatW());
 
     // temporary, TODO: remove it
     m_weights[3][i] = Weight<f23>(rgba, i, Scr4(0.0f)).GetWeights();
@@ -712,7 +712,7 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
 	Vec4 *crgbvalue = &rgbx[index];
 	
 	// check for a match
-	if (*(rgbvalue) == *(crgbvalue)) {
+	if (CompareAllEqualTo(*(rgbvalue), *(crgbvalue))) {
 	  // get the index of the match
 	  assume (index >= 0 && index < 16);
 
@@ -1212,7 +1212,7 @@ void PaletteSet::PermuteSet(PaletteSet const &palette, int mask, int flags) {
 
 	  m_count[s] = 1;
 	  m_points[s][0] = pnt;
-	  m_weights[s][0] = Vec4(1.0f);
+	  m_weights[s][0] = Scr4(1.0f);
 	  m_unweighted[s] = false;
 
 #ifdef	FEATURE_TEST_LINES

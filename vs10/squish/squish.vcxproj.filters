@@ -30,6 +30,9 @@
     <ClCompile Include="..\..\maths.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\singlecolourfit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\squish.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -57,28 +60,7 @@
     <ClCompile Include="..\..\paletteset.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\normal.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\palettechannelfit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\paletteindexfit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\palettenormalfit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\palettesinglefit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\palettesinglesnap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\coloursinglefit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\coloursinglesnap.cpp">
+    <ClCompile Include="..\..\singlepalettefit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -113,6 +95,9 @@
     <ClInclude Include="..\..\simd_ve.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\singlecolourfit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\squish.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -137,34 +122,19 @@
     <ClInclude Include="..\..\paletteset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\normal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\palettechannelfit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\paletteindexfit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\palettenormalfit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\palettesinglefit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\palettesinglesnap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\coloursinglefit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\coloursinglesnap.h">
+    <ClInclude Include="..\..\singlepalettefit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\singlecolourlookup.inl">
+      <Filter>Header Files</Filter>
+    </None>
     <None Include="..\..\texture_compression_s3tc.txt">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\singlepalettelookup.inl">
+      <Filter>Header Files</Filter>
     </None>
     <None Include="..\..\texture_compression_bptc.txt">
       <Filter>Resource Files</Filter>
@@ -177,18 +147,6 @@
     </None>
     <None Include="..\..\texture_compression_rgtc.txt">
       <Filter>Resource Files</Filter>
-    </None>
-    <None Include="..\..\colourclusterfit.inl">
-      <Filter>Header Files</Filter>
-    </None>
-    <None Include="..\..\coloursinglelookup.inl">
-      <Filter>Header Files</Filter>
-    </None>
-    <None Include="..\..\paletteclusterfit.inl">
-      <Filter>Header Files</Filter>
-    </None>
-    <None Include="..\..\palettesinglelookup.inl">
-      <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -49,6 +49,9 @@ protected:
 
   ColourSet const* m_colours;
   int m_flags;
+
+  Vec3 m_metric;
+  Scr3 m_besterror;
 };
 #endif
 

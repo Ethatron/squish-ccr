@@ -55,7 +55,6 @@ private:
   Vec3 m_end_candidate;
   Vec3 m_start;
   Vec3 m_end;
-  Scr3 m_besterror;
 };
 #endif
 

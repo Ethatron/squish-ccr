@@ -67,8 +67,12 @@
 #include "coloursinglesnap.h"
 #include "palettesinglefit.h"
 #include "palettesinglesnap.h"
+#include "hdrsinglefit.h"
+#include "hdrsinglesnap.h"
 
 namespace squish {
+
+#pragma warning(disable: 4482)
 
 /* *****************************************************************************
  */
@@ -84,9 +88,9 @@ int SanitizeFlags(int flags)
   int map    = flags & (kSrgbExternal | kSrgbInternal | kSignedExternal | kSignedInternal);
 
   // set defaults
-  if (!method || (method > kCtx1))
+  if (!method || ((method > kCtx1)))
     method = kBtc1;
-  if (!metric || (metric > kColourMetricUnit))
+  if (!metric || ((metric > kColourMetricUnit) && (metric != kColourMetricCustom)))
     metric = kColourMetricPerceptual;
 
   if (!fit)
@@ -105,6 +109,49 @@ int SanitizeFlags(int flags)
 
   // done
   return method + fit + metric + extra + mode + map;
+}
+
+/* *****************************************************************************
+ */
+Vec4 g_metric[8] =
+{
+#ifdef FEATURE_METRIC_ROOTED
+  // sum squared is 2.0f
+  Vec4(0.5773f, 0.5773f, 0.5773f, 1.0f),
+  Vec4(0.4611f, 0.8456f, 0.2687f, 1.0f),	// kColourMetricPerceptual
+  Vec4(0.5773f, 0.5773f, 0.5773f, 1.0f),	// kColourMetricUniform
+  Vec4(0.7071f, 0.7071f, 0.0000f, 1.0f),	// kColourMetricUnit
+  Vec4(0.5773f, 0.5773f, 0.5773f, 1.0f),	// kColourMetricGray
+  Vec4(0.5773f, 0.5773f, 0.5773f, 1.0f),
+  Vec4(0.5773f, 0.5773f, 0.5773f, 1.0f),
+  Vec4(0.5773f, 0.5773f, 0.5773f, 1.0f)		// kColourMetricCustom
+#else
+  // sum is 2.0f
+  Vec4(0.3333f, 0.3333f, 0.3333f, 1.0f),
+  Vec4(0.2126f, 0.7152f, 0.0722f, 1.0f),	// kColourMetricPerceptual
+  Vec4(0.3333f, 0.3333f, 0.3333f, 1.0f),	// kColourMetricUniform
+  Vec4(0.5000f, 0.5000f, 0.0000f, 1.0f),	// kColourMetricUnit
+  Vec4(0.3333f, 0.3333f, 0.3333f, 1.0f),	// kColourMetricGray
+  Vec4(0.3333f, 0.3333f, 0.3333f, 1.0f),
+  Vec4(0.3333f, 0.3333f, 0.3333f, 1.0f),
+  Vec4(0.3333f, 0.3333f, 0.3333f, 1.0f)		// kColourMetricCustom
+#endif
+};
+
+void SetWeights(int flags, const f23* rgba)
+{
+  // initialize the metric
+  const bool custom = ((flags & kColourMetrics) == kColourMetricCustom);
+
+  if (custom)
+  {
+    g_metric[7] = Vec4(rgba[0], rgba[1], rgba[2], 1.0f);
+    g_metric[7] /= Vec4(HorizontalAdd(g_metric[7].GetVec3()), 1.0f);
+
+#ifdef FEATURE_METRIC_ROOTED
+    g_metric[7] = Sqrt(g_metric[7]);
+#endif
+  }
 }
 
 /* *****************************************************************************
@@ -271,6 +318,10 @@ Scr4 CompressPaletteBtc7uV1(dtyp const* rgba, int mask, void* block, int flags)
 	em = (numm == 0 ? MODEORDER_OPAQ_MAX :               sm),
 	om = (numm == 0 ? MODEORDER_OPAQ     :   MODEORDER_EXPL);
              flags &= (~kVariableCodingModes);
+
+#undef MODEORDER_EXPL
+#undef MODEORDER_EXPL_MIN
+#undef MODEORDER_EXPL_MAX
 
   // limits sets to 3 and choose the partition freely
   int lmts =  3;
@@ -883,14 +934,7 @@ Scr4 CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
 }
 
 template<typename dtyp>
-void CompressColourBtc6u(dtyp const* rgb, int mask, void* block, int flags)
-{
-  // ...
-  flags = flags;
-  block = block;
-  mask  = mask;
-  rgb   = rgb;
-}
+void CompressColourBtc6u(dtyp const* rgb, int mask, void* block, int flags) {}
 
 /* *****************************************************************************
  */
@@ -1070,7 +1114,7 @@ void CompressMaskedColourBtc7u(dtyp const* rgba, int mask, void* block, int flag
   // get the block locations
   void* mixedBlock = block;
   
-#ifndef NDEBUG
+#ifdef DEBUG_DETAILS
   // compress color and alpha merged if necessary
   fprintf(stderr, "CompressPaletteBtc7uV1\n");
   Scr4 errora = CompressPaletteBtc7uV1<dtyp,PaletteRangeFit>(rgba, mask, mixedBlock, flags);
@@ -1362,11 +1406,7 @@ void DecompressColourBtc6u(dtyp* rgb, void const* block, int flags)
   void const* mixedBlock = block;
 
   // decompress color and alpha merged if necessary
-//DecompressColoursBtc6u(rgb, mixedBlock);
-  
-  rgb = rgb;
-  mixedBlock = mixedBlock;
-  flags = flags;
+	DecompressHDRsBtc6u(rgb, mixedBlock);
 }
 
 template<typename dtyp>
@@ -1545,7 +1585,7 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
   s.compressedsize = s.blockcount * s.blocksize;
   s.decompressedsize = sizeof(u8) * 4 * (width * height);
 
-  if (datatype == sqio::dtp::DT_U8) {
+  if (datatype == sqio::DT_U8) {
     // 3Dc-type compression
     /**/ if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal | kColourMetricUnit))
       s.encoder = (sqio::enc)CompressMaskedNormalBtc5s<s8>,
@@ -1607,7 +1647,7 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
     else if ((s.flags & kBtcp) == (kBtc6))
       {}// while this is possible (down-cast), should we support it?
   }
-  else if (datatype == sqio::dtp::DT_U16) {
+  else if (datatype == sqio::DT_U16) {
     // 3Dc-type compression
     /**/ if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal | kColourMetricUnit))
       s.encoder = (sqio::enc)CompressMaskedNormalBtc5s<s16>,
@@ -1670,7 +1710,7 @@ struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags)
       s.encoder = (sqio::enc)CompressMaskedColourBtc6u<u16>,
       s.decoder = (sqio::dec)DecompressColourBtc6u<u16>;
   }
-  else if (datatype == sqio::dtp::DT_F23) {
+  else if (datatype == sqio::DT_F23) {
     // 3Dc-type compression
     /**/ if ((s.flags & (kBtcp | kSignedness | kColourMetrics)) == (kBtc5 | kSignedExternal | kSignedInternal | kColourMetricUnit))
       s.encoder = (sqio::enc)CompressMaskedNormalBtc5s<f23>,

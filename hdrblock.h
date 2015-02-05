@@ -39,34 +39,44 @@ namespace squish {
 
 // -----------------------------------------------------------------------------
 #if	!defined(SQUISH_USE_PRE)
-  void WriteDynamicBlock3_m1(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m2(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m3(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m4(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m5(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m6(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m7(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m8(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_m9(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_mA(int partition, Vec4 (&start)[2], Vec4 (&end)[2], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_mB(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_mC(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_mD(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-  void WriteDynamicBlock3_mE(int partition, Vec4 (&start)[1], Vec4 (&end)[1], u16 (&indices)[1][16], void* block);
-  
-  void DecompressDynamicsBtc6(u16* rgba, void const* block);
-  void DecompressDynamicsBtc6(f23* rgba, void const* block);
+  void WriteHDRBlock_m1(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m2(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m3(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m4(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m5(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m6(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m7(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m8(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_m9(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_mA(int partition, Col4 const (&start)[2], Col4 const (&end)[2], u8 const (&indices)[1][16], void* block);
+
+  void WriteHDRBlock_mB(	       Col4 const (&start)[1], Col4 const (&end)[1], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_mC(	       Col4 const (&start)[1], Col4 const (&end)[1], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_mD(	       Col4 const (&start)[1], Col4 const (&end)[1], u8 const (&indices)[1][16], void* block);
+  void WriteHDRBlock_mE(	       Col4 const (&start)[1], Col4 const (&end)[1], u8 const (&indices)[1][16], void* block);
+
+  void ReadHDRBlock_m1(u16* rgb, void const* block);
+  void ReadHDRBlock_m2(u16* rgb, void const* block);
+  void ReadHDRBlock_m3(u16* rgb, void const* block);
+  void ReadHDRBlock_m4(u16* rgb, void const* block);
+  void ReadHDRBlock_m5(u16* rgb, void const* block);
+  void ReadHDRBlock_m6(u16* rgb, void const* block);
+  void ReadHDRBlock_m7(u16* rgb, void const* block);
+  void ReadHDRBlock_m8(u16* rgb, void const* block);
+  void ReadHDRBlock_m9(u16* rgb, void const* block);
+  void ReadHDRBlock_mA(u16* rgb, void const* block);
+
+  void ReadHDRBlock_mB(u16* rgb, void const* block);
+  void ReadHDRBlock_mC(u16* rgb, void const* block);
+  void ReadHDRBlock_mD(u16* rgb, void const* block);
+  void ReadHDRBlock_mE(u16* rgb, void const* block);
+
+  void DecompressHDRsBtc6u(u16* rgb, void const* block);
+  void DecompressHDRsBtc6u(f23* rgb, void const* block);
 #endif
 
 // -----------------------------------------------------------------------------
 #if	defined(SQUISH_USE_AMP) || defined(SQUISH_USE_COMPUTE)
-  void WriteDynamicBlock3(tile_barrier barrier, const int thread,
-			  lineC2 cline, inout index16 indices, out code64 block) amp_restricted;
-  void WriteDynamicBlock4(tile_barrier barrier, const int thread,
-			  lineC2 cline, inout index16 indices, out code64 block) amp_restricted;
-
-/*void DecompressDynamicBtc(tile_barrier barrier, const int thread,
-			out pixel16 rgba, bool isBtc1) amp_restricted;*/
 #endif
 
 } // namespace squish

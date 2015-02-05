@@ -90,10 +90,31 @@
     <ClCompile Include="..\..\paletteindexfit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\alphanormalfit.cpp">
+    <ClCompile Include="..\..\hdrset.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\colournormalfit.cpp">
+    <ClCompile Include="..\..\hdrfit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hdrrangefit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hdrsinglefit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hdrsinglesnap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hdrindexfit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\simd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\hdrblock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\alphanormalfit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\bitoneblock.cpp">
@@ -112,6 +133,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\bitoneset.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\colournormalfit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -191,10 +215,31 @@
     <ClInclude Include="..\..\paletteindexfit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\hdrblock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hdrset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hdrfit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hdrrangefit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hdrsinglefit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hdrsinglesnap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hdrindexfit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\alphanormalfit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\colournormalfit.h">
+    <ClInclude Include="..\..\helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\bitoneblock.h">
@@ -215,7 +260,7 @@
     <ClInclude Include="..\..\bitoneset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\helpers.h">
+    <ClInclude Include="..\..\colournormalfit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -239,9 +284,6 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="..\..\coloursinglelookup.inl">
-      <Filter>Header Files</Filter>
-    </None>
-    <None Include="..\..\squish.inl">
       <Filter>Header Files</Filter>
     </None>
     <None Include="..\..\bitoneclusterfit.inl">

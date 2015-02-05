@@ -31,16 +31,20 @@
 #include <emmintrin.h>
 #endif
 #if ( SQUISH_USE_SSE >= 3 )
-#include <intrin.h>
+#include <pmmintrin.h>
 #endif
 #if ( SQUISH_USE_SSE >= 4 )
 #include <smmintrin.h>
 #endif
-#if ( SQUISH_USE_XSSE == 4 )
-#include <intrin.h>
-#endif
 #if ( SQUISH_USE_XSSE == 3 )
 #include <tmmintrin.h>
+#endif
+#if ( SQUISH_USE_XSSE == 4 )
+#if defined(_MSC_VER)
+#include <intrin.h>
+#elif defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
+#include <x86intrin.h>
+#endif
 #endif
 
 #pragma warning(disable: 4127)

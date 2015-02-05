@@ -42,6 +42,7 @@
  */
 #define	ColourSingleMatch	ColourSingleSnap
 #define	PaletteSingleMatch	PaletteSingleSnap
+#define	HDRSingleMatch		HDRSingleSnap
 
 /* use the power-method to estimate the principle component axis
  * should be more precise if not faster
@@ -199,12 +200,12 @@ namespace squish {
 
 // Set to 1 or 2 or 3 or 4 when building squish to use SSE or SSE2, SSE3 or SSE4 instructions.
 #ifndef SQUISH_USE_SSE
-#define SQUISH_USE_SSE	    3
+#define SQUISH_USE_SSE	    0
 #endif
 
 // Set to 3 or 4 when building squish to use SSSE3 or SSE4A instructions.
 #ifndef SQUISH_USE_XSSE
-#define SQUISH_USE_XSSE	    4
+#define SQUISH_USE_XSSE	    0
 #endif
 
 // Internally et SQUISH_USE_SIMD when either Altivec or SSE is available.
@@ -213,21 +214,32 @@ namespace squish {
 #endif
 #if SQUISH_USE_ALTIVEC || SQUISH_USE_SSE
 #define SQUISH_USE_SIMD 1
-#ifdef __GNUC__
+#if defined(__GNUC__)
 #define a16		__attribute__ ((__aligned__ (16)))
-typedef long long	__int64;
-#else
+#elif defined(_MSC_VER)
 #define a16		__declspec(align(16))
+#else
+#define a16		
 #endif
 #else
 #define SQUISH_USE_SIMD 0
-#ifdef __GNUC__
+#if defined(__GNUC__)
 #define a16		__attribute__ ((__aligned__ (4)))
-typedef unsigned long long unsigned__int64;
-#else
+#elif defined(_MSC_VER)
 #define a16		__declspec(align(4))
-typedef unsigned __int64 unsigned__int64;
+#else
+#define a16		
 #endif
+#endif
+
+#if defined(__GNUC__)
+typedef long long	__int64;
+typedef unsigned long long unsigned__int64;
+#elif defined(_MSC_VER)
+typedef unsigned __int64 unsigned__int64;
+#else
+typedef long long	__int64;
+typedef unsigned long long unsigned__int64;
 #endif
 
 /* *****************************************************************************

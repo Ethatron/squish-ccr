@@ -48,10 +48,8 @@ private:
   virtual void Compress3(void* block);
   virtual void Compress4(void* block);
 
-  Vec3 m_metric;
   Vec3 m_start;
   Vec3 m_end;
-  Scr3 m_besterror;
 };
 #endif
 

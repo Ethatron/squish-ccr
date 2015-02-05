@@ -47,29 +47,6 @@ ColourClusterFit::ColourClusterFit(ColourSet const* colours, int flags)
   // set the iteration count
   m_iterationCount = (m_flags & kColourIterativeClusterFits) / kColourClusterFit;
   
-  // initialize the metric
-  const bool perceptual = ((m_flags & kColourMetrics) == kColourMetricPerceptual);
-  const bool unit       = ((m_flags & kColourMetrics) == kColourMetricUnit);
-  
-#ifdef FEATURE_METRIC_ROOTED
-  if (unit)
-    m_metric = Vec3(0.7071f, 0.7071f, 0.0000f);
-  else if (perceptual)	// linear RGB luminance
-    m_metric = Vec3(0.4611f, 0.8456f, 0.2687f);
-  else
-    m_metric = Vec3(0.5773f, 0.5773f, 0.5773f);
-#else
-  if (unit)
-    m_metric = Vec3(0.5000f, 0.5000f, 0.0000f);
-  else if (perceptual)	// linear RGB luminance
-    m_metric = Vec3(0.2126f, 0.7152f, 0.0722f);
-  else
-    m_metric = Vec3(0.3333f, 0.3333f, 0.3333f);
-#endif
-
-  // initialize the best error
-  m_besterror = Scr4(FLT_MAX);
-  
   // initialize endpoints
   ComputeEndPoints();
 }
@@ -86,9 +63,9 @@ void ColourClusterFit::ComputeEndPoints()
 
   // get the covariance matrix
   if (unweighted)
-    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric.GetVec3());
+    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric);
   else
-    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric.GetVec3(), m_colours->GetWeights());
+    ComputeWeightedCovariance3(covariance, centroid, count, values, m_metric, m_colours->GetWeights());
 
   // compute the principle component
   GetPrincipleComponent(covariance, m_principle);
@@ -101,8 +78,8 @@ void ColourClusterFit::SumError3(u8 (&closest)[16], Vec4 &beststart, Vec4 &beste
   cQuantizer4<5,6,5,0> q = cQuantizer4<5,6,5,0>();
   
   // snap floating-point-values to the integer-lattice
-  Vec4 start = q.SnapToLattice(beststart);
-  Vec4 end   = q.SnapToLattice(bestend);
+  Vec3 start = q.SnapToLattice(beststart);
+  Vec3 end   = q.SnapToLattice(bestend);
   
   // cache some values
   int const count = m_colours->GetCount();
@@ -115,15 +92,15 @@ void ColourClusterFit::SumError3(u8 (&closest)[16], Vec4 &beststart, Vec4 &beste
 
   // error-sum
   for (int i = 0; i < count; ++i)
-    besterror += LengthSquared(m_metric.GetVec3() * values[i] - codes[closest[i]]) * freq[i];
+    besterror += LengthSquared(m_metric * values[i] - codes[closest[i]]) * freq[i];
 }
 
 void ColourClusterFit::SumError4(u8 (&closest)[16], Vec4 &beststart, Vec4 &bestend, Scr4 &besterror) {
   cQuantizer4<5,6,5,0> q = cQuantizer4<5,6,5,0>();
   
   // snap floating-point-values to the integer-lattice
-  Vec4 start = q.SnapToLattice(beststart);
-  Vec4 end   = q.SnapToLattice(bestend);
+  Vec3 start = q.SnapToLattice(beststart);
+  Vec3 end   = q.SnapToLattice(bestend);
   
   // cache some values
   int const count = m_colours->GetCount();
@@ -136,7 +113,7 @@ void ColourClusterFit::SumError4(u8 (&closest)[16], Vec4 &beststart, Vec4 &beste
 
   // error-sum
   for (int i = 0; i < count; ++i)
-    besterror += LengthSquared(m_metric.GetVec3() * values[i] - codes[closest[i]]) * freq[i];
+    besterror += LengthSquared(m_metric * values[i] - codes[closest[i]]) * freq[i];
 }
 
 bool ColourClusterFit::ConstructOrdering(Vec3 const& axis, int iteration)
@@ -308,7 +285,7 @@ void ColourClusterFit::ClusterFit3(void* block)
   // save the block if necessary
   besterror = Scr4(0.0f);
   SumError3(unordered, beststart, bestend, besterror);
-  if (besterror < m_besterror) {
+  if (Scr3(besterror) < m_besterror) {
     // save the error
     m_besterror = besterror;
     
@@ -476,7 +453,7 @@ void ColourClusterFit::ClusterFit4(void* block)
   // save the block if necessary
   besterror = Scr4(0.0f);
   SumError4(unordered, beststart, bestend, besterror);
-  if (besterror < m_besterror) {
+  if (Scr3(besterror) < m_besterror) {
     // save the error
     m_besterror = besterror;
     
@@ -703,7 +680,7 @@ void ColourClusterFit::ClusterFit3Constant(void* block)
   // save the block if necessary
   besterror = Scr4(0.0f);
   SumError3(unordered, beststart, bestend, besterror);
-  if (besterror < m_besterror) {
+  if (Scr3(besterror) < m_besterror) {
     // save the error
     m_besterror = besterror;
     
@@ -944,7 +921,7 @@ void ColourClusterFit::ClusterFit4Constant(void* block)
   // save the block if necessary
   besterror = Scr4(0.0f);
   SumError4(unordered, beststart, bestend, besterror);
-  if (besterror < m_besterror) {
+  if (Scr3(besterror) < m_besterror) {
     // save the error
     m_besterror = besterror;
     
@@ -993,7 +970,7 @@ void ColourClusterFit::Compress3b(void* block)
   m_colours = &copy;
   
   Scr3 m_destroyed = Scr3(0.0f);
-  while (copy.RemoveBlack(m_metric, m_destroyed) && !(m_besterror.GetVec3() < m_destroyed)) {
+  while (copy.RemoveBlack(m_metric, m_destroyed) && !(m_besterror < m_destroyed)) {
     m_besterror -= m_destroyed;
     
     if (copy.GetCount() == 1) {

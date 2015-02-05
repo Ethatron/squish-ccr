@@ -32,9 +32,16 @@ namespace squish {
 /* *****************************************************************************
  */
 #if	!defined(SQUISH_USE_PRE)
+extern Vec4 g_metric[8];
+
 ColourFit::ColourFit( ColourSet const* colours, int flags )
   : m_colours(colours), m_flags(flags)
 {
+  // initialize the metric
+  m_metric = KillW(g_metric[(flags & kColourMetrics) >> 4]);
+
+  // initialize the best error
+  m_besterror = Scr4(FLT_MAX);
 }
 
 void ColourFit::Compress( void* block )
@@ -47,7 +54,7 @@ void ColourFit::Compress( void* block )
     if (!m_colours->IsTransparent())
       Compress4(block);
     if (isBtc1b)
-      Compress3b(block);
+      {/*Compress3b(block)*/;}
   }
   else
     Compress4(block);

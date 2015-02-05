@@ -70,6 +70,8 @@ enum
 	kColourMetricUnit = ( 3 << 4 ),
 	//! Use a multi-channel grayscale metric for colour error.
 	kColourMetricGray = ( 4 << 4 ),
+	//! Use a custom metric for colour error.
+	kColourMetricCustom = ( 7 << 4 ),
 	//! Use some metric (mask)
 	kColourMetrics = ( 7 << 4 ),
 
@@ -94,6 +96,8 @@ enum
 
 	//! Use a fast but low quality colour compressor.
 	kColourRangeFit	= ( 1 << 14 ),
+	kAlphaRangeFit	= ( 1 << 14 ),
+	kNormalRangeFit	= ( 1 << 14 ),
 	//! Use a slow but high quality alpha/gray/normal compressor.
 	kAlphaIterativeFit = ( 1 << 15 ),
 	kNormalIterativeFit = ( 1 << 15 ),
@@ -287,6 +291,7 @@ struct sqio {
 };
 
 struct sqio GetSquishIO(int width, int height, sqio::dtp datatype, int flags);
+void SetWeights(int flags, const f23* rgba);
 
 // -----------------------------------------------------------------------------
 

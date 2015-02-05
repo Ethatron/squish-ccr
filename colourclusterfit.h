@@ -76,8 +76,6 @@ private:
 
   int  m_iterationCount;
   Vec3 m_principle;
-  Vec4 m_metric;
-  Scr4 m_besterror;
   Vec4 m_xsum_wsum;
   Vec4 m_points_weights[16];
   a16 u8 m_order[16 * kMaxIterations];

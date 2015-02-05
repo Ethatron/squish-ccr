@@ -6,8 +6,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishpng", "squishpng\squi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishtest", "squishtest\squishtest.vcxproj", "{77A3F26C-A1D6-4535-9E37-7D3DF34E4B4B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "squishldrpng", "squishldrpng\squishldrpng.vcxproj", "{6E59DFC4-0D50-455D-B77B-BD691EE079C3}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -40,14 +38,6 @@ Global
 		{77A3F26C-A1D6-4535-9E37-7D3DF34E4B4B}.Release|Win32.Build.0 = Release|Win32
 		{77A3F26C-A1D6-4535-9E37-7D3DF34E4B4B}.Release|x64.ActiveCfg = Release|x64
 		{77A3F26C-A1D6-4535-9E37-7D3DF34E4B4B}.Release|x64.Build.0 = Release|x64
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Debug|Win32.ActiveCfg = Debug|Win32
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Debug|Win32.Build.0 = Debug|Win32
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Debug|x64.ActiveCfg = Debug|x64
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Debug|x64.Build.0 = Debug|x64
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Release|Win32.ActiveCfg = Release|Win32
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Release|Win32.Build.0 = Release|Win32
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Release|x64.ActiveCfg = Release|x64
-		{6E59DFC4-0D50-455D-B77B-BD691EE079C3}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
