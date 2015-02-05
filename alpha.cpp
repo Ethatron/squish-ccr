@@ -656,29 +656,69 @@ static void CompressAlphaBtc3i(dtyp const* rgba, int mask, void* block, int flag
   int min5 = max, max5 = min;
   int min7 = max, max7 = min;
 
-  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
-    // check this pixel is valid
-    if ((imask & 1) == 0)
-      continue;
+  if (!((flags & kAlphaIterativeFit) && prc)) {
+    for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
+      // check this pixel is valid
+      if ((imask & 1) == 0)
+        continue;
 
-    // incorporate into the min/max
-    int value = rgba[4 * i + 3];
-    if (compress > 0)
-      value = (value + ((1 << compress) >> 1)) >> compress;
+      const int fudge = ((1 << compress) >> 1);
+
+      // incorporate into the min/max
+      {
+        // create 8bit integer value, do round() with truncate() fudged
+        int value = (rgba[4 * i + 3] + ((min < 0) && (rgba[4 * i + 3] < 0) ? -fudge : fudge)) >> compress;
+        
+        if (value < min7)
+          min7 = value;
+        if (value > max7)
+          max7 = value;
+        if ((value != min) && (value < min5))
+          min5 = value;
+        if ((value != max) && (value > max5))
+          max5 = value;
+   
+      }
+    }
+  }
+  else {
+    for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
+      // check this pixel is valid
+      if ((imask & 1) == 0)
+        continue;
     
-    if (value < min7)
-      min7 = value;
-    if (value > max7)
-      max7 = value;
-    if ((value != min) && (value < min5))
-      min5 = value;
-    if ((value != max) && (value > max5))
-      max5 = value;
+      // calculate fudge value which guarantees "255.0f + fudge" truncate to 255
+      const int fudge = ((1 << compress) - 1);
+
+      // incorporate into the min/max
+      {
+        // create 8bit integer value, do floor() with truncate() fudged
+        int value = (rgba[4 * i + 3] - ((min < 0) && (rgba[4 * i + 3] < 0) ? fudge : 0)) >> compress;
+    
+        if (value < min7)
+          min7 = value;
+        if ((value != min) && (value < min5))
+          min5 = value;
+      }
+        
+      {
+        // create 8bit integer value, do ceil() with truncate() fudged
+        int value = (rgba[4 * i + 3] + ((min < 0) && (rgba[4 * i + 3] < 0) ? 0 : fudge)) >> compress;
+    
+        if (value > max7)
+          max7 = value;
+        if ((value != max) && (value > max5))
+          max5 = value;
+      }
+    }
   }
 
   // handle the case that no valid range was found
   if (min5 > max5) min5 = max5;
   if (min7 > max7) min7 = max7;
+
+  // expand empty range in 5-code
+  if (min5 == max5) min5 -= min5 > min, max5 += max5 < max;
 
   assert(min5 >= min); assert(max5 <= max);
   assert(min7 >= min); assert(max7 <= max);
@@ -737,29 +777,66 @@ static void CompressAlphaBtc3f(dtyp const* rgba, int mask, void* block, int flag
   int min5 = max, max5 = min;
   int min7 = max, max7 = min;
 
-  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
-    // check this pixel is valid
-    if ((imask & 1) == 0)
-      continue;
-
-    // incorporate into the min/max
-    int value = int((rgba[4 * i + 3] * max) + 0.5f);
-    if (compress > 0)
-      value = (value + ((1 << compress) >> 1)) >> compress;
+  if (!((flags & kAlphaIterativeFit) && prc)) {
+    for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
+      // check this pixel is valid
+      if ((imask & 1) == 0)
+        continue;
     
-    if (value < min7)
-      min7 = value;
-    if (value > max7)
-      max7 = value;
-    if ((value != min) && (value < min5))
-      min5 = value;
-    if ((value != max) && (value > max5))
-      max5 = value;
+      // incorporate into the min/max
+      {
+        // create 8bit integer value, do round() with truncate() fudged
+        int value = int((rgba[4 * i + 3] * max) + ((min < 0) && (rgba[4 * i + 3] < 0) ? -0.5f : 0.5f));
+        
+        if (value < min7)
+          min7 = value;
+        if (value > max7)
+          max7 = value;
+        if ((value != min) && (value < min5))
+          min5 = value;
+        if ((value != max) && (value > max5))
+          max5 = value;
+      }
+    }
+  }
+  else {
+    for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
+      // check this pixel is valid
+      if ((imask & 1) == 0)
+        continue;
+
+      // calculate fudge value which guarantees "255.0f + fudge" truncate to 255
+      const float fudge = 1.0f - 0.5f / (1 << prc);
+
+      // incorporate into the min/max
+      {
+        // create 8bit integer value, do floor() with truncate() fudged
+        int value = int((rgba[4 * i + 3] * max) - ((min < 0) && (rgba[4 * i + 3] < 0) ? fudge : 0));
+        
+        if (value < min7)
+          min7 = value;
+        if ((value != min) && (value < min5))
+          min5 = value;
+      }
+    
+      {
+        // create 8bit integer value, do ceil() with truncate() fudged
+        int value = int((rgba[4 * i + 3] * max) + ((min < 0) && (rgba[4 * i + 3] < 0) ? 0 : fudge));
+        
+        if (value > max7)
+          max7 = value;
+        if ((value != max) && (value > max5))
+          max5 = value;
+      }
+    }
   }
 
   // handle the case that no valid range was found
   if (min5 > max5) min5 = max5;
   if (min7 > max7) min7 = max7;
+
+  // expand empty range in 5-code
+  if (min5 == max5) min5 -= min5 > min, max5 += max5 < max;
   
   assert(min5 >= min); assert(max5 <= max);
   assert(min7 >= min); assert(max7 <= max);
@@ -1281,3 +1358,6 @@ void CompressAlphaBtc2u(tile_barrier barrier, const int thread, pixel16 rgba, in
 #endif
 
 } // namespace squish
+
+#undef CBLB
+#undef CBHB

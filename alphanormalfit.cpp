@@ -40,6 +40,17 @@
 //#define PYRAMID_PROJECTION
 //#define Complement  ComplementPyramidal
 
+// possibly defined in some std-headers
+#undef FSCALE
+#undef FOFFSET
+#undef CSCALE
+#undef COFFSET
+
+#undef ISCALE
+#undef IOFFSET
+#undef OSCALE
+#undef OOFFSET
+
 // Codebook precision bits, up to 5 (+8)
 #define CBLB	0	// low precision
 #define CBHB	5	// high precision
@@ -873,40 +884,92 @@ static void CompressNormalBtc5v(Vec4 const* xyz, int mask, void* blockx, void* b
   Col4 min77 = Col4(max), min75;
   Col4 max77 = Col4(min), max75;
 
-  for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
-    // check this pixel is valid
-    if ((imask & 1) == 0)
-      continue;
-
-    Vec4 norm = xyz[i];
+  if (!((flags & kNormalIterativeFit) && prc)) {
+    for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
+      // check this pixel is valid
+      if ((imask & 1) == 0)
+        continue;
+    
+      Vec4 norm = xyz[i];
 #ifdef PYRAMID_PROJECTION
-    Vec4 nabs = Abs(norm);
-    Vec4 len = HorizontalMaxXY(nabs) + nabs.SplatZ();
+      Vec4 nabs = Abs(norm);
+      Vec4 len = HorizontalMaxXY(nabs) + nabs.SplatZ();
 
-    norm /= len;
+      norm /= len;
 #endif
+    
+      // incorporate into the min/max
+      {
+        // create 8bit integer vector
+        Col4 value = 
+          FloatToInt<true>((norm * Vec4(FSCALE)) - Vec4(FOFFSET));
+        
+        Col4 vmask =
+          IsValue<min>(value) |
+          IsValue<max>(value);
+      
+        min77 = Min(min77, value);
+        max77 = Max(max77, value);
+        min55 = Min(min55, (vmask % value) + (vmask & min55));
+        max55 = Max(max55, (vmask % value) + (vmask & max55));
+      }
+    }
+  }
+  else {
+    for (int i = 0, imask = mask; i < 16; ++i, imask >>= 1) {
+      // check this pixel is valid
+      if ((imask & 1) == 0)
+        continue;
+    
+      Vec4 norm = xyz[i];
+#ifdef PYRAMID_PROJECTION
+      Vec4 nabs = Abs(norm);
+      Vec4 len = HorizontalMaxXY(nabs) + nabs.SplatZ();
 
-    // create integer vector
-    Col4 value = 
-      FloatToInt<true>((norm * Vec4(FSCALE)) - Vec4(FOFFSET));
+      norm /= len;
+#endif
+    
+      // calculate fudge value which guarantees "255.0f + fudge" round to 255 (tie-even makes 255.5f become 256)
+      const float fudge = 0.5f - 0.5f / (1 << prc);
 
-    Col4 vmask =
-      IsValue<min>(value) |
-      IsValue<max>(value);
-
-    // incorporate into the min/max
-    min55 = Min(min55, (vmask % value) + (vmask & min55));
-    max55 = Max(max55, (vmask % value) + (vmask & max55));
-    min77 = Min(min77, value);
-    max77 = Max(max77, value);
+      // incorporate into the min/max
+      {
+        // create 8bit integer vector, do floor() with round-nearest-tie-even() fudged
+        Col4 value = 
+          FloatToInt<true>((norm * Vec4(FSCALE)) - Vec4(FOFFSET + fudge));
+        
+        Col4 vmask =
+          IsValue<min>(value) |
+          IsValue<max>(value);
+      
+        min77 = Min(min77, value);
+        min55 = Min(min55, (vmask % value) + (vmask & min55));
+      }
+      
+      {
+        // create 8bit integer vector, do ceil() with round-nearest-tie-even() fudged
+        Col4 value = 
+          FloatToInt<true>((norm * Vec4(FSCALE)) - Vec4(FOFFSET - fudge));
+        
+        Col4 vmask =
+          IsValue<min>(value) |
+          IsValue<max>(value);
+      
+        max77 = Max(max77, value);
+        max55 = Max(max55, (vmask % value) + (vmask & max55));
+      }
+    }
   }
 
   // handle the case that no valid range was found
   min55 = Min(min55, max55);
-  max55 = Max(min55, max55);
   min77 = Min(min77, max77);
-  max77 = Max(min77, max77);
-
+  
+  // expand empty range in 5-code
+  Col4 eq55 =  CompareAllEqualTo_M4(min55, max55);
+  min55 += CompareAllGreaterThan_M4(min55, Col4(min)) & eq55;
+  max55 -=    CompareAllLessThan_M4(max55, Col4(max)) & eq55;
+  
   // fix the range to be the minimum in each case
 //FixRange(min55, max55, 5);
 //FixRange(min77, max77, 7);
@@ -1208,3 +1271,16 @@ void DecompressNormalsBtc5s(f23* xyzd, void const* blockx, void const* blocky) {
 #endif
 
 } // namespace squish
+
+#undef CBLB
+#undef CBHB
+
+#undef FSCALE
+#undef FOFFSET
+#undef CSCALE
+#undef COFFSET
+
+#undef ISCALE
+#undef IOFFSET
+#undef OSCALE
+#undef OOFFSET
