@@ -33,7 +33,7 @@
 #include "bitoneset.h"
 #include "colourset.h"
 #include "paletteset.h"
-//nclude "hdrset.h"
+#include "hdrset.h"
 
 #include "maths.h"
 
@@ -59,7 +59,7 @@
 #include "paletteblock.h"
 
 // Btc6
-//nclude "hdrrangefit.h"
+#include "hdrrangefit.h"
 //nclude "hdrclusterfit.h"
 #include "hdrblock.h"
 
@@ -934,7 +934,118 @@ Scr4 CompressPaletteBtc7uV2(dtyp const* rgba, int mask, void* block, int flags)
 }
 
 template<typename dtyp>
-void CompressColourBtc6u(dtyp const* rgb, int mask, void* block, int flags) {}
+void CompressColourBtc6u(dtyp const* rgb, int mask, void* block, int flags)
+{
+  static const int modeorder[1][14] = {
+    {
+#define MODEORDER_EXPL	    0
+#define MODEORDER_EXPL_MIN  0
+#define MODEORDER_EXPL_MAX  13
+      // order: mode (lo to hi)
+      kVariableCodingMode1, //{ 2, 5,   0, { 5, 5, 5}, {5,5,5},  6, 3 },
+      kVariableCodingMode2, //{ 2, 5,   0, { 1, 1, 1}, {6,6,6},  9, 3 },
+      kVariableCodingMode3, //{ 2, 5,   0, { 6, 7, 7}, {5,4,4},  5, 3 },
+      kVariableCodingMode4, //{ 2, 5,   0, { 7, 6, 7}, {4,5,4},  5, 3 },
+      kVariableCodingMode5, //{ 2, 5,   0, { 7, 7, 6}, {4,4,5},  5, 3 },
+      kVariableCodingMode6, //{ 2, 5,   0, { 4, 4, 4}, {5,5,5},  7, 3 },
+      kVariableCodingMode7, //{ 2, 5,   0, { 2, 3, 3}, {6,5,5},  8, 3 },
+      kVariableCodingMode8, //{ 2, 5,   0, { 3, 2, 3}, {5,6,5},  8, 3 },
+      kVariableCodingMode9, //{ 2, 5,   0, { 3, 3, 2}, {5,5,5},  8, 3 },
+      kVariableCodingMode10,//{ 2, 5,   6, { 0, 0, 0}, {0,0,0}, 10, 3 },
+      kVariableCodingMode11,//{ 1, 0,  10, { 0, 0, 0}, {0,0,0},  6, 4 },
+      kVariableCodingMode12,//{ 1, 0,   0, { 2, 2, 2}, {9,9,9},  5, 4 },
+      kVariableCodingMode13,//{ 1, 0,   0, { 4, 4, 4}, {8,8,8},  4, 4 },
+      kVariableCodingMode14,//{ 1, 0,   0, {12,12,12}, {4,4,4},  0, 4 } 
+    }
+  };
+
+  int numm = flags &  ( kVariableCodingModes),
+    sm = (numm == 0 ? MODEORDER_EXPL_MIN : (numm >> 24) - 1),
+    em = (numm == 0 ? MODEORDER_EXPL_MAX :               sm),
+    om = (numm == 0 ? MODEORDER_EXPL     :   MODEORDER_EXPL);
+	     flags &= (~kVariableCodingModes);
+
+#undef MODEORDER_EXPL
+#undef MODEORDER_EXPL_MIN
+#undef MODEORDER_EXPL_MAX
+
+  // limits sets to 2 and choose the partition freely
+  int lmts =  2;
+  int lmtp = -1;
+
+  // use the same data-structure all the time
+  HDRSet bestpal;
+  int bestmde = -1;
+  int besttyp = -1;
+
+  Scr3 error(FLT_MAX);
+
+  for (int m = sm; m <= em; m++) {
+    int mode = modeorder[om][m];
+    int mnum = (mode >> 24) - 1;
+
+    // a mode has a specific number of sets, and variable partitions
+    int nums = HDRFit::GetNumSets      (mnum);
+    int nump = HDRFit::GetPartitionBits(mnum);
+    int numi = HDRFit::GetIndexBits    (mnum); numi = numi;
+
+    // stop if set-limit reached
+    if (nums > lmts)
+      break;
+
+    // lock on the perfect partition
+    int sp = (lmtp == -1 ?               0 : lmtp),
+	ep = (lmtp == -1 ? (1 << nump) - 1 : lmtp);
+
+    int tb = HDRFit::GetTruncationBits(mnum);
+    int db = HDRFit::GetDeltaBits(mnum);
+
+    // create the initial point set and quantizer
+    HDRSet initial(rgb, mask, flags + mode);
+    fQuantizer qnt(tb, db);
+
+    // signal if we do we have anything better this iteration of the search
+    bool better = false;
+
+    // search for the best partition
+    for (int p = sp; p <= ep; p++) {
+      // create the minimal point set
+      HDRSet palette(initial, mask, flags + mode, p);
+
+#if 0
+			// if we see we have less colors than sets, 
+			// then back up from trying to test with more sets
+			// or even other partitions
+      if (palette.GetCount() <= nums)
+	lmtp = p, lmts = nums;
+#endif
+
+      // do a range fit (which uses single palette fit if appropriate)
+      HDRRangeFit fit(&palette, flags + mode);
+
+      // update with old best error (reset IsBest)
+      fit.SetError(error);
+      fit.Compress(block, qnt, mnum);
+
+      // we could code it lossless, no point in trying any further at all
+      if (fit.IsBest()) {
+	if (fit.Lossless())
+	  return;
+
+	error = fit.GetError();
+	if (1)
+	  bestmde = mode,
+	  bestpal = palette,
+	  besttyp = 0,
+	  better  = true;
+      }
+    }
+  }
+
+#if defined(VERIFY_ENCODER)
+  DecompressHDRsBtc6u((f23*)rgb, block);
+#endif
+}
 
 /* *****************************************************************************
  */
