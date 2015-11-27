@@ -67,8 +67,8 @@
 #include "coloursinglesnap.h"
 #include "palettesinglefit.h"
 #include "palettesinglesnap.h"
-#include "hdrsinglefit.h"
-#include "hdrsinglesnap.h"
+//nclude "hdrsinglefit.h"
+//nclude "hdrsinglesnap.h"
 
 namespace squish {
 
@@ -1513,11 +1513,11 @@ void DecompressNormalBtc5s(dtyp* rgba, void const* block, int flags)
 template<typename dtyp>
 void DecompressColourBtc6u(dtyp* rgb, void const* block, int flags)
 {
-  // get the block locations
+  /* // get the block locations
   void const* mixedBlock = block;
 
   // decompress color and alpha merged if necessary
-	DecompressHDRsBtc6u(rgb, mixedBlock);
+  DecompressHDRsBtc6u(rgb, mixedBlock); */ abort();
 }
 
 template<typename dtyp>

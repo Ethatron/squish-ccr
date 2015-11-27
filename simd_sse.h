@@ -3354,6 +3354,7 @@ private:
 	friend class Vec4;
 };
 
+#if 0
 template<const bool round>
 Col3 FloatToUHalf( Vec3::Arg v );
 template<const bool round>
@@ -3403,6 +3404,7 @@ Vec3 SHalfToFloat( Col3::Arg v )
 
 	return f;
 }
+#endif
 
 class Vec4
 {
@@ -4420,6 +4422,7 @@ private:
 	__m128 m_v;
 };
 
+#if 0
 template<const bool round>
 Col4 FloatToUHalf( Vec4::Arg v );
 template<const bool round>
@@ -4473,6 +4476,7 @@ Vec4 SHalfToFloat( Col4::Arg v )
 
 	return f;
 }
+#endif
 
 // TODO: figure out how to put static const instances into an incomplete class body
 namespace Vec4C {

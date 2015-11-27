@@ -31,6 +31,7 @@
 
 namespace squish {
 
+#if 0
   // FloatTo...
   extern unsigned short uhLUTb[1 << 9];
   extern char           uhLUTs[1 << 9];
@@ -54,6 +55,7 @@ namespace squish {
     unsigned int c = uhLUTm[uhLUTo[h >> 11] + (h & 0x07FF)] + uhLUTe[h >> 11]; return *((float *)&c); }
   static inline f23 SHalfToFloat(u16 h) {
     unsigned int c = shLUTm[shLUTo[h >> 10] + (h & 0x03FF)] + shLUTe[h >> 10]; return *((float *)&c); }
+#endif
 
 };
 
