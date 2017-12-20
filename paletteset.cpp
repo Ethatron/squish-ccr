@@ -474,6 +474,11 @@ void PaletteSet::BuildSet(u8 const* rgba, int mask, int flags) {
       // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
       int a = s + m_numsets;
 
+      // don't ignore 0-alphas for alphas
+      int amask = mask;
+      // combined alpha, exclusion and selection mask
+      int pmask = amask & m_mask[a];
+
       // create the minimal set
       for (int i = 0, index; i < 16; ++i) {
 	// check this pixel is enabled
@@ -832,6 +837,11 @@ void PaletteSet::BuildSet(f23 const* rgba, int mask, int flags) {
     if (m_seperatealpha) {
       // the alpha-set (in theory we can do separate alpha + separate partitioning, but's not codeable)
       int a = s + m_numsets;
+
+      // don't ignore 0-alphas for alphas
+      int amask = mask;
+      // combined alpha, exclusion and selection mask
+      int pmask = amask & m_mask[a];
 
       // create the minimal set
       for (int i = 0, index; i < 16; ++i) {

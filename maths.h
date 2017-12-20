@@ -905,7 +905,6 @@ public:
 
 #undef	OLD_QUANTIZER
 
-#if 0
 class fQuantizer {
 
 public:
@@ -1010,6 +1009,7 @@ public:
 		res[0] = b;
 		res[1] = p;
 	}
+
 #else
   doinline Col3 QuantizeToLattice(Vec3 const &val) const {
     Col3 p = FloatToUHalf<false>(val);
@@ -1121,7 +1121,6 @@ public:
 #endif
 
 };
-#endif
 
 } // namespace squish
 

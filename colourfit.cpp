@@ -54,7 +54,7 @@ void ColourFit::Compress( void* block )
     if (!m_colours->IsTransparent())
       Compress4(block);
     if (isBtc1b)
-      {/*Compress3b(block)*/;}
+      Compress3b(block);
   }
   else
     Compress4(block);
