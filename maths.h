@@ -924,10 +924,10 @@ public:
     trunc = tb;
 
     /* truncate: tb = 4, 1 << 4 = 0x10 - 1 = 0xF ~= 0xFFF0 */
-    gridprc.SetRGBpow2<0>(tb);
-    gridrnd  = gridprc;
-    gridprc -= Col3(1);
-    gridrnd >>= 1;
+		gridprc.SetRGBpow2<0>(tb);
+		gridrnd  = gridprc;
+		gridprc -= Col3(1);
+		gridrnd >>= 1;
     gridprc = ~gridprc;
 
     if (db)
@@ -1011,7 +1011,7 @@ public:
 	}
 
 #else
-  doinline Col3 QuantizeToLattice(Vec3 const &val) const {
+	doinline Col3 QuantizeToLattice(Vec3 const &val) const {
     Col3 p = FloatToUHalf<false>(val);
     assert((p.R() >= 0) && (p.R() <= 0xFFFF) &&
 	   (p.G() >= 0) && (p.G() <= 0xFFFF) &&
@@ -1117,7 +1117,7 @@ public:
     }
 
     res[base] = UHalfToFloat(b);
-  }
+	}
 #endif
 
 };
